@@ -19,3 +19,5 @@
 .theme-toggle i{width:7px;height:7px;border-radius:50%;background:#b178ff;box-shadow:0 0 9px #b178ff}
 :root[data-theme="day"] .theme-toggle{color:#4f4259;background:#f4eff7;border-color:#d6c8df}
 :root[data-theme="day"] .theme-toggle i{background:#e0a52d;box-shadow:0 0 8px #e0a52d}
+
+.thinking-feather{display:inline-block;font-size:16px;margin-right:7px;animation:hudhud-feather-float 1.4s ease-in-out infinite;filter:drop-shadow(0 0 7px rgba(177,120,255,.65));vertical-align:-2px}.chat-status:has(.thinking-feather){display:flex;align-items:center;color:#b9a8c9}@keyframes hudhud-feather-float{0%,100%{transform:translateY(2px) rotate(-8deg)}50%{transform:translateY(-3px) rotate(8deg)}}
