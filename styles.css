@@ -56,3 +56,16 @@
 :root[data-theme="day"] .live-rail,:root[data-theme="day"] .integration-row{background:#fff;border-color:#ddd6e5}:root[data-theme="day"] .live-brief,:root[data-theme="day"] .brief-setting select{background:#f8f6fb;color:#3c3344;border-color:#ddd6e5}:root[data-theme="day"] .integration-row small,:root[data-theme="day"] .analytics-card small{color:#706a78}:root[data-theme="day"] .connection-logo{background:#f3edf7;border-color:#d9cbe2}:root[data-theme="day"] .connection-status-line{border-color:#ddd6e5}
 @media(max-width:1100px){.system-layout{grid-template-columns:1fr}.live-rail{position:relative;top:auto}.analytics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.connection-control-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.analytics-grid{grid-template-columns:1fr}.system-head-actions{align-items:flex-end;flex-direction:column}.connection-settings{align-items:flex-start;flex-direction:column}}
+
+/* Connection control actions */
+.connection-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.connection-summary{margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.connection-summary strong{font-size:30px;margin-right:5px}
+.connection-summary>div:first-child>span{font-size:10px;color:#716a78}
+.active-connection-names{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.active-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #2a3a31;background:#101812;color:#9ce3b7;border-radius:18px;padding:7px 10px;font-size:9px}
+.active-chip i{width:6px;height:6px;border-radius:50%;background:#66e49b;box-shadow:0 0 8px #66e49b}
+.connection-reconnect{margin-top:13px;font-size:10px;padding:9px 11px}
+.connection-reconnect:disabled,.connection-head-actions button:disabled{opacity:.6;cursor:wait}
+:root[data-theme="day"] .active-chip{background:#edf7f0;border-color:#cfe3d5;color:#356346}
+@media(max-width:700px){.connection-head-actions{width:100%}.connection-head-actions button{flex:1}.connection-summary{align-items:flex-start;flex-direction:column}.active-connection-names{justify-content:flex-start}}
