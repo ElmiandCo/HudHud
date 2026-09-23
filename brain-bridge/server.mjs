@@ -1,9 +1,14 @@
 import http from "node:http";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+const execFileAsync = promisify(execFile);
 
 const PORT = Number(process.env.HUDHUD_BRIDGE_PORT || 8787);
 const GPT4ALL_URL = process.env.GPT4ALL_URL || "http://127.0.0.1:4891/v1/chat/completions";
 const MODEL = process.env.GPT4ALL_MODEL || "Llama 3.2 1B Instruct";
 const TOKEN = process.env.HUDHUD_BRAIN_TOKEN || "";
+const CONTROL_ENABLED = process.env.HUDHUD_CONTROL_ENABLED !== "false";
+const BRIDGE_LABEL = process.env.HUDHUD_BRIDGE_LABEL || "com.elmi.hudhud.brain";
 
 if (!TOKEN) {
   console.error("HUDHUD_BRAIN_TOKEN is required.");
@@ -16,6 +21,20 @@ function send(res, status, body) {
     "Cache-Control": "no-store"
   });
   res.end(JSON.stringify(body));
+}
+
+
+async function command(command,args=[],options={}){const {stdout="",stderr=""}=await execFileAsync(command,args,{timeout:30000,maxBuffer:100000,...options});return {stdout:stdout.trim(),stderr:stderr.trim()};}
+async function control(action){
+ if(!CONTROL_ENABLED)throw new Error("Local control is disabled.");
+ const uid=String(process.getuid?.()||"");
+ if(action==="health"){const result={gpt4all:{online:false},bridge:{online:true},tailscale:{online:false}};try{await command("/usr/bin/curl",["-fsS","http://127.0.0.1:4891/v1/models"],{timeout:5000});result.gpt4all.online=true;}catch{}try{const x=await command("/usr/bin/tailscale",["funnel","status"],{timeout:8000});result.tailscale.online=/8787/.test(x.stdout);}catch{}return result;}
+ if(action==="start-gpt4all"){await command("/usr/bin/open",["-a","GPT4All"]);return {message:"GPT4All launch requested."};}
+ if(action==="start-tailscale"){await command("/usr/bin/open",["-a","Tailscale"]);return {message:"Tailscale launch requested."};}
+ if(action==="start-funnel"){try{await command("/usr/local/bin/tailscale",["funnel","--bg","8787"],{timeout:15000});}catch{await command("/opt/homebrew/bin/tailscale",["funnel","--bg","8787"],{timeout:15000});}return {message:"Tailscale Funnel requested."};}
+ if(action==="restart-bridge"){if(!uid)throw new Error("Could not determine the logged-in user.");await command("/bin/launchctl",["kickstart","-k",`gui/${uid}/${BRIDGE_LABEL}`]);return {message:"HudHud Bridge restart requested."};}
+ if(action==="start-everything"){await command("/usr/bin/open",["-a","GPT4All"]);await command("/usr/bin/open",["-a","Tailscale"]).catch(()=>{});try{await command("/usr/local/bin/tailscale",["funnel","--bg","8787"],{timeout:15000});}catch{try{await command("/opt/homebrew/bin/tailscale",["funnel","--bg","8787"],{timeout:15000});}catch{}}return {message:"HudHud startup sequence requested."};}
+ throw new Error("Unknown system action.");
 }
 
 function readBody(req) {
@@ -66,6 +85,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/health") {
     return send(res, 200, { ok: true, service: "HudHud Brain Bridge" });
   }
+
+  if (req.method === "POST" && req.url === "/control") { const auth=req.headers.authorization||""; if(auth!==`Bearer ${TOKEN}`)return send(res,401,{error:"Unauthorized."}); try{const body=JSON.parse(await readBody(req));return send(res,200,await control(body.action));}catch(error){console.error(error);return send(res,503,{error:error.message||"Control action failed."});} }
 
   if (req.method !== "POST" || req.url !== "/brain") {
     return send(res, 404, { error: "Not found." });
