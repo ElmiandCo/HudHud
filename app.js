@@ -1,6 +1,42 @@
-document.title="HudHud HQ";
-function scrollToId(id){document.getElementById(id)?.scrollIntoView({behavior:"smooth"});}
-function notify(message){const t=document.getElementById("toast");t.textContent=message;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2600);}
-function launchProject(){notify("Project Launchpad initialized — project creation is the next control layer.");document.querySelector("#activityFeed")?.insertAdjacentHTML("afterbegin",'<div><i></i><span><b>HudHud</b> opened Project Launchpad</span><small>NOW</small></div>');}
-document.querySelectorAll("nav a").forEach(a=>a.addEventListener("click",()=>{document.querySelectorAll("nav a").forEach(x=>x.classList.remove("active"));a.classList.add("active");}));
-console.log("🦉 HUDHUD HQ ONLINE");
+const KEY="hudhud_hq_state_v1";
+const initial={projects:[],opportunities:[],connections:[],documents:[],activity:[]};
+let state=load();
+function load(){try{return {...initial,...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch{return {...initial}}}
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function nowLabel(){return new Intl.DateTimeFormat(undefined,{dateStyle:"medium"}).format(new Date())}
+document.getElementById("today").textContent=nowLabel();
+function toast(s){const t=document.getElementById("toast");t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+function log(text){state.activity.unshift({text,at:new Date().toISOString()});state.activity=state.activity.slice(0,50);save()}
+function render(view="home"){
+ document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+ const m=document.getElementById("main");
+ if(view==="home")m.innerHTML=home();
+ if(view==="projects")m.innerHTML=projects();
+ if(view==="opportunities")m.innerHTML=opportunities();
+ if(view==="connections")m.innerHTML=connections();
+ if(view==="documents")m.innerHTML=documents();
+ if(view==="activity")m.innerHTML=activity();
+ if(view==="core")m.innerHTML=core();
+ bind(view);
+}
+function home(){return '<section class="hero"><span class="eyebrow">A FRESH HUDHUD WORKSPACE</span><h1>Welcome home.</h1><p>Nothing is assumed. No fake projects, fake activity, fake deadlines, or invented dates. This workspace starts empty and only shows information you create or connect.</p><div class="actions"><button class="primary" data-go="projects">Create your first project →</button><button class="secondary" data-go="connections">Connect a system</button></div></section><section class="grid" style="margin-top:70px"><div class="card"><div class="muted">PROJECTS</div><div class="metric">'+state.projects.length+'</div><div class="muted">Created in this workspace</div></div><div class="card"><div class="muted">OPPORTUNITIES</div><div class="metric">'+state.opportunities.length+'</div><div class="muted">Added by you</div></div><div class="card"><div class="muted">ACTIVITY</div><div class="metric">'+state.activity.length+'</div><div class="muted">Real workspace events</div></div></section>'}
+function projects(){return '<div class="section-head"><div><h2>Projects</h2><span class="muted">Start from zero.</span></div><button class="primary" data-action="new-project">＋ New project</button></div>'+list(state.projects,"No projects yet.","Create the first project and HudHud will keep it here.")}
+function projectForm(){return '<div class="section-head"><div><h2>New project</h2><span class="muted">Only save information you provide.</span></div></div><form class="card form" id="projectForm"><label>Project name *</label><input name="name" required maxlength="100" placeholder="e.g. One Muslim"><label>Description</label><textarea name="description" maxlength="500" placeholder="What is this project?"></textarea><label>Status</label><select name="status"><option>Planning</option><option>Active</option><option>On hold</option></select><div class="form-actions"><button type="submit" class="primary">Create project</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>'}
+function opportunities(){return '<div class="section-head"><div><h2>Opportunities</h2><span class="muted">Empty until you add something.</span></div><button class="primary" data-action="new-opportunity">＋ Add opportunity</button></div>'+list(state.opportunities,"No opportunities yet.","Keep the pipeline clean: only real opportunities go here.")}
+function opportunityForm(){return '<div class="section-head"><h2>New opportunity</h2></div><form class="card form" id="oppForm"><label>Name *</label><input name="name" required maxlength="100" placeholder="Opportunity or contract"><label>Notes</label><textarea name="notes" maxlength="500"></textarea><div class="form-actions"><button class="primary">Save opportunity</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>'}
+function connections(){return '<div class="section-head"><div><h2>Connections</h2><span class="muted">No connection is claimed unless you record it.</span></div><button class="primary" data-action="new-connection">＋ Add connection</button></div>'+list(state.connections,"No connections recorded.","Add the systems HudHud is actually connected to.")}
+function connectionForm(){return '<div class="section-head"><h2>Add connection</h2></div><form class="card form" id="connForm"><label>System *</label><input name="name" required maxlength="80" placeholder="GitHub, Vercel, Supabase..."><label>Details</label><input name="details" maxlength="150" placeholder="Optional URL, account, or note"><div class="form-actions"><button class="primary">Save connection</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>'}
+function documents(){return '<div class="section-head"><div><h2>Documents</h2><span class="muted">Fresh workspace — no documents loaded.</span></div><button class="secondary" disabled>File connection coming next</button></div><div class="empty"><strong>No documents.</strong>Add a real document connection when we build the file layer.</div>'}
+function activity(){return '<div class="section-head"><div><h2>Activity</h2><span class="muted">Generated from actions in this browser.</span></div><button class="danger" data-action="clear-activity">Clear activity</button></div>'+list(state.activity,"No activity yet.","Your real actions will appear here.")}
+function core(){return '<div class="section-head"><div><h2>HudHud Core</h2><span class="muted">Identity without invented capabilities.</span></div></div><div class="grid"><div class="card"><div class="muted">IDENTITY</div><h3>HudHud</h3><p>AI command headquarters for Elmi Inc.</p></div><div class="card"><div class="muted">WORKSPACE</div><h3>Fresh</h3><p>Local browser state. No seeded business data.</p></div><div class="card"><div class="muted">DATE SOURCE</div><h3>System clock</h3><p>The date shown by this app comes from the user's browser clock.</p></div></div>'}
+function list(items,emptyTitle,emptyText){if(!items.length)return '<div class="empty"><strong>'+emptyTitle+'</strong>'+emptyText+'</div>';return '<div class="list">'+items.map((x,i)=>'<div class="row"><div><h3>'+esc(x.name||x.text)+'</h3><p>'+esc(x.description||x.notes||x.details||((x.at)?new Date(x.at).toLocaleString():""))+'</p></div><span class="pill">'+esc(x.status||"Recorded")+'</span></div>').join("")+'</div>'}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function bind(view){
+ document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>render(b.dataset.go));
+ document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>{const a=b.dataset.action;if(a==="new-project")document.getElementById("main").innerHTML=projectForm();if(a==="new-opportunity")document.getElementById("main").innerHTML=opportunityForm();if(a==="new-connection")document.getElementById("main").innerHTML=connectionForm();if(a==="cancel")render(view);if(a==="clear-activity"){state.activity=[];save();render("activity");}});
+ const pf=document.getElementById("projectForm");if(pf)pf.onsubmit=e=>{e.preventDefault();const f=new FormData(pf);const name=String(f.get("name")).trim();if(!name)return;state.projects.unshift({name,description:String(f.get("description")).trim(),status:String(f.get("status")),createdAt:new Date().toISOString()});log("Created project: "+name);toast("Project created");render("projects")};
+ const of=document.getElementById("oppForm");if(of)of.onsubmit=e=>{e.preventDefault();const f=new FormData(of);const name=String(f.get("name")).trim();if(!name)return;state.opportunities.unshift({name,notes:String(f.get("notes")).trim(),createdAt:new Date().toISOString()});log("Added opportunity: "+name);toast("Opportunity saved");render("opportunities")};
+ const cf=document.getElementById("connForm");if(cf)cf.onsubmit=e=>{e.preventDefault();const f=new FormData(cf);const name=String(f.get("name")).trim();if(!name)return;state.connections.unshift({name,details:String(f.get("details")).trim(),status:"Recorded",createdAt:new Date().toISOString()});log("Recorded connection: "+name);toast("Connection recorded");render("connections")};
+}
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>render(b.dataset.view));
+render("home");
