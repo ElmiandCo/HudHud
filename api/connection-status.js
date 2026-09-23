@@ -64,12 +64,13 @@ async function checkSupabase(){
   if(!base||!key) return {status:"not_configured",configured:false,active:false,detail:"Supabase server-side connection is not configured."};
   const t=Date.now();
   try{
-    const r=await fetch(base.replace(/\/$/,"")+"/rest/v1/",{
-      headers:{apikey:key,Authorization:`Bearer ${key}`},
+    const r=await fetch(base.replace(/\/$/,"")+"/auth/v1/health",{
+      headers:{apikey:key},
       signal:AbortSignal.timeout(8000)
     });
     if(!r.ok) return {status:r.status===401||r.status===403?"auth_error":"offline",configured:true,active:false,detail:`Supabase HTTP ${r.status}`,latencyMs:Date.now()-t};
-    return {status:"connected",configured:true,active:true,detail:"PostgREST responded.",latencyMs:Date.now()-t};
+    const d=await r.json().catch(()=>({}));
+    return {status:"connected",configured:true,active:true,detail:d.name?d.name+" health OK":"Supabase health OK",latencyMs:Date.now()-t};
   }catch(e){
     return {status:"offline",configured:true,active:false,detail:"Supabase could not be reached.",latencyMs:Date.now()-t};
   }
