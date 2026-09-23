@@ -58,8 +58,13 @@ async function checkVercel(){
   }
 }
 
+function normalizeSupabaseUrl(value){
+  return String(value||"").trim().replace(/\/+$/,"" ).replace(/\/(?:rest\/v1|auth\/v1)$/i,"");
+}
+
 async function checkSupabase(){
-  const base=process.env.HUDHUD_SUPABASE_URL;
+  const rawBase=process.env.HUDHUD_SUPABASE_URL;
+  const base=normalizeSupabaseUrl(rawBase);
   const key=process.env.HUDHUD_SUPABASE_KEY;
   if(!base||!key) return {status:"not_configured",configured:false,active:false,detail:"Supabase server-side connection is not configured."};
   const t=Date.now();
@@ -68,7 +73,7 @@ async function checkSupabase(){
       headers:{apikey:key},
       signal:AbortSignal.timeout(8000)
     });
-    if(!r.ok) return {status:r.status===401||r.status===403?"auth_error":"offline",configured:true,active:false,detail:`Supabase HTTP ${r.status}`,latencyMs:Date.now()-t};
+    if(!r.ok) return {status:r.status===401||r.status===403?"auth_error":"offline",configured:true,active:false,detail:`Supabase HTTP ${r.status} • check HUDHUD_SUPABASE_URL`,latencyMs:Date.now()-t};
     const d=await r.json().catch(()=>({}));
     return {status:"connected",configured:true,active:true,detail:d.name?d.name+" health OK":"Supabase health OK",latencyMs:Date.now()-t};
   }catch(e){
