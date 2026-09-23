@@ -22,8 +22,66 @@ function list(items,title,desc){
  if(!items.length)return '<div class="empty"><strong>'+title+'</strong>'+desc+'</div>';
  return '<div class="list">'+items.map(x=>'<div class="row"><div><h3>'+esc(x.name||x.text)+'</h3><p>'+esc(x.description||x.notes||x.details||((x.at)?new Date(x.at).toLocaleString():""))+'</p></div><span class="pill">'+esc(x.status||"Recorded")+'</span></div>').join("")+'</div>';
 }
-function projects(){return '<div class="section-head"><div><h2>Projects</h2><span class="muted">Start from zero.</span></div><button class="primary" data-action="new-project">＋ New project</button></div>'+list(state.projects,"No projects yet.","Create the first project and HudHud will keep it here.");}
-function opportunities(){return '<div class="section-head"><div><h2>Opportunities</h2><span class="muted">Empty until you add something.</span></div><button class="primary" data-action="new-opportunity">＋ Add opportunity</button></div>'+list(state.opportunities,"No opportunities yet.","Only real opportunities go here.");}
+function ensureSteps(item){
+ if(!Array.isArray(item.steps))item.steps=[];
+ return item.steps;
+}
+function stepProgress(item){
+ const steps=ensureSteps(item);
+ const done=steps.filter(s=>s.done).length;
+ return {done,total:steps.length};
+}
+function workspaceTabs(kind,activeCount,doneCount){
+ const filter=kind==="project"?projectFilter:opportunityFilter;
+ return '<div class="workspace-tabs">'+
+   '<button class="'+(filter==="active"?"active":"")+'" data-workspace-filter="'+kind+'" data-filter="active">Active <span>'+activeCount+'</span></button>'+
+   '<button class="'+(filter==="done"?"active":"")+'" data-workspace-filter="'+kind+'" data-filter="done">Done <span>'+doneCount+'</span></button>'+
+   '<button class="'+(filter==="all"?"active":"")+'" data-workspace-filter="'+kind+'" data-filter="all">All <span>'+(activeCount+doneCount)+'</span></button>'+
+ '</div>';
+}
+function workspaceCards(items,kind,filter){
+ const filtered=items.filter(item=>{
+   const isDone=item.status==="Done";
+   return filter==="done"?isDone:filter==="active"?!isDone:true;
+ });
+ if(!filtered.length){
+   return '<div class="empty workspace-empty"><strong>'+ (filter==="done"?"Nothing is done yet.":"No active "+(kind==="project"?"projects":"opportunities")+" yet.")+'</strong>'+
+     (filter==="done"?"Finish every step on an item and it will move here automatically.":"Create one above and break it into clear steps.")+'</div>';
+ }
+ return '<div class="workspace-cards">'+filtered.map(item=>{
+   const p=stepProgress(item);
+   const percent=p.total?Math.round((p.done/p.total)*100):0;
+   const stepsHtml=p.total?'<div class="workspace-steps">'+item.steps.map((step,index)=>
+     '<button type="button" class="workspace-step '+(step.done?"done":"")+'" data-step-toggle="'+kind+'" data-item-id="'+esc(item.id)+'" data-step-index="'+index+'">'+
+       '<span class="step-check">'+(step.done?"✓":"")+'</span><span>'+esc(step.name)+'</span>'+
+     '</button>').join("")+'</div>':
+     '<div class="no-steps">No steps defined for this '+(kind==="project"?"project":"opportunity")+'.</div>';
+   return '<article class="workspace-card '+(item.status==="Done"?"is-done":"")+'">'+
+     '<div class="workspace-card-head"><div><div class="muted">'+(kind==="project"?"PROJECT":"OPPORTUNITY")+'</div><h3>'+esc(item.name)+'</h3></div><span class="pill '+(item.status==="Done"?"pill-done":"")+'">'+esc(item.status||"Planning")+'</span></div>'+
+     '<p class="workspace-description">'+esc(item.description||item.notes||"No description provided.")+'</p>'+
+     '<div class="workspace-progress"><div><span>PROGRESS</span><strong>'+p.done+'/'+p.total+' steps</strong></div><div class="progress-track"><i style="width:'+percent+'%"></i></div></div>'+
+     stepsHtml+
+   '</article>';
+ }).join("")+'</div>';
+}
+let projectFilter="active";
+let opportunityFilter="active";
+function projects(){
+ const items=state.projects||[];
+ const active=items.filter(x=>x.status!=="Done").length;
+ const done=items.filter(x=>x.status==="Done").length;
+ return '<div class="section-head"><div><span class="eyebrow">WORKSPACE</span><h2>Projects</h2><span class="muted">Give every project a description, a clear sequence of steps, and a visible finish line.</span></div><button class="primary" data-action="new-project">＋ New project</button></div>'+
+ workspaceTabs("project",active,done)+
+ workspaceCards(items,"project",projectFilter);
+}
+function opportunities(){
+ const items=state.opportunities||[];
+ const active=items.filter(x=>x.status!=="Done").length;
+ const done=items.filter(x=>x.status==="Done").length;
+ return '<div class="section-head"><div><span class="eyebrow">PIPELINE</span><h2>Opportunities</h2><span class="muted">Break each opportunity into steps and move it to Done automatically when the work is complete.</span></div><button class="primary" data-action="new-opportunity">＋ Add opportunity</button></div>'+
+ workspaceTabs("opportunity",active,done)+
+ workspaceCards(items,"opportunity",opportunityFilter);
+}
 function tools(){return '<div class="section-head"><div><h2>Tools</h2><span class="muted">HudHud\'s action layer — capabilities are separated from the brain.</span></div></div><div class="tool-grid">'+[
 ['GitHub','Code, repositories, issues, pull requests','READ + WRITE','Ready to wire'],
 ['Vercel','Projects, deployments, build status','READ + DEPLOY','Ready to wire'],
@@ -39,8 +97,42 @@ function documents(){return '<div class="section-head"><div><h2>Documents</h2><s
 function activity(){return '<div class="section-head"><div><h2>Activity</h2><span class="muted">Real actions from this browser.</span></div><button class="danger" data-action="clear-activity">Clear activity</button></div>'+list(state.activity,"No activity yet.","Your real actions will appear here.");}
 function core(){return '<div class="section-head"><div><h2>HudHud Core</h2><span class="muted">Identity and workspace settings.</span></div></div><div class="grid"><div class="card"><div class="muted">IDENTITY</div><h3>HudHud</h3><p>AI command headquarters for Elmi Inc.</p></div><div class="card"><div class="muted">WORKSPACE</div><h3>Fresh</h3><p>Local browser state. No seeded business data.</p></div><div class="card"><div class="muted">DATE SOURCE</div><h3>System clock</h3><p>The date shown comes from the browser clock.</p></div></div><div class="card appearance-card"><div><div class="muted">APPEARANCE</div><h3>Day / Night</h3><p>Switch the visual theme instantly.</p></div><button id="themeToggle" class="theme-toggle" type="button"><span id="themeIcon">☾</span><span id="themeLabel">Night</span><i></i></button></div>';}
 
-function projectForm(){return '<div class="section-head"><h2>New project</h2></div><form class="card form" id="projectForm"><label>Project name *</label><input name="name" required maxlength="100"><label>Description</label><textarea name="description" maxlength="500"></textarea><label>Status</label><select name="status"><option>Planning</option><option>Active</option><option>On hold</option></select><div class="form-actions"><button type="submit" class="primary">Create project</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';}
-function opportunityForm(){return '<div class="section-head"><h2>New opportunity</h2></div><form class="card form" id="oppForm"><label>Name *</label><input name="name" required maxlength="100"><label>Notes</label><textarea name="notes" maxlength="500"></textarea><div class="form-actions"><button class="primary">Save opportunity</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';}
+function stepOptions(){
+ return Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+(i===0?" step":" steps")+'</option>').join("");
+}
+function stepBuilderFields(prefix,count){
+ let html="";
+ for(let i=0;i<count;i++)html+='<div class="step-name-field"><span>'+String(i+1).padStart(2,"0")+'</span><input name="step_'+i+'" maxlength="120" placeholder="Step '+(i+1)+' name" required></div>';
+ return html;
+}
+function bindStepBuilder(prefix){
+ const select=document.getElementById(prefix+"StepCount");
+ const fields=document.getElementById(prefix+"StepFields");
+ if(!select||!fields)return;
+ const renderFields=()=>{fields.innerHTML=stepBuilderFields(prefix,Number(select.value)||1);};
+ select.onchange=renderFields;
+ renderFields();
+}
+function projectForm(){
+ return '<div class="section-head"><div><span class="eyebrow">NEW PROJECT</span><h2>Build the project</h2><span class="muted">Describe the outcome, choose the number of steps, then name each step.</span></div></div>'+
+ '<form class="card form workspace-form" id="projectForm">'+
+ '<label>Project name *</label><input name="name" required maxlength="100" placeholder="Fix Everything">'+
+ '<label>Description *</label><textarea name="description" required maxlength="1000" placeholder="What is this project trying to accomplish?"></textarea>'+
+ '<label>Starting status</label><select name="status"><option>Planning</option><option>Active</option><option>On hold</option></select>'+
+ '<label>Number of steps *</label><select id="projectStepCount" name="stepCount">'+stepOptions()+'</select>'+
+ '<div class="step-builder"><div class="step-builder-head"><span>STEP PLAN</span><small>Name each step in the order it should happen.</small></div><div id="projectStepFields" class="step-builder-fields"></div></div>'+
+ '<div class="form-actions"><button type="submit" class="primary">Create project</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';
+}
+function opportunityForm(){
+ return '<div class="section-head"><div><span class="eyebrow">NEW OPPORTUNITY</span><h2>Build the opportunity</h2><span class="muted">Capture the opportunity and turn the pursuit into a sequence of steps.</span></div></div>'+
+ '<form class="card form workspace-form" id="oppForm">'+
+ '<label>Opportunity name *</label><input name="name" required maxlength="100" placeholder="State Power Platform Contract">'+
+ '<label>Description *</label><textarea name="description" required maxlength="1000" placeholder="What is the opportunity and what are we trying to win?"></textarea>'+
+ '<label>Starting status</label><select name="status"><option>Open</option><option>Active</option><option>On hold</option></select>'+
+ '<label>Number of steps *</label><select id="opportunityStepCount" name="stepCount">'+stepOptions()+'</select>'+
+ '<div class="step-builder"><div class="step-builder-head"><span>PURSUIT PLAN</span><small>Name each step in the order it should happen.</small></div><div id="opportunityStepFields" class="step-builder-fields"></div></div>'+
+ '<div class="form-actions"><button class="primary">Save opportunity</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';
+}
 function connectionForm(){return '<div class="section-head"><h2>Add connection</h2></div><form class="card form" id="connForm"><label>System *</label><input name="name" required maxlength="80" placeholder="GitHub, Vercel, Supabase..."><label>Details</label><input name="details" maxlength="150"><div class="form-actions"><button class="primary">Save connection</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';}
 
 function render(view){
@@ -61,18 +153,69 @@ function bind(view){
  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>render(b.dataset.go));
  document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>{
    const a=b.dataset.action;
-   if(a==="new-project"){document.getElementById("main").innerHTML=projectForm();bind(view);}
-   if(a==="new-opportunity"){document.getElementById("main").innerHTML=opportunityForm();bind(view);}
+   if(a==="new-project"){document.getElementById("main").innerHTML=projectForm();bind(view);bindStepBuilder("project");}
+   if(a==="new-opportunity"){document.getElementById("main").innerHTML=opportunityForm();bind(view);bindStepBuilder("opportunity");}
    if(a==="new-connection"){document.getElementById("main").innerHTML=connectionForm();bind(view);}
    if(a==="cancel")render(view);
    if(a==="clear-activity"){state.activity=[];save();render("activity");}
  });
+ document.querySelectorAll("[data-workspace-filter]").forEach(b=>b.onclick=()=>{
+   const kind=b.dataset.workspaceFilter,filter=b.dataset.filter;
+   if(kind==="project")projectFilter=filter; else opportunityFilter=filter;
+   render(kind==="project"?"projects":"opportunities");
+ });
+ document.querySelectorAll("[data-step-toggle]").forEach(b=>b.onclick=()=>toggleWorkspaceStep(b.dataset.stepToggle,b.dataset.itemId,Number(b.dataset.stepIndex)));
+
  const pf=document.getElementById("projectForm");
- if(pf)pf.onsubmit=e=>{e.preventDefault();const f=new FormData(pf),name=String(f.get("name")).trim();if(!name)return;state.projects.unshift({name:name,description:String(f.get("description")).trim(),status:String(f.get("status")),createdAt:new Date().toISOString()});log("Created project: "+name);toast("Project created");render("projects");};
+ if(pf)pf.onsubmit=e=>{
+   e.preventDefault();
+   const f=new FormData(pf),name=String(f.get("name")).trim(),description=String(f.get("description")).trim();
+   if(!name||!description)return;
+   const count=Number(f.get("stepCount"))||1;
+   const steps=Array.from({length:count},(_,i)=>({id:"step_"+Date.now()+"_"+i,name:String(f.get("step_"+i)||"").trim(),done:false}));
+   if(steps.some(s=>!s.name)){toast("Name every project step");return;}
+   state.projects.unshift({id:"project_"+Date.now(),name,description,status:String(f.get("status")),steps,createdAt:new Date().toISOString()});
+   log("Created project: "+name+" with "+steps.length+" steps");
+   toast("Project created");
+   render("projects");
+ };
  const of=document.getElementById("oppForm");
- if(of)of.onsubmit=e=>{e.preventDefault();const f=new FormData(of),name=String(f.get("name")).trim();if(!name)return;state.opportunities.unshift({name:name,notes:String(f.get("notes")).trim(),createdAt:new Date().toISOString()});log("Added opportunity: "+name);toast("Opportunity saved");render("opportunities");};
+ if(of)of.onsubmit=e=>{
+   e.preventDefault();
+   const f=new FormData(of),name=String(f.get("name")).trim(),description=String(f.get("description")).trim();
+   if(!name||!description)return;
+   const count=Number(f.get("stepCount"))||1;
+   const steps=Array.from({length:count},(_,i)=>({id:"step_"+Date.now()+"_"+i,name:String(f.get("step_"+i)||"").trim(),done:false}));
+   if(steps.some(s=>!s.name)){toast("Name every opportunity step");return;}
+   state.opportunities.unshift({id:"opportunity_"+Date.now(),name,description,status:String(f.get("status")),steps,createdAt:new Date().toISOString()});
+   log("Added opportunity: "+name+" with "+steps.length+" steps");
+   toast("Opportunity saved");
+   render("opportunities");
+ };
  const cf=document.getElementById("connForm");
  if(cf)cf.onsubmit=e=>{e.preventDefault();const f=new FormData(cf),name=String(f.get("name")).trim();if(!name)return;state.connections.unshift({name:name,details:String(f.get("details")).trim(),status:"Recorded",createdAt:new Date().toISOString()});log("Recorded connection: "+name);toast("Connection recorded");render("connections");};
+}
+function toggleWorkspaceStep(kind,itemId,index){
+ const collection=kind==="project"?state.projects:state.opportunities;
+ const item=collection.find(x=>x.id===itemId);
+ if(!item)return;
+ const steps=ensureSteps(item),step=steps[index];
+ if(!step)return;
+ step.done=!step.done;
+ const allDone=steps.length>0&&steps.every(s=>s.done);
+ if(allDone){
+   if(item.status!=="Done")item.preDoneStatus=item.status||"Active";
+   item.status="Done";
+   log((kind==="project"?"Completed project":"Completed opportunity")+" step: "+item.name+" • "+step.name);
+   toast((kind==="project"?"Project":"Opportunity")+" moved to Done");
+ }else{
+   if(item.status==="Done")item.status=item.preDoneStatus||"Active";
+   log((step.done?"Completed ":"Reopened ")+(kind==="project"?"project":"opportunity")+" step: "+step.name);
+   toast(step.done?"Step completed":"Step reopened");
+ }
+ item.updatedAt=new Date().toISOString();
+ save();
+ render(kind==="project"?"projects":"opportunities");
 }
 
 function addMessage(who,text,kind){
