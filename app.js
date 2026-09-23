@@ -61,11 +61,45 @@ function workspaceCards(items,kind,filter){
      '<p class="workspace-description">'+esc(item.description||item.notes||"No description provided.")+'</p>'+
      '<div class="workspace-progress"><div><span>PROGRESS</span><strong>'+p.done+'/'+p.total+' steps</strong></div><div class="progress-track"><i style="width:'+percent+'%"></i></div></div>'+
      stepsHtml+
+     '<div class="workspace-card-actions"><button type="button" class="secondary" data-plan-item="'+kind+'" data-item-id="'+esc(item.id)+'">✎ Manage steps</button></div>'+
    '</article>';
  }).join("")+'</div>';
 }
 let projectFilter="active";
 let opportunityFilter="active";
+function workspacePlanForm(kind,item){
+ const steps=ensureSteps(item);
+ const count=steps.length||3;
+ return '<div class="section-head"><div><span class="eyebrow">EDIT WORKFLOW</span><h2>Manage '+(kind==="project"?"project":"opportunity")+'</h2><span class="muted">Update the description, choose the number of steps, and rename the workflow.</span></div></div>'+
+ '<form class="card form workspace-form" id="planForm" data-plan-kind="'+kind+'" data-plan-id="'+esc(item.id)+'">'+
+ '<label>Name *</label><input name="name" required maxlength="100" value="'+esc(item.name)+'">'+
+ '<label>Description *</label><textarea name="description" required maxlength="1000">'+esc(item.description||item.notes||"")+'</textarea>'+
+ '<label>Number of steps *</label><select id="planStepCount" name="stepCount">'+Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'" '+((i+1)===count?"selected":"")+'>'+(i+1)+(i===0?" step":" steps")+'</option>').join("")+'</select>'+
+ '<div class="step-builder"><div class="step-builder-head"><span>WORKFLOW STEPS</span><small>Completed steps stay done when their names are retained.</small></div><div id="planStepFields" class="step-builder-fields"></div></div>'+
+ '<div class="form-actions"><button type="submit" class="primary">Save workflow</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';
+}
+function bindPlanBuilder(item){
+ const select=document.getElementById("planStepCount"),fields=document.getElementById("planStepFields");
+ if(!select||!fields)return;
+ const renderFields=()=>{
+   const count=Number(select.value)||1,steps=ensureSteps(item);
+   fields.innerHTML=Array.from({length:count},(_,i)=>{
+     const existing=steps[i];
+     return '<div class="step-name-field"><span>'+String(i+1).padStart(2,"0")+'</span><input name="step_'+i+'" maxlength="120" placeholder="Step '+(i+1)+' name" value="'+esc(existing?.name||"")+'" required></div>';
+   }).join("");
+ };
+ select.onchange=renderFields;
+ renderFields();
+}
+function editWorkspacePlan(kind,id){
+ const collection=kind==="project"?state.projects:state.opportunities;
+ const item=collection.find(x=>x.id===id);
+ if(!item){toast("Item not found");return;}
+ document.getElementById("main").innerHTML=workspacePlanForm(kind,item);
+ bind(kind==="project"?"projects":"opportunities");
+ bindPlanBuilder(item);
+}
+
 function projects(){
  const items=state.projects||[];
  const active=items.filter(x=>x.status!=="Done").length;
@@ -165,6 +199,7 @@ function bind(view){
    render(kind==="project"?"projects":"opportunities");
  });
  document.querySelectorAll("[data-step-toggle]").forEach(b=>b.onclick=()=>toggleWorkspaceStep(b.dataset.stepToggle,b.dataset.itemId,Number(b.dataset.stepIndex)));
+ document.querySelectorAll("[data-plan-item]").forEach(b=>b.onclick=()=>editWorkspacePlan(b.dataset.planItem,b.dataset.itemId));
 
  const pf=document.getElementById("projectForm");
  if(pf)pf.onsubmit=e=>{
@@ -191,6 +226,21 @@ function bind(view){
    log("Added opportunity: "+name+" with "+steps.length+" steps");
    toast("Opportunity saved");
    render("opportunities");
+ };
+ const planForm=document.getElementById("planForm");
+ if(planForm)planForm.onsubmit=e=>{
+   e.preventDefault();
+   const kind=planForm.dataset.planKind,id=planForm.dataset.planId,collection=kind==="project"?state.projects:state.opportunities,item=collection.find(x=>x.id===id);
+   if(!item)return;
+   const f=new FormData(planForm),name=String(f.get("name")).trim(),description=String(f.get("description")).trim(),count=Number(f.get("stepCount"))||1;
+   const oldSteps=ensureSteps(item);
+   const steps=Array.from({length:count},(_,i)=>({id:oldSteps[i]?.id||("step_"+Date.now()+"_"+i),name:String(f.get("step_"+i)||"").trim(),done:!!oldSteps[i]?.done}));
+   if(!name||!description||steps.some(s=>!s.name)){toast("Complete the workflow fields");return;}
+   item.name=name;item.description=description;item.steps=steps;item.updatedAt=new Date().toISOString();
+   const allDone=steps.length>0&&steps.every(s=>s.done);
+   if(allDone){item.preDoneStatus=item.preDoneStatus||item.status||"Active";item.status="Done";}else if(item.status==="Done"){item.status=item.preDoneStatus||"Active";}
+   log("Updated "+kind+" workflow: "+name);
+   save();toast("Workflow updated");render(kind==="project"?"projects":"opportunities");
  };
  const cf=document.getElementById("connForm");
  if(cf)cf.onsubmit=e=>{e.preventDefault();const f=new FormData(cf),name=String(f.get("name")).trim();if(!name)return;state.connections.unshift({name:name,details:String(f.get("details")).trim(),status:"Recorded",createdAt:new Date().toISOString()});log("Recorded connection: "+name);toast("Connection recorded");render("connections");};
