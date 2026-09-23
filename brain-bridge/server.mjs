@@ -105,7 +105,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, "127.0.0.1", () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`HudHud Brain Bridge listening on http://127.0.0.1:${PORT}`);
   console.log(`GPT4All target: ${GPT4ALL_URL}`);
 });
