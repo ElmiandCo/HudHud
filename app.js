@@ -82,11 +82,35 @@ function addMessage(who,text,kind){
  const s=document.createElement("span");s.textContent=text;
  d.appendChild(b);d.appendChild(s);box.appendChild(d);box.scrollTop=box.scrollHeight;
 }
+function handleWorkspaceCommand(message){
+ const text=String(message||"").trim();
+ const createMatch=text.match(/\\b(?:create|add)\\s+(?:a\\s+)?(?:new\\s+)?project\\s+(?:called|named|titled)\\s+[“"']([^”"']+)[”"']/i);
+ const looseMatch=text.match(/\\b(?:create|add)\\s+(?:a\\s+)?(?:new\\s+)?project\\s+(?:called|named|titled)\\s+(.+?)(?:\\s+(?:here|on this site|to this site))?$/i);
+ const match=createMatch||looseMatch;
+ if(!match)return null;
+ let name=String(match[1]).trim().replace(/[.?!]+$/,"");
+ if(!name)return null;
+ const statusMatch=text.match(/\\bstatus\\s*[:=]?\\s*(planning|active|on hold)\\b/i);
+ const rawStatus=statusMatch?statusMatch[1].toLowerCase():"planning";
+ const status=rawStatus==="active"?"Active":rawStatus==="on hold"?"On hold":"Planning";
+ const project={id:"project_"+Date.now(),name:name,description:"Created from the HudHud command center.",status:status,createdAt:new Date().toISOString()};
+ state.projects.unshift(project);
+ log("Created project from HudHud chat: "+name);
+ return {reply:"Done. I created the project “"+name+"” with status “"+status+"”. It is now in Projects."};
+}
+
 async function sendToHudHud(message){
  const status=document.getElementById("brainStatus");
  const endpoint="/api/hudhud";
  try{
    status.innerHTML='<span class="thinking-feather" aria-hidden="true">🪶</span><span>HudHud is thinking…</span>';
+   const workspaceAction=handleWorkspaceCommand(message);
+   if(workspaceAction){
+     addMessage("HudHud",workspaceAction.reply,"hud");
+     status.textContent="HUDHUD • workspace action complete";
+     toast("Project created");
+     return;
+   }
    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:message})});
    const raw=await r.text();
    let data={};try{data=JSON.parse(raw)}catch(e){}
