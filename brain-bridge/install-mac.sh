@@ -1,6 +1,6 @@
 #!/bin/zsh
 set -e
-BRIDGE_DIR="$HOME/brain-bridge"
+BRIDGE_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLIST="$HOME/Library/LaunchAgents/com.elmi.hudhud.brain.plist"
 NODE_BIN="$(command -v node)"
 if [[ -z "$NODE_BIN" ]]; then echo "Node.js was not found in PATH."; exit 1; fi
