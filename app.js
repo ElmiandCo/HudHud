@@ -84,6 +84,22 @@ function addMessage(who,text,kind){
 }
 function handleWorkspaceCommand(message){
  const text=String(message||"").trim();
+
+ const statusUpdate=text.match(/\b(?:update|change|set)\s+(?:project\s*\\?:\s*|project\s+)([“"']?)([^”"']+?)\1(?:'s)?\s+status\s+(?:to|=)\s*[“"']?(planning|active|on hold)[”"']?/i);
+ if(statusUpdate){
+   const requestedName=String(statusUpdate[2]).trim().replace(/[.?!]+$/,"");
+   const nextRaw=statusUpdate[3].toLowerCase();
+   const nextStatus=nextRaw==="active"?"Active":nextRaw==="on hold"?"On hold":"Planning";
+   const project=state.projects.find(p=>String(p.name||"").trim().toLowerCase()===requestedName.toLowerCase());
+   if(!project)return {reply:"I couldn't find a project named “"+requestedName+"” in Projects."};
+   const previous=project.status||"Recorded";
+   project.status=nextStatus;
+   project.updatedAt=new Date().toISOString();
+   log("Updated project status: "+project.name+" → "+nextStatus);
+   save();
+   return {reply:"Done. Project “"+project.name+"” is now “"+nextStatus+"”. (Previously “"+previous+"”.)"};
+ }
+
  const createMatch=text.match(/\b(?:create|add)\s+(?:a\s+)?(?:new\s+)?project\s+(?:called|named|titled)\s+[“"']([^”"']+)[”"']/i);
  const looseMatch=text.match(/\b(?:create|add)\s+(?:a\s+)?(?:new\s+)?project\s+(?:called|named|titled)\s+(.+?)(?:\s+(?:here|on this site|to this site))?$/i);
  const match=createMatch||looseMatch;
