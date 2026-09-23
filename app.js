@@ -73,7 +73,7 @@ async function sendToHudHud(message){
  const status=document.getElementById("brainStatus");
  const endpoint="/api/hudhud";
  try{
-   status.textContent="HudHud is thinking…";
+   status.innerHTML='<span class="thinking-feather" aria-hidden="true">🪶</span><span>HudHud is thinking…</span>';
    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:message})});
    const raw=await r.text();
    let data={};try{data=JSON.parse(raw)}catch(e){}
