@@ -94,7 +94,8 @@ async function importLegacyWorkspace(){
 }
 async function cloudInsertProject(item){
  if(!hasCloudUser())return true;
- const {error}=await supabaseClient.from("hudhud_projects").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt});
+ const {data,error}=await supabaseClient.from("hudhud_projects").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
+ if(data?.id)item.id=data.id;
  if(error){toast("Project save failed");console.error(error);return false;} return true;
 }
 async function cloudUpdateProject(item){
@@ -104,7 +105,8 @@ async function cloudUpdateProject(item){
 }
 async function cloudInsertOpportunity(item){
  if(!hasCloudUser())return true;
- const {error}=await supabaseClient.from("hudhud_opportunities").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt});
+ const {data,error}=await supabaseClient.from("hudhud_opportunities").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
+ if(data?.id)item.id=data.id;
  if(error){toast("Opportunity save failed");console.error(error);return false;} return true;
 }
 async function cloudUpdateOpportunity(item){
@@ -114,7 +116,8 @@ async function cloudUpdateOpportunity(item){
 }
 async function cloudInsertConnection(item){
  if(!hasCloudUser())return true;
- const {error}=await supabaseClient.from("hudhud_connections").insert({user_id:currentUser.id,name:item.name,details:item.details||"",status:item.status||"Recorded",created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt});
+ const {data,error}=await supabaseClient.from("hudhud_connections").insert({user_id:currentUser.id,name:item.name,details:item.details||"",status:item.status||"Recorded",created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
+ if(data?.id)item.id=data.id;
  if(error){toast("Connection save failed");console.error(error);return false;} return true;
 }
 async function cloudInsertActivity(textValue){
@@ -346,7 +349,7 @@ function opportunityForm(){
 function connectionForm(){return '<div class="section-head"><h2>Add connection</h2></div><form class="card form" id="connForm"><label>System *</label><input name="name" required maxlength="80" placeholder="GitHub, Vercel, Supabase..."><label>Details</label><input name="details" maxlength="150"><div class="form-actions"><button class="primary">Save connection</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';}
 
 function render(view){
- if(["projects","opportunities","connections","tools","studio","system","documents","activity","core"].includes(view)&&!requireAuth(view))return;
+ if(["projects","opportunities","connections","documents","activity"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
