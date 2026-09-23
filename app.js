@@ -1,45 +1,99 @@
+(function(){
+"use strict";
+
 const KEY="hudhud_hq_state_v1";
 const initial={projects:[],opportunities:[],connections:[],documents:[],activity:[]};
 let state=load();
-function load(){try{return {...initial,...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch{return {...initial}}}
-function save(){localStorage.setItem(KEY,JSON.stringify(state))}
-function nowLabel(){return new Intl.DateTimeFormat(undefined,{dateStyle:"medium"}).format(new Date())}
-document.getElementById("today").textContent=nowLabel();
-function toast(s){const t=document.getElementById("toast");t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
-function log(text){state.activity.unshift({text,at:new Date().toISOString()});state.activity=state.activity.slice(0,50);save()}
-function render(view="home"){
+
+function load(){
+  try { return Object.assign({},initial,JSON.parse(localStorage.getItem(KEY)||"{}")); }
+  catch(e){ return Object.assign({},initial); }
+}
+function save(){ localStorage.setItem(KEY,JSON.stringify(state)); }
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function toast(s){const t=document.getElementById("toast");if(!t)return;t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200);}
+function log(text){state.activity.unshift({text:text,at:new Date().toISOString()});state.activity=state.activity.slice(0,50);save();}
+function nowLabel(){return new Intl.DateTimeFormat(undefined,{dateStyle:"medium"}).format(new Date());}
+
+function home(){
+return '<section class="hero"><span class="eyebrow">HUDHUD CONVERSATION</span><h1>Welcome home.</h1><p>Talk to HudHud here. Your local AI connection is shown honestly below.</p><div class="chat card"><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div></section><section class="grid" style="margin-top:45px"><div class="card"><div class="muted">PROJECTS</div><div class="metric">'+state.projects.length+'</div><div class="muted">Created in this workspace</div></div><div class="card"><div class="muted">OPPORTUNITIES</div><div class="metric">'+state.opportunities.length+'</div><div class="muted">Added by you</div></div><div class="card"><div class="muted">ACTIVITY</div><div class="metric">'+state.activity.length+'</div><div class="muted">Real workspace events</div></div></section>';
+}
+function list(items,title,desc){
+ if(!items.length)return '<div class="empty"><strong>'+title+'</strong>'+desc+'</div>';
+ return '<div class="list">'+items.map(x=>'<div class="row"><div><h3>'+esc(x.name||x.text)+'</h3><p>'+esc(x.description||x.notes||x.details||((x.at)?new Date(x.at).toLocaleString():""))+'</p></div><span class="pill">'+esc(x.status||"Recorded")+'</span></div>').join("")+'</div>';
+}
+function projects(){return '<div class="section-head"><div><h2>Projects</h2><span class="muted">Start from zero.</span></div><button class="primary" data-action="new-project">＋ New project</button></div>'+list(state.projects,"No projects yet.","Create the first project and HudHud will keep it here.");}
+function opportunities(){return '<div class="section-head"><div><h2>Opportunities</h2><span class="muted">Empty until you add something.</span></div><button class="primary" data-action="new-opportunity">＋ Add opportunity</button></div>'+list(state.opportunities,"No opportunities yet.","Only real opportunities go here.");}
+function connections(){return '<div class="section-head"><div><h2>Connections</h2><span class="muted">Only recorded connections appear here.</span></div><button class="primary" data-action="new-connection">＋ Add connection</button></div>'+list(state.connections,"No connections recorded.","Add the systems HudHud is actually connected to.");}
+function documents(){return '<div class="section-head"><div><h2>Documents</h2><span class="muted">Fresh workspace — no documents loaded.</span></div></div><div class="empty"><strong>No documents.</strong>The file layer comes later.</div>';}
+function activity(){return '<div class="section-head"><div><h2>Activity</h2><span class="muted">Real actions from this browser.</span></div><button class="danger" data-action="clear-activity">Clear activity</button></div>'+list(state.activity,"No activity yet.","Your real actions will appear here.");}
+function core(){return '<div class="section-head"><div><h2>HudHud Core</h2><span class="muted">Identity without invented capabilities.</span></div></div><div class="grid"><div class="card"><div class="muted">IDENTITY</div><h3>HudHud</h3><p>AI command headquarters for Elmi Inc.</p></div><div class="card"><div class="muted">WORKSPACE</div><h3>Fresh</h3><p>Local browser state. No seeded business data.</p></div><div class="card"><div class="muted">DATE SOURCE</div><h3>System clock</h3><p>The date shown comes from the browser clock.</p></div></div>';}
+
+function projectForm(){return '<div class="section-head"><h2>New project</h2></div><form class="card form" id="projectForm"><label>Project name *</label><input name="name" required maxlength="100"><label>Description</label><textarea name="description" maxlength="500"></textarea><label>Status</label><select name="status"><option>Planning</option><option>Active</option><option>On hold</option></select><div class="form-actions"><button type="submit" class="primary">Create project</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';}
+function opportunityForm(){return '<div class="section-head"><h2>New opportunity</h2></div><form class="card form" id="oppForm"><label>Name *</label><input name="name" required maxlength="100"><label>Notes</label><textarea name="notes" maxlength="500"></textarea><div class="form-actions"><button class="primary">Save opportunity</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';}
+function connectionForm(){return '<div class="section-head"><h2>Add connection</h2></div><form class="card form" id="connForm"><label>System *</label><input name="name" required maxlength="80" placeholder="GitHub, Vercel, Supabase..."><label>Details</label><input name="details" maxlength="150"><div class="form-actions"><button class="primary">Save connection</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';}
+
+function render(view){
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
- if(view==="home")m.innerHTML=home();
- if(view==="projects")m.innerHTML=projects();
- if(view==="opportunities")m.innerHTML=opportunities();
- if(view==="connections")m.innerHTML=connections();
- if(view==="documents")m.innerHTML=documents();
- if(view==="activity")m.innerHTML=activity();
- if(view==="core")m.innerHTML=core();
- bind(view);bindChat();
+ if(!m)return;
+ const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,documents:documents,activity:activity,core:core};
+ m.innerHTML=(pages[view]||home)();
+ bind(view);
+ if(view==="home") bindChat();
 }
-function home(){return '<section class="hero"><span class="eyebrow">HUDHUD CONVERSATION</span><h1>Welcome home.</h1><p>Talk to HudHud here. It will try the local GPT4All brain on this computer first. If that local connection is unavailable, HudHud will tell you instead of pretending it is connected.</p><div class="chat card"><div id="messages" class="messages"><div class="message hud"><b>HudHud</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div></section><section class="grid" style="margin-top:45px"><div class="card"><div class="muted">PROJECTS</div><div class="metric">'+state.projects.length+'</div><div class="muted">Created in this workspace</div></div><div class="card"><div class="muted">OPPORTUNITIES</div><div class="metric">'+state.opportunities.length+'</div><div class="muted">Added by you</div></div><div class="card"><div class="muted">ACTIVITY</div><div class="metric">'+state.activity.length+'</div><div class="muted">Real workspace events</div></div></section>'}
-function projects(){return '<div class="section-head"><div><h2>Projects</h2><span class="muted">Start from zero.</span></div><button class="primary" data-action="new-project">＋ New project</button></div>'+list(state.projects,"No projects yet.","Create the first project and HudHud will keep it here.")}
-function projectForm(){return '<div class="section-head"><div><h2>New project</h2><span class="muted">Only save information you provide.</span></div></div><form class="card form" id="projectForm"><label>Project name *</label><input name="name" required maxlength="100" placeholder="e.g. One Muslim"><label>Description</label><textarea name="description" maxlength="500" placeholder="What is this project?"></textarea><label>Status</label><select name="status"><option>Planning</option><option>Active</option><option>On hold</option></select><div class="form-actions"><button type="submit" class="primary">Create project</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>'}
-function opportunities(){return '<div class="section-head"><div><h2>Opportunities</h2><span class="muted">Empty until you add something.</span></div><button class="primary" data-action="new-opportunity">＋ Add opportunity</button></div>'+list(state.opportunities,"No opportunities yet.","Keep the pipeline clean: only real opportunities go here.")}
-function opportunityForm(){return '<div class="section-head"><h2>New opportunity</h2></div><form class="card form" id="oppForm"><label>Name *</label><input name="name" required maxlength="100" placeholder="Opportunity or contract"><label>Notes</label><textarea name="notes" maxlength="500"></textarea><div class="form-actions"><button class="primary">Save opportunity</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>'}
-function connections(){return '<div class="section-head"><div><h2>Connections</h2><span class="muted">No connection is claimed unless you record it.</span></div><button class="primary" data-action="new-connection">＋ Add connection</button></div>'+list(state.connections,"No connections recorded.","Add the systems HudHud is actually connected to.")}
-function connectionForm(){return '<div class="section-head"><h2>Add connection</h2></div><form class="card form" id="connForm"><label>System *</label><input name="name" required maxlength="80" placeholder="GitHub, Vercel, Supabase..."><label>Details</label><input name="details" maxlength="150" placeholder="Optional URL, account, or note"><div class="form-actions"><button class="primary">Save connection</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>'}
-function documents(){return '<div class="section-head"><div><h2>Documents</h2><span class="muted">Fresh workspace — no documents loaded.</span></div><button class="secondary" disabled>File connection coming next</button></div><div class="empty"><strong>No documents.</strong>Add a real document connection when we build the file layer.</div>'}
-function activity(){return '<div class="section-head"><div><h2>Activity</h2><span class="muted">Generated from actions in this browser.</span></div><button class="danger" data-action="clear-activity">Clear activity</button></div>'+list(state.activity,"No activity yet.","Your real actions will appear here.")}
-function core(){return '<div class="section-head"><div><h2>HudHud Core</h2><span class="muted">Identity without invented capabilities.</span></div></div><div class="grid"><div class="card"><div class="muted">IDENTITY</div><h3>HudHud</h3><p>AI command headquarters for Elmi Inc.</p></div><div class="card"><div class="muted">WORKSPACE</div><h3>Fresh</h3><p>Local browser state. No seeded business data.</p></div><div class="card"><div class="muted">DATE SOURCE</div><h3>System clock</h3><p>The date shown by this app comes from the user's browser clock.</p></div></div>'}
-function list(items,emptyTitle,emptyText){if(!items.length)return '<div class="empty"><strong>'+emptyTitle+'</strong>'+emptyText+'</div>';return '<div class="list">'+items.map((x,i)=>'<div class="row"><div><h3>'+esc(x.name||x.text)+'</h3><p>'+esc(x.description||x.notes||x.details||((x.at)?new Date(x.at).toLocaleString():""))+'</p></div><span class="pill">'+esc(x.status||"Recorded")+'</span></div>').join("")+'</div>'}
-function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
 function bind(view){
  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>render(b.dataset.go));
- document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>{const a=b.dataset.action;if(a==="new-project")document.getElementById("main").innerHTML=projectForm();if(a==="new-opportunity")document.getElementById("main").innerHTML=opportunityForm();if(a==="new-connection")document.getElementById("main").innerHTML=connectionForm();if(a==="cancel")render(view);if(a==="clear-activity"){state.activity=[];save();render("activity");}});
- const pf=document.getElementById("projectForm");if(pf)pf.onsubmit=e=>{e.preventDefault();const f=new FormData(pf);const name=String(f.get("name")).trim();if(!name)return;state.projects.unshift({name,description:String(f.get("description")).trim(),status:String(f.get("status")),createdAt:new Date().toISOString()});log("Created project: "+name);toast("Project created");render("projects")};
- const of=document.getElementById("oppForm");if(of)of.onsubmit=e=>{e.preventDefault();const f=new FormData(of);const name=String(f.get("name")).trim();if(!name)return;state.opportunities.unshift({name,notes:String(f.get("notes")).trim(),createdAt:new Date().toISOString()});log("Added opportunity: "+name);toast("Opportunity saved");render("opportunities")};
- const cf=document.getElementById("connForm");if(cf)cf.onsubmit=e=>{e.preventDefault();const f=new FormData(cf);const name=String(f.get("name")).trim();if(!name)return;state.connections.unshift({name,details:String(f.get("details")).trim(),status:"Recorded",createdAt:new Date().toISOString()});log("Recorded connection: "+name);toast("Connection recorded");render("connections")};
+ document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>{
+   const a=b.dataset.action;
+   if(a==="new-project"){document.getElementById("main").innerHTML=projectForm();bind(view);}
+   if(a==="new-opportunity"){document.getElementById("main").innerHTML=opportunityForm();bind(view);}
+   if(a==="new-connection"){document.getElementById("main").innerHTML=connectionForm();bind(view);}
+   if(a==="cancel")render(view);
+   if(a==="clear-activity"){state.activity=[];save();render("activity");}
+ });
+ const pf=document.getElementById("projectForm");
+ if(pf)pf.onsubmit=e=>{e.preventDefault();const f=new FormData(pf),name=String(f.get("name")).trim();if(!name)return;state.projects.unshift({name:name,description:String(f.get("description")).trim(),status:String(f.get("status")),createdAt:new Date().toISOString()});log("Created project: "+name);toast("Project created");render("projects");};
+ const of=document.getElementById("oppForm");
+ if(of)of.onsubmit=e=>{e.preventDefault();const f=new FormData(of),name=String(f.get("name")).trim();if(!name)return;state.opportunities.unshift({name:name,notes:String(f.get("notes")).trim(),createdAt:new Date().toISOString()});log("Added opportunity: "+name);toast("Opportunity saved");render("opportunities");};
+ const cf=document.getElementById("connForm");
+ if(cf)cf.onsubmit=e=>{e.preventDefault();const f=new FormData(cf),name=String(f.get("name")).trim();if(!name)return;state.connections.unshift({name:name,details:String(f.get("details")).trim(),status:"Recorded",createdAt:new Date().toISOString()});log("Recorded connection: "+name);toast("Connection recorded");render("connections");};
 }
-async function sendToHudHud(message){const status=document.getElementById("brainStatus");try{status.textContent="Connecting to local GPT4All…";const r=await fetch("http://127.0.0.1:4891/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"Llama 3.2 1B Instruct",messages:[{role:"system",content:"You are HudHud, a concise AI command assistant for Elmi Inc. Do not invent dates, projects, connections, actions, or facts. If you do not know something, say so."},{role:"user",content:message}],stream:false})});if(!r.ok)throw new Error("Local brain returned "+r.status);const data=await r.json();const reply=data?.choices?.[0]?.message?.content?.trim();if(!reply)throw new Error("No response");addMessage("HudHud",reply,"hud");status.textContent="LOCAL GPT4All • connected"}catch(e){status.textContent="LOCAL GPT4All • unavailable on this browser";addMessage("HudHud","My local AI brain is not reachable from this browser right now. I won't pretend it is connected. Once GPT4All is reachable here, I'll respond using the local model.","hud")}}
-function addMessage(who,text,kind){const box=document.getElementById("messages");if(!box)return;const d=document.createElement("div");d.className="message "+kind;const b=document.createElement("b");b.textContent=who;const s=document.createElement("span");s.textContent=text;d.append(b,s);box.appendChild(d);box.scrollTop=box.scrollHeight}
-function bindChat(){const form=document.getElementById("chatForm");if(!form)return;const input=document.getElementById("chatInput");form.onsubmit=async e=>{e.preventDefault();const message=input.value.trim();if(!message)return;addMessage("You",message,"user");input.value="";log("Sent message to HudHud: "+message);await sendToHudHud(message)};fetch("http://127.0.0.1:4891/v1/models").then(r=>{if(!r.ok)throw 0;document.getElementById("brainStatus").textContent="LOCAL GPT4All • available"}).catch(()=>{document.getElementById("brainStatus").textContent="LOCAL GPT4All • not reachable from this browser"})}
-document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>render(b.dataset.view));
-render("home");
+
+function addMessage(who,text,kind){
+ const box=document.getElementById("messages");if(!box)return;
+ const d=document.createElement("div");d.className="message "+kind;
+ const b=document.createElement("b");b.textContent=who;
+ const s=document.createElement("span");s.textContent=text;
+ d.appendChild(b);d.appendChild(s);box.appendChild(d);box.scrollTop=box.scrollHeight;
+}
+async function sendToHudHud(message){
+ const status=document.getElementById("brainStatus");
+ try{
+   status.textContent="Connecting to local GPT4All…";
+   const r=await fetch("http://127.0.0.1:4891/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"Llama 3.2 1B Instruct",messages:[{role:"system",content:"You are HudHud, a concise AI command assistant for Elmi Inc. Do not invent dates, projects, connections, actions, or facts."},{role:"user",content:message}],stream:false})});
+   if(!r.ok)throw new Error("HTTP "+r.status);
+   const data=await r.json(),reply=data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;
+   if(!reply)throw new Error("No response");
+   addMessage("HudHud",reply.trim(),"hud");status.textContent="LOCAL GPT4All • connected";
+ }catch(e){
+   status.textContent="LOCAL GPT4All • unavailable";
+   addMessage("HudHud","My local AI brain is not reachable from this browser right now. I won't pretend it is connected.","hud");
+ }
+}
+function bindChat(){
+ const form=document.getElementById("chatForm");if(!form)return;
+ const input=document.getElementById("chatInput");
+ form.onsubmit=async e=>{e.preventDefault();const message=input.value.trim();if(!message)return;addMessage("You",message,"user");input.value="";log("Sent message to HudHud: "+message);await sendToHudHud(message);};
+ const status=document.getElementById("brainStatus");
+ fetch("http://127.0.0.1:4891/v1/models").then(r=>{if(!r.ok)throw 0;status.textContent="LOCAL GPT4All • available";}).catch(()=>status.textContent="LOCAL GPT4All • not reachable");
+}
+
+function init(){
+ const today=document.getElementById("today");if(today)today.textContent=nowLabel();
+ document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>render(b.dataset.view)));
+ render("home");
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
+})();
