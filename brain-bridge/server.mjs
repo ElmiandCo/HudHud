@@ -80,6 +80,26 @@ const server = http.createServer(async (req, res) => {
     const body = JSON.parse(await readBody(req));
     const message = typeof body.message === "string" ? body.message.trim() : "";
 
+    // Deterministic identity answers: keep HudHud's core identity out of the small local model's hands.
+    const normalized = message.toLowerCase().replace(/[^a-z0-9\s?]/g, " ").replace(/\s+/g, " ").trim();
+    const identityQuestions = [
+      "what is your name",
+      "whats your name",
+      "who are you",
+      "what are you called",
+      "why are you called hudhud",
+      "why is your name hudhud",
+      "where does the name hudhud come from",
+      "what does hudhud mean"
+    ];
+
+    if (identityQuestions.includes(normalized)) {
+      return send(res, 200, {
+        reply:
+          "My name is HudHud. 🦉 I’m named after the hudhud—the hoopoe mentioned in the Qur’an in Surah An-Naml. In the story, I brought Prophet Sulayman information from Saba’. My purpose is inspired by that role: observe, discover, verify, and bring useful information back to you. Chirp."
+      });
+    }
+
     if (!message) {
       return send(res, 400, { error: "Message is required." });
     }
