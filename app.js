@@ -10,6 +10,7 @@ let supabaseReady=null;
 let authMode="signin";
 let pendingView=null;
 let legacyWorkspace=null;
+let pendingWorkspaceMessage=null;
 
 function load(){
   try { return Object.assign({},initial,JSON.parse(localStorage.getItem(KEY)||"{}")); }
@@ -59,6 +60,7 @@ async function handleAuthSession(session){
      showImportPrompt();
    }
    if(pendingView){const v=pendingView;pendingView=null;render(v);}
+   if(pendingWorkspaceMessage){const m=pendingWorkspaceMessage;pendingWorkspaceMessage=null;setTimeout(()=>sendToHudHud(m),0);}
  }
 }
 async function loadCloudState(){
@@ -504,11 +506,20 @@ function handleWorkspaceCommand(message){
  return {reply:"Done. I created the project “"+name+"” with status “"+status+"”. It is now in Projects."};
 }
 
+function requiresWorkspaceAuth(message){
+ return /\b(?:create|add|update|change|set)\b[\s\S]*\b(?:project|opportunity|connection)\b/i.test(String(message||""));
+}
 async function sendToHudHud(message){
  const status=document.getElementById("brainStatus");
  const endpoint="/api/hudhud";
  try{
    status.innerHTML='<span class="thinking-feather" aria-hidden="true">🪶</span><span>HudHud is thinking…</span>';
+   if(!currentUser&&requiresWorkspaceAuth(message)){
+     pendingWorkspaceMessage=message;
+     showAuthModal("signin");
+     status.textContent="HUDHUD • sign in required for workspace actions";
+     return;
+   }
    const workspaceAction=handleWorkspaceCommand(message);
    if(workspaceAction){
      addMessage("HudHud",workspaceAction.reply,"hud");
