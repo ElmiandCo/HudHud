@@ -24,6 +24,14 @@ function list(items,title,desc){
 }
 function projects(){return '<div class="section-head"><div><h2>Projects</h2><span class="muted">Start from zero.</span></div><button class="primary" data-action="new-project">＋ New project</button></div>'+list(state.projects,"No projects yet.","Create the first project and HudHud will keep it here.");}
 function opportunities(){return '<div class="section-head"><div><h2>Opportunities</h2><span class="muted">Empty until you add something.</span></div><button class="primary" data-action="new-opportunity">＋ Add opportunity</button></div>'+list(state.opportunities,"No opportunities yet.","Only real opportunities go here.");}
+function tools(){return '<div class="section-head"><div><h2>Tools</h2><span class="muted">HudHud\'s action layer — capabilities are separated from the brain.</span></div></div><div class="tool-grid">'+[
+['GitHub','Code, repositories, issues, pull requests','READ + WRITE','Ready to wire'],
+['Vercel','Projects, deployments, build status','READ + DEPLOY','Ready to wire'],
+['Supabase','Database, auth, storage, Edge Functions','READ + WRITE','Ready to wire'],
+['OpenClaw','Browser and computer-side actions','ACTION','Local bridge'],
+['Files','Documents, project knowledge, memory','READ + WRITE','Planned'],
+['Web','Fresh information and research','READ','Planned']
+].map(x=>'<div class="tool-card"><div class="tool-top"><span class="tool-icon">✦</span><span class="tool-state">'+esc(x[3])+'</span></div><h3>'+esc(x[0])+'</h3><p>'+esc(x[1])+'</p><div class="tool-bottom"><span>'+esc(x[2])+'</span><span class="tool-dot"></span></div></div>').join('')+'</div><div class="card tool-note"><div class="muted">HUDHUD TOOL ROUTER</div><h3>One brain. Many tools.</h3><p>HudHud will decide which connection to use, execute the permitted action, inspect the result, and continue until the task is complete.</p></div>';}
 function connections(){return '<div class="section-head"><div><h2>Connections</h2><span class="muted">Only recorded connections appear here.</span></div><button class="primary" data-action="new-connection">＋ Add connection</button></div>'+list(state.connections,"No connections recorded.","Add the systems HudHud is actually connected to.");}
 function documents(){return '<div class="section-head"><div><h2>Documents</h2><span class="muted">Fresh workspace — no documents loaded.</span></div></div><div class="empty"><strong>No documents.</strong>The file layer comes later.</div>';}
 function activity(){return '<div class="section-head"><div><h2>Activity</h2><span class="muted">Real actions from this browser.</span></div><button class="danger" data-action="clear-activity">Clear activity</button></div>'+list(state.activity,"No activity yet.","Your real actions will appear here.");}
@@ -37,7 +45,7 @@ function render(view){
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
- const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,documents:documents,activity:activity,core:core};
+ const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,documents:documents,activity:activity,core:core};
  m.innerHTML=(pages[view]||home)();
  bind(view);
  if(view==="home") bindChat();
@@ -92,7 +100,7 @@ function bindChat(){
  const input=document.getElementById("chatInput");
  form.onsubmit=async e=>{e.preventDefault();const message=input.value.trim();if(!message)return;addMessage("You",message,"user");input.value="";log("Sent message to HudHud: "+message);await sendToHudHud(message);};
  const status=document.getElementById("brainStatus");
- fetch("http://127.0.0.1:4891/v1/models").then(r=>{if(!r.ok)throw 0;status.textContent="LOCAL GPT4All • available";}).catch(()=>status.textContent="LOCAL GPT4All • not reachable");
+ status.textContent="HUDHUD • ready";
 }
 
 function applyTheme(theme){document.documentElement.dataset.theme=theme;localStorage.setItem("hudhud_theme",theme);}
