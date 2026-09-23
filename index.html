@@ -1,12 +1,47 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>HudHud Command Center</title><meta name="description" content="HudHud — personal AI command center."><link rel="stylesheet" href="styles.css"></head>
-<body><div class="shell"><aside><div class="brand"><div class="bird">🦉</div><div><strong>HUDHUD</strong><span>COMMAND CENTER</span></div></div><nav><a class="active" href="#home">⌂ Command Center</a><a href="#brain">◉ Brain</a><a href="#projects">▣ Projects</a><a href="#opportunities">◇ Opportunities</a><a href="#connections">⌁ Connections</a><a href="#documents">▤ Documents</a><a href="#activity">◷ Activity</a><a href="#core">⚙ HudHud Core</a></nav><div class="presence"><i></i><div><b>HUDHUD CORE</b><small>LOCAL BRAIN READY</small></div></div></aside>
-<main><header><div><small class="eyebrow">ELMI INC. • AI OPERATING SYSTEM</small><h1>Good evening, Mr. Elmi.</h1><p>HudHud is becoming your command center.</p></div><div class="status"><i></i> SYSTEM ONLINE</div></header>
-<section class="hero" id="home"><div><span class="tag">🦉 HUDHUD</span><h2>One place to see what matters.</h2><p>Projects, opportunities, deadlines, documents and connections — organized around an AI that can grow with the operation.</p><button onclick="document.querySelector('#brain').scrollIntoView({behavior:'smooth'})">Open HudHud Brain →</button></div><div class="orb"><div class="orb-ring"></div><div class="orb-core">HUD<br><span>HUD</span></div></div></section>
-<section class="grid" id="brain"><article class="card brain-card"><div class="card-head"><span>🧠</span><b>HudHud Brain</b><em>LOCAL</em></div><h3>Llama 3.2 1B Instruct</h3><p>Connected through GPT4All on the local Mac. The model is responding; the web command layer is the next connection.</p><div class="meter"><span style="width:72%"></span></div><small>Brain transport • Local OpenAI-compatible API</small></article>
-<article class="card"><div class="card-head"><span>🚀</span><b>Projects</b><em>0 ACTIVE</em></div><h3>Project control</h3><p>Launch, track and operate software projects from one place.</p><a href="#projects">Open Projects →</a></article>
-<article class="card"><div class="card-head"><span>🎯</span><b>Opportunities</b><em>READY</em></div><h3>Find the next move</h3><p>Capture contracts, leads and pursuits before they disappear.</p><a href="#opportunities">Open Pipeline →</a></article>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HudHud HQ</title><meta name="description" content="HudHud — AI command headquarters for Elmi Inc."><link rel="stylesheet" href="styles.css"></head>
+<body>
+<div class="shell">
+<aside>
+  <div class="brand"><div class="bird">🦉</div><div><strong>HUDHUD</strong><span>HEADQUARTERS</span></div></div>
+  <nav>
+    <a class="active" href="#home">⌂ Command Center</a><a href="#brain">◉ Brain</a><a href="#projects">▣ Projects</a>
+    <a href="#opportunities">◇ Opportunities</a><a href="#connections">⌁ Connections</a><a href="#documents">▤ Documents</a>
+    <a href="#activity">◷ Activity</a><a href="#core">⚙ HudHud Core</a>
+  </nav>
+  <div class="presence"><i></i><div><b>HUDHUD CORE</b><small>SYSTEM ONLINE</small></div></div>
+</aside>
+<main>
+<header><div><small class="eyebrow">ELMI INC. • AI OPERATING SYSTEM</small><h1>Good evening, Mr. Elmi.</h1><p>Your operation, organized around HudHud.</p></div><div class="status"><i></i> ONLINE</div></header>
+
+<section class="hero" id="home"><div><span class="tag">🦉 HUDHUD HQ</span><h2>The command center for everything you're building.</h2>
+<p>Projects, opportunities, deadlines, documents, connections and the AI layer that will eventually operate them.</p>
+<div class="actions"><button onclick="scrollToId('projects')">Launch a Project →</button><button class="ghost" onclick="scrollToId('brain')">Open Brain</button></div></div>
+<div class="orb"><div class="orb-ring"></div><div class="orb-core">HUD<br><span>HUD</span></div></div></section>
+
+<section class="stats">
+<div class="stat"><small>PROJECTS</small><strong>0</strong><span>Ready to launch</span></div><div class="stat"><small>OPPORTUNITIES</small><strong>0</strong><span>Pipeline ready</span></div>
+<div class="stat"><small>CONNECTIONS</small><strong>3</strong><span>GitHub • Vercel • OpenClaw</span></div><div class="stat"><small>BRAIN</small><strong>LOCAL</strong><span>GPT4All bridge</span></div>
 </section>
-<section class="wide card" id="projects"><div class="card-head"><span>▣</span><b>Project Launchpad</b><em>HUDHUD CONTROL</em></div><div class="empty"><strong>No projects connected yet.</strong><span>HudHud will be able to create a project record, connect GitHub/Vercel/Supabase, establish milestones and begin monitoring.</span><button>＋ Launch a Project</button></div></section>
-<section class="wide card" id="core"><div class="card-head"><span>⚙</span><b>HudHud Core</b><em>BUILDING</em></div><div class="core-grid"><div><small>IDENTITY</small><strong>HudHud</strong></div><div><small>ROLE</small><strong>AI Command Agent</strong></div><div><small>LOCAL MODEL</small><strong>Llama 3.2 1B</strong></div><div><small>RUNTIME</small><strong>OpenClaw</strong></div></div></section>
-<footer>HUDHUD • Built for Elmi Inc. • <span>v0.1 Command Center</span></footer></main></div><script src="app.js"></script></body></html>
+
+<section class="grid" id="brain">
+<article class="card brain-card"><div class="card-head"><span>🧠</span><b>HudHud Brain</b><em>LOCAL</em></div><h3>GPT4All</h3>
+<p>Local inference is available on the Mac. HudHud's web command layer is being built separately from the local model so the architecture can grow.</p>
+<div class="signal"><i></i><b>LOCAL API</b><span>127.0.0.1:4891</span></div><div class="meter"><span></span></div><small>Current local models: Phi-3 Mini Instruct • Llama 3.2 1B Instruct</small></article>
+<article class="card" id="opportunities"><div class="card-head"><span>🎯</span><b>Opportunities</b><em>READY</em></div><h3>Capture the next move</h3><p>Contracts, leads, RFPs and pursuits will live here instead of scattered across systems.</p><button class="text-btn" onclick="notify('Opportunity workspace coming next.')">Open Pipeline →</button></article>
+<article class="card" id="connections"><div class="card-head"><span>⌁</span><b>Connections</b><em>3 ACTIVE</em></div><h3>Connected systems</h3><div class="connection"><i></i>GitHub <span>CONNECTED</span></div><div class="connection"><i></i>Vercel <span>CONNECTED</span></div><div class="connection"><i></i>OpenClaw <span>LOCAL</span></div></article>
+</section>
+
+<section class="wide card" id="projects"><div class="card-head"><span>▣</span><b>Project Launchpad</b><em>HUDHUD CONTROL</em></div>
+<div class="empty"><strong>Ready for the first project.</strong><span>Launch a project from HudHud, then connect its repository, deployment, database, documents, milestones and monitoring.</span><button onclick="launchProject()">＋ Launch a Project</button></div></section>
+
+<section class="wide card" id="documents"><div class="card-head"><span>▤</span><b>Documents</b><em>0 CONNECTED</em></div><div class="empty compact"><strong>Document intelligence will live here.</strong><span>Contracts, proposals, resumes, project files and reference material will become searchable context for HudHud.</span></div></section>
+
+<section class="wide card" id="activity"><div class="card-head"><span>◷</span><b>Activity</b><em>LIVE LAYER</em></div><div id="activityFeed" class="feed"><div><i></i><span><b>HudHud HQ</b> initialized</span><small>NOW</small></div><div><i></i><span><b>GitHub</b> repository connected</span><small>READY</small></div><div><i></i><span><b>Vercel</b> deployment pipeline recognized</span><small>READY</small></div></div></section>
+
+<section class="wide card" id="core"><div class="card-head"><span>⚙</span><b>HudHud Core</b><em>BUILDING</em></div>
+<div class="core-grid"><div><small>IDENTITY</small><strong>HudHud</strong></div><div><small>ROLE</small><strong>AI Command Agent</strong></div><div><small>MISSION</small><strong>Operate the HQ</strong></div><div><small>RUNTIME</small><strong>OpenClaw</strong></div></div></section>
+<footer>HUDHUD HQ • ELMI INC. • <span>v0.2 Command Center</span></footer>
+</main></div>
+<div id="toast" class="toast"></div><script src="app.js"></script></body></html>
