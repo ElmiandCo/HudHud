@@ -84,13 +84,13 @@ function addMessage(who,text,kind){
 }
 function handleWorkspaceCommand(message){
  const text=String(message||"").trim();
- const createMatch=text.match(/\\b(?:create|add)\\s+(?:a\\s+)?(?:new\\s+)?project\\s+(?:called|named|titled)\\s+[“"']([^”"']+)[”"']/i);
- const looseMatch=text.match(/\\b(?:create|add)\\s+(?:a\\s+)?(?:new\\s+)?project\\s+(?:called|named|titled)\\s+(.+?)(?:\\s+(?:here|on this site|to this site))?$/i);
+ const createMatch=text.match(/\b(?:create|add)\s+(?:a\s+)?(?:new\s+)?project\s+(?:called|named|titled)\s+[“"']([^”"']+)[”"']/i);
+ const looseMatch=text.match(/\b(?:create|add)\s+(?:a\s+)?(?:new\s+)?project\s+(?:called|named|titled)\s+(.+?)(?:\s+(?:here|on this site|to this site))?$/i);
  const match=createMatch||looseMatch;
  if(!match)return null;
  let name=String(match[1]).trim().replace(/[.?!]+$/,"");
  if(!name)return null;
- const statusMatch=text.match(/\\bstatus\\s*[:=]?\\s*(planning|active|on hold)\\b/i);
+ const statusMatch=text.match(/\bstatus\s*[:=]?\s*(planning|active|on hold)\b/i);
  const rawStatus=statusMatch?statusMatch[1].toLowerCase():"planning";
  const status=rawStatus==="active"?"Active":rawStatus==="on hold"?"On hold":"Planning";
  const project={id:"project_"+Date.now(),name:name,description:"Created from the HudHud command center.",status:status,createdAt:new Date().toISOString()};
