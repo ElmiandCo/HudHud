@@ -71,22 +71,20 @@ function addMessage(who,text,kind){
 }
 async function sendToHudHud(message){
  const status=document.getElementById("brainStatus");
- const endpoint="http://127.0.0.1:4891/v1/chat/completions";
- const model="Llama 3.2 1B Instruct";
+ const endpoint="/api/hudhud";
  try{
-   status.textContent="Connecting to GPT4All at 127.0.0.1:4891…";
-   const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:model,messages:[{role:"system",content:"You are HudHud, a concise AI command assistant for Elmi Inc. Do not invent dates, projects, connections, actions, or facts."},{role:"user",content:message}],stream:false})});
+   status.textContent="HudHud is thinking…";
+   const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:message})});
    const raw=await r.text();
-   if(!r.ok)throw new Error("GPT4All HTTP "+r.status+" "+r.statusText+(raw?" — "+raw.slice(0,500):""));
-   let data;try{data=JSON.parse(raw)}catch(e){throw new Error("GPT4All returned non-JSON: "+raw.slice(0,500));}
-   const reply=data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;
-   if(!reply)throw new Error("GPT4All returned HTTP 200 but no assistant message. Raw response: "+raw.slice(0,500));
-   addMessage("HudHud",reply.trim(),"hud");status.textContent="GPT4All • "+model+" • connected";
+   let data={};try{data=JSON.parse(raw)}catch(e){}
+   if(!r.ok)throw new Error(data.error||("HudHud API HTTP "+r.status));
+   if(!data.reply)throw new Error("HudHud API returned no reply");
+   addMessage("HudHud",data.reply.trim(),"hud");
+   status.textContent="HUDHUD • connected";
  }catch(e){
-   const detail=e&&e.message?e.message:String(e);
-   status.textContent="GPT4All connection failed";
-   addMessage("SYSTEM","REAL CONNECTION ERROR: "+detail,"hud");
-   console.error("HudHud GPT4All request failed",{endpoint:endpoint,model:model,error:e});
+   status.textContent="HUDHUD • connection unavailable";
+   addMessage("SYSTEM","HudHud API: "+(e&&e.message?e.message:String(e)),"hud");
+   console.error("HudHud API request failed",e);
  }
 }
 function bindChat(){
