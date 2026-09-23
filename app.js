@@ -70,16 +70,22 @@ function addMessage(who,text,kind){
 }
 async function sendToHudHud(message){
  const status=document.getElementById("brainStatus");
+ const endpoint="http://127.0.0.1:4891/v1/chat/completions";
+ const model="Llama 3.2 1B Instruct";
  try{
-   status.textContent="Connecting to local GPT4All…";
-   const r=await fetch("http://127.0.0.1:4891/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"Llama 3.2 1B Instruct",messages:[{role:"system",content:"You are HudHud, a concise AI command assistant for Elmi Inc. Do not invent dates, projects, connections, actions, or facts."},{role:"user",content:message}],stream:false})});
-   if(!r.ok)throw new Error("HTTP "+r.status);
-   const data=await r.json(),reply=data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;
-   if(!reply)throw new Error("No response");
-   addMessage("HudHud",reply.trim(),"hud");status.textContent="LOCAL GPT4All • connected";
+   status.textContent="Connecting to GPT4All at 127.0.0.1:4891…";
+   const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:model,messages:[{role:"system",content:"You are HudHud, a concise AI command assistant for Elmi Inc. Do not invent dates, projects, connections, actions, or facts."},{role:"user",content:message}],stream:false})});
+   const raw=await r.text();
+   if(!r.ok)throw new Error("GPT4All HTTP "+r.status+" "+r.statusText+(raw?" — "+raw.slice(0,500):""));
+   let data;try{data=JSON.parse(raw)}catch(e){throw new Error("GPT4All returned non-JSON: "+raw.slice(0,500));}
+   const reply=data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;
+   if(!reply)throw new Error("GPT4All returned HTTP 200 but no assistant message. Raw response: "+raw.slice(0,500));
+   addMessage("HudHud",reply.trim(),"hud");status.textContent="GPT4All • "+model+" • connected";
  }catch(e){
-   status.textContent="LOCAL GPT4All • unavailable";
-   addMessage("HudHud","My local AI brain is not reachable from this browser right now. I won't pretend it is connected.","hud");
+   const detail=e&&e.message?e.message:String(e);
+   status.textContent="GPT4All connection failed";
+   addMessage("SYSTEM","REAL CONNECTION ERROR: "+detail,"hud");
+   console.error("HudHud GPT4All request failed",{endpoint:endpoint,model:model,error:e});
  }
 }
 function bindChat(){
