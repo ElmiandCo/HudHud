@@ -4,6 +4,12 @@
 const KEY="hudhud_hq_state_v1";
 const initial={projects:[],opportunities:[],connections:[],documents:[],activity:[]};
 let state=load();
+let supabaseClient=null;
+let currentUser=null;
+let supabaseReady=null;
+let authMode="signin";
+let pendingView=null;
+let legacyWorkspace=null;
 
 function load(){
   try { return Object.assign({},initial,JSON.parse(localStorage.getItem(KEY)||"{}")); }
@@ -12,11 +18,181 @@ function load(){
 function save(){ localStorage.setItem(KEY,JSON.stringify(state)); }
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function toast(s){const t=document.getElementById("toast");if(!t)return;t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200);}
-function log(text){state.activity.unshift({text:text,at:new Date().toISOString()});state.activity=state.activity.slice(0,50);save();}
+function log(text){const event={text:text,at:new Date().toISOString()};state.activity.unshift(event);state.activity=state.activity.slice(0,50);save();if(currentUser)cloudInsertActivity(text);}
 function nowLabel(){return new Intl.DateTimeFormat(undefined,{dateStyle:"medium"}).format(new Date());}
 
+async function initSupabase(){
+ if(supabaseReady)return supabaseReady;
+ supabaseReady=(async()=>{
+   const r=await fetch("/api/supabase-config",{cache:"no-store"});
+   const cfg=await r.json();
+   if(!r.ok)throw new Error(cfg.error||"Supabase configuration unavailable.");
+   if(!window.supabase?.createClient)throw new Error("Supabase browser client did not load.");
+   supabaseClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+   supabaseClient.auth.onAuthStateChange((event,session)=>{
+     setTimeout(()=>handleAuthSession(session),0);
+   });
+   const {data}=await supabaseClient.auth.getSession();
+   await handleAuthSession(data.session);
+   return supabaseClient;
+ })();
+ return supabaseReady;
+}
+function hasCloudUser(){return !!currentUser&&!!supabaseClient;}
+async function handleAuthSession(session){
+ const nextUser=session?.user||null;
+ if(!nextUser){
+   currentUser=null;
+   state=Object.assign({},initial,{projects:[],opportunities:[],connections:[],documents:[],activity:[]});
+   localStorage.removeItem(KEY);
+   updateAuthUI();
+   return;
+ }
+ const changed=!currentUser||currentUser.id!==nextUser.id;
+ currentUser=nextUser;
+ updateAuthUI();
+ if(changed){
+   const legacy=load();
+   await loadCloudState();
+   if(!state.projects.length&&!state.opportunities.length&&!state.connections.length&&(legacy.projects?.length||legacy.opportunities?.length||legacy.connections?.length)){
+     legacyWorkspace=legacy;
+     showImportPrompt();
+   }
+   if(pendingView){const v=pendingView;pendingView=null;render(v);}
+ }
+}
+async function loadCloudState(){
+ if(!hasCloudUser())return;
+ const uid=currentUser.id;
+ const [p,o,c,a]=await Promise.all([
+   supabaseClient.from("hudhud_projects").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
+   supabaseClient.from("hudhud_opportunities").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
+   supabaseClient.from("hudhud_connections").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
+   supabaseClient.from("hudhud_activity").select("*").eq("user_id",uid).order("created_at",{ascending:false}).limit(50)
+ ]);
+ const error=[p,o,c,a].find(x=>x.error)?.error;
+ if(error){console.error("HudHud cloud load failed",error);toast("Could not load your workspace");return;}
+ state.projects=(p.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
+ state.opportunities=(o.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
+ state.connections=(c.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
+ state.activity=(a.data||[]).map(x=>({text:x.text,at:x.created_at,id:x.id}));
+ save();
+}
+async function importLegacyWorkspace(){
+ if(!hasCloudUser()||!legacyWorkspace)return;
+ const l=legacyWorkspace;
+ const projects=(l.projects||[]).map(x=>({user_id:currentUser.id,name:x.name,description:x.description||"",status:x.status==="Done"?"Done":x.status||"Planning",steps:Array.isArray(x.steps)?x.steps:[],pre_done_status:x.preDoneStatus||null,created_at:x.createdAt||new Date().toISOString(),updated_at:x.updatedAt||x.createdAt||new Date().toISOString()}));
+ const opportunities=(l.opportunities||[]).map(x=>({user_id:currentUser.id,name:x.name,description:x.description||x.notes||"",status:x.status==="Done"?"Done":x.status||"Open",steps:Array.isArray(x.steps)?x.steps:[],pre_done_status:x.preDoneStatus||null,created_at:x.createdAt||new Date().toISOString(),updated_at:x.updatedAt||x.createdAt||new Date().toISOString()}));
+ const connections=(l.connections||[]).map(x=>({user_id:currentUser.id,name:x.name,details:x.details||"",status:x.status||"Recorded",created_at:x.createdAt||new Date().toISOString(),updated_at:x.updatedAt||x.createdAt||new Date().toISOString()}));
+ if(projects.length)await supabaseClient.from("hudhud_projects").insert(projects);
+ if(opportunities.length)await supabaseClient.from("hudhud_opportunities").insert(opportunities);
+ if(connections.length)await supabaseClient.from("hudhud_connections").insert(connections);
+ await loadCloudState();
+ legacyWorkspace=null;
+ closeAuthModal();
+ toast("Existing workspace imported");
+}
+async function cloudInsertProject(item){
+ if(!hasCloudUser())return true;
+ const {error}=await supabaseClient.from("hudhud_projects").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt});
+ if(error){toast("Project save failed");console.error(error);return false;} return true;
+}
+async function cloudUpdateProject(item){
+ if(!hasCloudUser())return true;
+ const {error}=await supabaseClient.from("hudhud_projects").update({name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,updated_at:item.updatedAt||new Date().toISOString()}).eq("id",item.id).eq("user_id",currentUser.id);
+ if(error){toast("Project update failed");console.error(error);return false;} return true;
+}
+async function cloudInsertOpportunity(item){
+ if(!hasCloudUser())return true;
+ const {error}=await supabaseClient.from("hudhud_opportunities").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt});
+ if(error){toast("Opportunity save failed");console.error(error);return false;} return true;
+}
+async function cloudUpdateOpportunity(item){
+ if(!hasCloudUser())return true;
+ const {error}=await supabaseClient.from("hudhud_opportunities").update({name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,updated_at:item.updatedAt||new Date().toISOString()}).eq("id",item.id).eq("user_id",currentUser.id);
+ if(error){toast("Opportunity update failed");console.error(error);return false;} return true;
+}
+async function cloudInsertConnection(item){
+ if(!hasCloudUser())return true;
+ const {error}=await supabaseClient.from("hudhud_connections").insert({user_id:currentUser.id,name:item.name,details:item.details||"",status:item.status||"Recorded",created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt});
+ if(error){toast("Connection save failed");console.error(error);return false;} return true;
+}
+async function cloudInsertActivity(textValue){
+ if(!hasCloudUser())return;
+ const {error}=await supabaseClient.from("hudhud_activity").insert({user_id:currentUser.id,text:textValue});
+ if(error)console.error("Activity save failed",error);
+}
+function updateAuthUI(){
+ const buttons=document.querySelectorAll("[data-auth-start]");
+ buttons.forEach(b=>{b.textContent=currentUser?"Open Workspace":"Get Started";});
+ const top=document.querySelector(".auth-user");
+ if(top)top.textContent=currentUser?(currentUser.email||"Signed in"):"";
+}
+function authModalHtml(){
+ return '<div class="auth-backdrop" data-auth-close></div><div class="auth-dialog" role="dialog" aria-modal="true"><button class="auth-close" data-auth-close>×</button><div class="eyebrow">HUDHUD ACCOUNT</div><h2>'+ (authMode==="signin"?"Welcome back":"Create your HudHud account") +'</h2><p class="auth-subtitle">'+(authMode==="signin"?"Sign in to access your private workspace.":"Create an account so your workspace belongs to you.")+'</p><div class="auth-tabs"><button class="'+(authMode==="signin"?"active":"")+'" data-auth-mode="signin">Sign in</button><button class="'+(authMode==="signup"?"active":"")+'" data-auth-mode="signup">Create account</button></div><form id="authForm"><label>Email</label><input name="email" type="email" autocomplete="email" required placeholder="you@example.com"><label>Password</label><input name="password" type="password" autocomplete="'+(authMode==="signin"?"current-password":"new-password")+'" minlength="6" required placeholder="At least 6 characters">'+(authMode==="signup"?'<label>Confirm password</label><input name="confirm" type="password" autocomplete="new-password" minlength="6" required placeholder="Repeat your password">':"")+'<div id="authError" class="auth-error"></div><button class="primary auth-submit" type="submit">'+(authMode==="signin"?"Sign in":"Create account")+'</button></form><div class="auth-footer">'+(authMode==="signin"?"New to HudHud?":"Already have an account?")+' <button type="button" data-auth-mode="'+(authMode==="signin"?"signup":"signin")+'">'+(authMode==="signin"?"Create an account":"Sign in")+'</button></div></div>';
+}
+function showAuthModal(mode="signin"){
+ authMode=mode;
+ const modal=document.getElementById("authModal");if(!modal)return;
+ modal.innerHTML=authModalHtml();modal.classList.add("show");modal.setAttribute("aria-hidden","false");
+ bindAuthModal();
+}
+function closeAuthModal(){
+ const modal=document.getElementById("authModal");if(!modal)return;
+ modal.classList.remove("show");modal.setAttribute("aria-hidden","true");
+}
+function bindAuthModal(){
+ const modal=document.getElementById("authModal");
+ modal.querySelectorAll("[data-auth-close]").forEach(b=>b.onclick=closeAuthModal);
+ modal.querySelectorAll("[data-auth-mode]").forEach(b=>b.onclick=()=>showAuthModal(b.dataset.authMode));
+ const form=modal.querySelector("#authForm");
+ if(form)form.onsubmit=async e=>{
+   e.preventDefault();
+   const f=new FormData(form),email=String(f.get("email")).trim(),password=String(f.get("password"));
+   const errorEl=modal.querySelector("#authError"),submit=modal.querySelector(".auth-submit");
+   if(errorEl)errorEl.textContent="";
+   if(authMode==="signup"&&password!==String(f.get("confirm"))){if(errorEl)errorEl.textContent="Passwords do not match.";return;}
+   submit.disabled=true;submit.textContent=authMode==="signin"?"Signing in…":"Creating account…";
+   try{
+     await initSupabase();
+     const result=authMode==="signin"
+       ?await supabaseClient.auth.signInWithPassword({email,password})
+       :await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin}});
+     if(result.error)throw result.error;
+     if(authMode==="signup"&&!result.data.session){
+       if(errorEl)errorEl.textContent="Account created. Check your email to confirm your account, then sign in.";
+       submit.disabled=false;submit.textContent="Create account";return;
+     }
+     closeAuthModal();
+     toast("Signed in");
+   }catch(err){if(errorEl)errorEl.textContent=err.message||"Authentication failed.";submit.disabled=false;submit.textContent=authMode==="signin"?"Sign in":"Create account";}
+ };
+}
+function showImportPrompt(){
+ const modal=document.getElementById("authModal");if(!modal||!legacyWorkspace)return;
+ const p=legacyWorkspace.projects?.length||0,o=legacyWorkspace.opportunities?.length||0,c=legacyWorkspace.connections?.length||0;
+ modal.innerHTML='<div class="auth-backdrop"></div><div class="auth-dialog import-dialog"><div class="eyebrow">WORKSPACE FOUND</div><h2>Import your existing workspace?</h2><p class="auth-subtitle">HudHud found '+p+' project(s), '+o+' opportunity(ies), and '+c+' connection(s) stored on this browser. Import them into your signed-in account?</p><div class="form-actions"><button class="primary" data-import-workspace>Import workspace</button><button class="secondary" data-skip-import>Start fresh</button></div></div>';
+ modal.classList.add("show");modal.setAttribute("aria-hidden","false");
+ modal.querySelector("[data-import-workspace]").onclick=async b=>{b.currentTarget.disabled=true;b.currentTarget.textContent="Importing…";await importLegacyWorkspace();};
+ modal.querySelector("[data-skip-import]").onclick=()=>{legacyWorkspace=null;closeAuthModal();localStorage.removeItem(KEY);};
+}
+function requireAuth(view){
+ if(currentUser)return true;
+ pendingView=view;
+ showAuthModal("signin");
+ return false;
+}
+async function signOut(){
+ if(supabaseClient)await supabaseClient.auth.signOut();
+ currentUser=null;
+ state=Object.assign({},initial,{projects:[],opportunities:[],connections:[],documents:[],activity:[]});
+ localStorage.removeItem(KEY);
+ toast("Signed out");
+ render("home");
+}
+
 function home(){
-return '<section class="hero"><span class="eyebrow">HUDHUD CONVERSATION</span><h1>Welcome home.</h1><p>Talk to HudHud here. Your local AI connection is shown honestly below.</p><div class="chat card"><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div></section><section class="grid" style="margin-top:45px"><div class="card"><div class="muted">PROJECTS</div><div class="metric">'+state.projects.length+'</div><div class="muted">Created in this workspace</div></div><div class="card"><div class="muted">OPPORTUNITIES</div><div class="metric">'+state.opportunities.length+'</div><div class="muted">Added by you</div></div><div class="card"><div class="muted">ACTIVITY</div><div class="metric">'+state.activity.length+'</div><div class="muted">Real workspace events</div></div></section>';
+return '<section class="hero"><span class="eyebrow">HUDHUD CONVERSATION</span><h1>Welcome home.</h1><p>Talk to HudHud here. Sign in to create and manage your own private projects, opportunities and connections.</p><div class="actions"><button class="primary" data-auth-start>Get Started</button></div><div class="chat card"><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div></section><section class="grid" style="margin-top:45px"><div class="card"><div class="muted">PROJECTS</div><div class="metric">'+state.projects.length+'</div><div class="muted">Created in this workspace</div></div><div class="card"><div class="muted">OPPORTUNITIES</div><div class="metric">'+state.opportunities.length+'</div><div class="muted">Added by you</div></div><div class="card"><div class="muted">ACTIVITY</div><div class="metric">'+state.activity.length+'</div><div class="muted">Real workspace events</div></div></section>';
 }
 function list(items,title,desc){
  if(!items.length)return '<div class="empty"><strong>'+title+'</strong>'+desc+'</div>';
@@ -170,13 +346,14 @@ function opportunityForm(){
 function connectionForm(){return '<div class="section-head"><h2>Add connection</h2></div><form class="card form" id="connForm"><label>System *</label><input name="name" required maxlength="80" placeholder="GitHub, Vercel, Supabase..."><label>Details</label><input name="details" maxlength="150"><div class="form-actions"><button class="primary">Save connection</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';}
 
 function render(view){
+ if(["projects","opportunities","connections","tools","studio","system","documents","activity","core"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
  const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system};
  m.innerHTML=(pages[view]||home)();
  bind(view);
- if(view==="home") bindChat();
+ if(view==="home") { bindChat(); bindHomeAuth(); }
  if(view==="core") bindThemeToggle();
  if(view==="studio") bindStudio();
  if(view==="system") bindSystem();
@@ -209,7 +386,10 @@ function bind(view){
    const count=Number(f.get("stepCount"))||1;
    const steps=Array.from({length:count},(_,i)=>({id:"step_"+Date.now()+"_"+i,name:String(f.get("step_"+i)||"").trim(),done:false}));
    if(steps.some(s=>!s.name)){toast("Name every project step");return;}
-   state.projects.unshift({id:"project_"+Date.now(),name,description,status:String(f.get("status")),steps,createdAt:new Date().toISOString()});
+   const item={id:"project_"+Date.now(),name,description,status:String(f.get("status")),steps,createdAt:new Date().toISOString()};
+   state.projects.unshift(item);
+   save();
+   if(!(await cloudInsertProject(item))){state.projects.shift();save();return;}
    log("Created project: "+name+" with "+steps.length+" steps");
    toast("Project created");
    render("projects");
@@ -222,13 +402,16 @@ function bind(view){
    const count=Number(f.get("stepCount"))||1;
    const steps=Array.from({length:count},(_,i)=>({id:"step_"+Date.now()+"_"+i,name:String(f.get("step_"+i)||"").trim(),done:false}));
    if(steps.some(s=>!s.name)){toast("Name every opportunity step");return;}
-   state.opportunities.unshift({id:"opportunity_"+Date.now(),name,description,status:String(f.get("status")),steps,createdAt:new Date().toISOString()});
+   const item={id:"opportunity_"+Date.now(),name,description,status:String(f.get("status")),steps,createdAt:new Date().toISOString()};
+   state.opportunities.unshift(item);
+   save();
+   if(!(await cloudInsertOpportunity(item))){state.opportunities.shift();save();return;}
    log("Added opportunity: "+name+" with "+steps.length+" steps");
    toast("Opportunity saved");
    render("opportunities");
  };
  const planForm=document.getElementById("planForm");
- if(planForm)planForm.onsubmit=e=>{
+ if(planForm)planForm.onsubmit=async e=>{
    e.preventDefault();
    const kind=planForm.dataset.planKind,id=planForm.dataset.planId,collection=kind==="project"?state.projects:state.opportunities,item=collection.find(x=>x.id===id);
    if(!item)return;
@@ -240,12 +423,15 @@ function bind(view){
    const allDone=steps.length>0&&steps.every(s=>s.done);
    if(allDone){item.preDoneStatus=item.preDoneStatus||item.status||"Active";item.status="Done";}else if(item.status==="Done"){item.status=item.preDoneStatus||"Active";}
    log("Updated "+kind+" workflow: "+name);
-   save();toast("Workflow updated");render(kind==="project"?"projects":"opportunities");
+   save();
+   const ok=kind==="project"?await cloudUpdateProject(item):await cloudUpdateOpportunity(item);
+   if(!ok){await loadCloudState();render(kind==="project"?"projects":"opportunities");return;}
+   toast("Workflow updated");render(kind==="project"?"projects":"opportunities");
  };
  const cf=document.getElementById("connForm");
- if(cf)cf.onsubmit=e=>{e.preventDefault();const f=new FormData(cf),name=String(f.get("name")).trim();if(!name)return;state.connections.unshift({name:name,details:String(f.get("details")).trim(),status:"Recorded",createdAt:new Date().toISOString()});log("Recorded connection: "+name);toast("Connection recorded");render("connections");};
+ if(cf)cf.onsubmit=async e=>{e.preventDefault();const f=new FormData(cf),name=String(f.get("name")).trim();if(!name)return;const item={id:"connection_"+Date.now(),name:name,details:String(f.get("details")).trim(),status:"Recorded",createdAt:new Date().toISOString()};state.connections.unshift(item);save();if(!(await cloudInsertConnection(item))){state.connections.shift();save();return;}log("Recorded connection: "+name);toast("Connection recorded");render("connections");};
 }
-function toggleWorkspaceStep(kind,itemId,index){
+async function toggleWorkspaceStep(kind,itemId,index){
  const collection=kind==="project"?state.projects:state.opportunities;
  const item=collection.find(x=>x.id===itemId);
  if(!item)return;
@@ -265,6 +451,8 @@ function toggleWorkspaceStep(kind,itemId,index){
  }
  item.updatedAt=new Date().toISOString();
  save();
+ const ok=kind==="project"?await cloudUpdateProject(item):await cloudUpdateOpportunity(item);
+ if(!ok){await loadCloudState();}
  render(kind==="project"?"projects":"opportunities");
 }
 
@@ -391,6 +579,15 @@ function bindConnections(){
 }
 function bindSystem(){document.querySelectorAll("[data-system-action]").forEach(b=>b.onclick=()=>systemAction(b.dataset.systemAction));document.querySelectorAll("[data-system-refresh]").forEach(b=>b.onclick=refreshSystem);const focus=document.getElementById("briefFocus");if(focus){focus.value=localStorage.getItem("hudhud_brief_focus")||"all";focus.onchange=()=>{localStorage.setItem("hudhud_brief_focus",focus.value);renderLiveStats();};}renderLiveStats();refreshSystem();clearInterval(healthTimer);healthTimer=setInterval(refreshSystem,5000);}
 
+function bindHomeAuth(){
+ document.querySelectorAll("[data-auth-start]").forEach(b=>b.onclick=async()=>{
+   if(currentUser){render("projects");return;}
+   await initSupabase().catch(()=>{});
+   if(currentUser){render("projects");return;}
+   showAuthModal("signin");
+ });
+}
+
 function bindChat(){
  const form=document.getElementById("chatForm");if(!form)return;
  const input=document.getElementById("chatInput");
@@ -410,10 +607,11 @@ function bindStudio(){
 function applyTheme(theme){document.documentElement.dataset.theme=theme;localStorage.setItem("hudhud_theme",theme);}
 function getTheme(){return localStorage.getItem("hudhud_theme")||"night";}
 function bindThemeToggle(){const b=document.getElementById("themeToggle");if(!b)return;const current=getTheme();document.documentElement.dataset.theme=current;const label=document.getElementById("themeLabel"),icon=document.getElementById("themeIcon");if(label)label.textContent=current==="day"?"Day":"Night";if(icon)icon.textContent=current==="day"?"☀":"☾";b.onclick=()=>{const next=getTheme()==="night"?"day":"night";applyTheme(next);if(label)label.textContent=next==="day"?"Day":"Night";if(icon)icon.textContent=next==="day"?"☀":"☾";};}
-function init(){
+async function init(){
  const today=document.getElementById("today");if(today)today.textContent=nowLabel();
  document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>render(b.dataset.view)));
  render("home");
+ initSupabase().catch(err=>console.warn("Supabase auth not initialized yet:",err.message));
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
 })();
