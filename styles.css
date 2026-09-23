@@ -36,3 +36,15 @@
 :root[data-theme="day"] .tool-card p{color:#706a78}
 @media(max-width:900px){.tool-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.tool-grid{grid-template-columns:1fr}}
+
+.studio-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.studio-card{min-height:300px;display:flex;flex-direction:column}
+.studio-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#17121f;border:1px solid #33283f;color:#c99aff;font-size:18px;margin-bottom:18px}
+.studio-card h3{font-size:21px;margin:7px 0}
+.studio-card p{max-width:480px}
+.studio-card .primary{align-self:flex-start;margin-top:16px}
+.studio-status{font-size:10px;color:#8e8298;margin-top:12px;min-height:16px}
+.studio-input{width:100%;min-height:110px;resize:vertical;background:#0b0a0f;color:#f3f0ea;border:1px solid #302a37;border-radius:8px;padding:12px;outline:none;margin-top:12px}
+:root[data-theme="day"] .studio-icon{background:#f3edf7;border-color:#d9cbe2}
+:root[data-theme="day"] .studio-input{background:#fff;color:#211d27;border-color:#ddd6e5}
+@media(max-width:800px){.studio-grid{grid-template-columns:1fr}}
