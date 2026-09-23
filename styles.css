@@ -69,3 +69,48 @@
 .connection-reconnect:disabled,.connection-head-actions button:disabled{opacity:.6;cursor:wait}
 :root[data-theme="day"] .active-chip{background:#edf7f0;border-color:#cfe3d5;color:#356346}
 @media(max-width:700px){.connection-head-actions{width:100%}.connection-head-actions button{flex:1}.connection-summary{align-items:flex-start;flex-direction:column}.active-connection-names{justify-content:flex-start}}
+
+/* Project / opportunity workflow */
+.workspace-tabs{display:flex;gap:7px;margin:0 0 16px;padding:4px;background:#0e0d12;border:1px solid #27222e;border-radius:11px;width:max-content}
+.workspace-tabs button{border:0;background:transparent;color:#817a87;padding:8px 12px;border-radius:8px;font-size:10px;cursor:pointer}
+.workspace-tabs button.active{background:#21172c;color:#f3f0ea;box-shadow:inset 0 0 0 1px #3a2c4b}
+.workspace-tabs button span{margin-left:5px;color:#9d8caf}
+.workspace-cards{display:grid;gap:13px}
+.workspace-card{background:#0e0d12;border:1px solid #27222e;border-radius:14px;padding:18px}
+.workspace-card.is-done{border-color:#2a3a31}
+.workspace-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}
+.workspace-card-head h3{font-size:18px;margin:5px 0 0}
+.workspace-description{margin:10px 0 16px!important;color:#9b93a1!important;max-width:850px}
+.workspace-progress{padding-top:12px;border-top:1px solid #25212b}
+.workspace-progress>div:first-child{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.workspace-progress span{font-size:8px;letter-spacing:1.2px;color:#716a78}
+.workspace-progress strong{font-size:9px;color:#bdb4c5;font-weight:600}
+.progress-track{height:6px;border-radius:10px;background:#19151d;overflow:hidden}
+.progress-track i{display:block;height:100%;border-radius:10px;background:#9a68ca;transition:width .2s ease}
+.workspace-steps{display:grid;gap:7px;margin-top:14px}
+.workspace-step{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid #29232f;background:#0b0a0f;color:#c9c1d0;border-radius:9px;padding:10px 11px;cursor:pointer;font-size:11px;transition:.15s}
+.workspace-step:hover{border-color:#6a4a82;background:#121016}
+.workspace-step.done{color:#8fbc9f;border-color:#2a3a31;background:#101812}
+.step-check{width:19px;height:19px;min-width:19px;display:grid;place-items:center;border:1px solid #51475a;border-radius:5px;font-size:11px}
+.workspace-step.done .step-check{border-color:#4b785d;background:#173020;color:#9ce3b7}
+.no-steps{margin-top:14px;padding:12px;border:1px dashed #30283a;border-radius:9px;color:#77717e;font-size:10px}
+.pill-done{color:#9ce3b7;border-color:#2a3a31;background:#101812}
+.workspace-form{max-width:760px}
+.step-builder{margin-top:20px;border-top:1px solid #25212b;padding-top:18px}
+.step-builder-head{display:flex;justify-content:space-between;align-items:flex-end;gap:15px;margin-bottom:10px}
+.step-builder-head span{font-size:9px;letter-spacing:1.5px;color:#a99db2}
+.step-builder-head small{font-size:9px;color:#716a78}
+.step-builder-fields{display:grid;gap:8px}
+.step-name-field{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:center}
+.step-name-field>span{height:42px;display:grid;place-items:center;border:1px solid #302a37;border-radius:8px;background:#121016;color:#8f8499;font-size:9px}
+.step-name-field input{height:42px}
+:root[data-theme="day"] .workspace-tabs{background:#f8f6fb;border-color:#ddd6e5}
+:root[data-theme="day"] .workspace-tabs button{color:#706a78}
+:root[data-theme="day"] .workspace-tabs button.active{background:#eee8f3;color:#211d27;border-color:#d9cce3}
+:root[data-theme="day"] .workspace-card{background:#fff;border-color:#ddd6e5}
+:root[data-theme="day"] .workspace-card.is-done{border-color:#cfe3d5}
+:root[data-theme="day"] .workspace-progress,:root[data-theme="day"] .workspace-step{border-color:#ddd6e5}
+:root[data-theme="day"] .workspace-step{background:#f8f6fb;color:#3c3344}
+:root[data-theme="day"] .workspace-step.done{background:#edf7f0;border-color:#cfe3d5;color:#356346}
+:root[data-theme="day"] .step-name-field>span{background:#f8f6fb;border-color:#ddd6e5}
+@media(max-width:700px){.workspace-tabs{width:100%}.workspace-tabs button{flex:1}.workspace-card-head{align-items:flex-start}.step-builder-head{align-items:flex-start;flex-direction:column}}
