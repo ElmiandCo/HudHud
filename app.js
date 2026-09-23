@@ -387,7 +387,7 @@ function bind(view){
  document.querySelectorAll("[data-plan-item]").forEach(b=>b.onclick=()=>editWorkspacePlan(b.dataset.planItem,b.dataset.itemId));
 
  const pf=document.getElementById("projectForm");
- if(pf)pf.onsubmit=e=>{
+ if(pf)pf.onsubmit=async e=>{
    e.preventDefault();
    const f=new FormData(pf),name=String(f.get("name")).trim(),description=String(f.get("description")).trim();
    if(!name||!description)return;
@@ -403,7 +403,7 @@ function bind(view){
    render("projects");
  };
  const of=document.getElementById("oppForm");
- if(of)of.onsubmit=e=>{
+ if(of)of.onsubmit=async e=>{
    e.preventDefault();
    const f=new FormData(of),name=String(f.get("name")).trim(),description=String(f.get("description")).trim();
    if(!name||!description)return;
