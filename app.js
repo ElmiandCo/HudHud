@@ -128,8 +128,13 @@ async function cloudInsertActivity(textValue){
 function updateAuthUI(){
  const buttons=document.querySelectorAll("[data-auth-start]");
  buttons.forEach(b=>{b.textContent=currentUser?"Open Workspace":"Get Started";});
- const top=document.querySelector(".auth-user");
+ const top=document.getElementById("authUser");
+ const account=document.getElementById("authAccountButton");
  if(top)top.textContent=currentUser?(currentUser.email||"Signed in"):"";
+ if(account){
+   account.textContent=currentUser?"Sign out":"Sign in";
+   account.onclick=()=>currentUser?signOut():showAuthModal("signin");
+ }
 }
 function authModalHtml(){
  return '<div class="auth-backdrop" data-auth-close></div><div class="auth-dialog" role="dialog" aria-modal="true"><button class="auth-close" data-auth-close>×</button><div class="eyebrow">HUDHUD ACCOUNT</div><h2>'+ (authMode==="signin"?"Welcome back":"Create your HudHud account") +'</h2><p class="auth-subtitle">'+(authMode==="signin"?"Sign in to access your private workspace.":"Create an account so your workspace belongs to you.")+'</p><div class="auth-tabs"><button class="'+(authMode==="signin"?"active":"")+'" data-auth-mode="signin">Sign in</button><button class="'+(authMode==="signup"?"active":"")+'" data-auth-mode="signup">Create account</button></div><form id="authForm"><label>Email</label><input name="email" type="email" autocomplete="email" required placeholder="you@example.com"><label>Password</label><input name="password" type="password" autocomplete="'+(authMode==="signin"?"current-password":"new-password")+'" minlength="6" required placeholder="At least 6 characters">'+(authMode==="signup"?'<label>Confirm password</label><input name="confirm" type="password" autocomplete="new-password" minlength="6" required placeholder="Repeat your password">':"")+'<div id="authError" class="auth-error"></div><button class="primary auth-submit" type="submit">'+(authMode==="signin"?"Sign in":"Create account")+'</button></form><div class="auth-footer">'+(authMode==="signin"?"New to HudHud?":"Already have an account?")+' <button type="button" data-auth-mode="'+(authMode==="signin"?"signup":"signin")+'">'+(authMode==="signin"?"Create an account":"Sign in")+'</button></div></div>';
