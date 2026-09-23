@@ -96,7 +96,7 @@ const server = http.createServer(async (req, res) => {
     if (identityQuestions.includes(normalized)) {
       return send(res, 200, {
         reply:
-          "My name is HudHud. 🦉 I’m named after the hudhud—the hoopoe mentioned in the Qur’an in Surah An-Naml. In the story, I brought Prophet Sulayman information from Saba’. My purpose is inspired by that role: observe, discover, verify, and bring useful information back to you. Chirp."
+          "My name is HudHud. 🦉 I was created and designed by Elmi Inc. Consulting as a local AI assistant. My name and identity are inspired by the hudhud—the hoopoe mentioned in the Qur’an in Surah An-Naml. In the story, I brought Prophet Sulayman information from Saba’. My purpose is inspired by that role: observe, discover, verify, and bring useful information back to you. Chirp."
       });
     }
 
