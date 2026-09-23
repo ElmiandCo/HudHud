@@ -25,14 +25,9 @@ function list(items,title,desc){
 function projects(){return '<div class="section-head"><div><h2>Projects</h2><span class="muted">Start from zero.</span></div><button class="primary" data-action="new-project">＋ New project</button></div>'+list(state.projects,"No projects yet.","Create the first project and HudHud will keep it here.");}
 function opportunities(){return '<div class="section-head"><div><h2>Opportunities</h2><span class="muted">Empty until you add something.</span></div><button class="primary" data-action="new-opportunity">＋ Add opportunity</button></div>'+list(state.opportunities,"No opportunities yet.","Only real opportunities go here.");}
 function studio(){return '<div class="section-head"><div><h2>HudHud Studio</h2><span class="muted">Create files and generate video concepts from the same command center.</span></div></div><div class="studio-grid"><div class="card studio-card"><div class="studio-icon">▣</div><div class="muted">FILE GENERATOR</div><h3>Word document</h3><p>Test HudHud\'s file-generation pipeline with a real downloadable .docx file.</p><button class="primary" id="makeDocx">Generate “Hi” Word Doc</button><div id="docStatus" class="studio-status"></div></div><div class="card studio-card"><div class="studio-icon">▶</div><div class="muted">AI VIDEO GENERATOR</div><h3>Video Studio</h3><p>Describe a video and HudHud will eventually route the request to the configured video model.</p><textarea id="videoPrompt" class="studio-input" placeholder="Describe the video you want…"></textarea><button class="primary" id="videoGenerate">Generate video</button><div id="videoStatus" class="studio-status">Provider connection will be added to the tool router.</div></div></div><div class="card tool-note"><div class="muted">STUDIO PIPELINE</div><h3>Prompt → Generator → File / Video → Download</h3><p>Files can be generated directly by HudHud. Video generation will use a provider connection rather than putting an API key in the browser.</p></div>';}
-function tools(){return '<div class="section-head"><div><h2>Tools</h2><span class="muted">HudHud\'s action layer — capabilities are separated from the brain.</span></div></div><div class="tool-grid">'+[
-['GitHub','Code, repositories, issues, pull requests','READ + WRITE','Ready to wire'],
-['Vercel','Projects, deployments, build status','READ + DEPLOY','Ready to wire'],
-['Supabase','Database, auth, storage, Edge Functions','READ + WRITE','Ready to wire'],
-['OpenClaw','Browser and computer-side actions','ACTION','Local bridge'],
-['Files','Documents, project knowledge, memory','READ + WRITE','Planned'],
-['Web','Fresh information and research','READ','Planned']
-].map(x=>'<div class="tool-card"><div class="tool-top"><span class="tool-icon">✦</span><span class="tool-state">'+esc(x[3])+'</span></div><h3>'+esc(x[0])+'</h3><p>'+esc(x[1])+'</p><div class="tool-bottom"><span>'+esc(x[2])+'</span><span class="tool-dot"></span></div></div>').join('')+'</div><div class="card tool-note"><div class="muted">HUDHUD TOOL ROUTER</div><h3>One brain. Many tools.</h3><p>HudHud will decide which connection to use, execute the permitted action, inspect the result, and continue until the task is complete.</p></div>';}
+function system(){return '<div class="section-head"><div><h2>HudHud System</h2><span class="muted">Control the local HudHud runtime from HQ.</span></div><span id="systemOverall" class="system-state">Checking…</span></div><div class="system-grid"><div class="card system-card"><div class="system-card-top"><span class="system-icon">🧠</span><div><div class="muted">LOCAL BRAIN</div><h3>GPT4All</h3><p id="systemGpt">Checking port 4891…</p></div></div><button class="primary system-btn" data-system-action="start-gpt4all">Start Brain</button></div><div class="card system-card"><div class="system-card-top"><span class="system-icon">🦉</span><div><div class="muted">BRIDGE</div><h3>HudHud Bridge</h3><p id="systemBridge">Checking port 8787…</p></div></div><button class="secondary system-btn" data-system-action="restart-bridge">Restart Bridge</button></div><div class="card system-card"><div class="system-card-top"><span class="system-icon">🌐</span><div><div class="muted">NETWORK</div><h3>Tailscale Funnel</h3><p id="systemTunnel">Checking…</p></div></div><button class="secondary system-btn" data-system-action="start-funnel">Start Tunnel</button></div></div><div class="card system-launch"><div><div class="muted">ONE BUTTON</div><h3>Bring HudHud Online</h3><p>Starts GPT4All, starts Tailscale, restores the Funnel, and verifies the local services.</p></div><button class="primary" data-system-action="start-everything">⚡ Start Everything</button></div><div class="card system-note"><div class="muted">SAFE COMMAND LAYER</div><h3>Only approved commands can run.</h3><p>The website cannot run arbitrary Terminal commands. It sends an authenticated request to your local HudHud Bridge, which only accepts fixed system actions.</p></div>';}
+
+
 function connections(){return '<div class="section-head"><div><h2>Connections</h2><span class="muted">Only recorded connections appear here.</span></div><button class="primary" data-action="new-connection">＋ Add connection</button></div>'+list(state.connections,"No connections recorded.","Add the systems HudHud is actually connected to.");}
 function documents(){return '<div class="section-head"><div><h2>Documents</h2><span class="muted">Fresh workspace — no documents loaded.</span></div></div><div class="empty"><strong>No documents.</strong>The file layer comes later.</div>';}
 function activity(){return '<div class="section-head"><div><h2>Activity</h2><span class="muted">Real actions from this browser.</span></div><button class="danger" data-action="clear-activity">Clear activity</button></div>'+list(state.activity,"No activity yet.","Your real actions will appear here.");}
@@ -46,12 +41,13 @@ function render(view){
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
- const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core};
+ const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system};
  m.innerHTML=(pages[view]||home)();
  bind(view);
  if(view==="home") bindChat();
  if(view==="core") bindThemeToggle();
  if(view==="studio") bindStudio();
+ if(view==="system") bindSystem();
 }
 
 function bind(view){
@@ -97,6 +93,10 @@ async function sendToHudHud(message){
    console.error("HudHud API request failed",e);
  }
 }
+async function systemAction(action){const status=document.getElementById("systemOverall");if(status)status.textContent="Working…";try{const r=await fetch("/api/system-control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:action})});const raw=await r.text();let data={};try{data=JSON.parse(raw)}catch(e){}if(!r.ok)throw new Error(data.error||("System API HTTP "+r.status));toast(data.message||"Command sent");setTimeout(refreshSystem,1500);}catch(e){if(status)status.textContent="Action failed";toast("System: "+(e&&e.message?e.message:String(e)));}}
+async function refreshSystem(){try{const r=await fetch("/api/system-control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"health"})});const data=await r.json();const g=document.getElementById("systemGpt"),b=document.getElementById("systemBridge"),t=document.getElementById("systemTunnel"),o=document.getElementById("systemOverall");if(!g||!b||!t||!o)return;g.textContent=data.gpt4all?.online?"ONLINE • :4891":"OFFLINE • :4891";b.textContent="ONLINE • :8787";t.textContent=data.tailscale?.online?"FUNNEL ACTIVE":"NOT ACTIVE";const all=!!(data.gpt4all?.online&&data.tailscale?.online);o.textContent=all?"● ALL SYSTEMS ONLINE":"● SYSTEMS NEED ATTENTION";o.className="system-state "+(all?"good":"warn");}catch(e){const o=document.getElementById("systemOverall");if(o)o.textContent="CONTROL AGENT UNAVAILABLE";}}
+function bindSystem(){document.querySelectorAll("[data-system-action]").forEach(b=>b.onclick=()=>systemAction(b.dataset.systemAction));refreshSystem();}
+
 function bindChat(){
  const form=document.getElementById("chatForm");if(!form)return;
  const input=document.getElementById("chatInput");
