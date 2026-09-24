@@ -355,6 +355,7 @@ function connections(){
  '<div class="card connection-settings"><div><div class="muted">SITE CONTROL</div><h3>Credentials stay server-side.</h3><p>Connection resources are discovered through HudHud’s server-side credentials. Your account stores only the focus and project-selection settings.</p></div><div class="settings-badge"><span class="status-light status-good"></span> Secrets stay server-side</div></div>'+
  '<div class="card"><div class="muted">RECORDED CONNECTIONS</div><h3>Workspace notes</h3>'+list(state.connections,"No connection profiles yet.","Open GitHub, Vercel or Supabase above to configure one.")+'</div>'+
  '</div><div id="connectionModalHost"></div>';
+}
 
 function documents(){return '<div class="section-head"><div><h2>Documents</h2><span class="muted">Fresh workspace — no documents loaded.</span></div></div><div class="empty"><strong>No documents.</strong>The file layer comes later.</div>';}
 function activity(){return '<div class="section-head"><div><h2>Activity</h2><span class="muted">Real actions from this browser.</span></div><button class="danger" data-action="clear-activity">Clear activity</button></div>'+list(state.activity,"No activity yet.","Your real actions will appear here.");}
