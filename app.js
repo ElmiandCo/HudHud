@@ -394,14 +394,15 @@ function connections(){
 }
 
 function premium(){
+ const lifetime=localStorage.getItem("hudhud_pricing_mode")==="lifetime";
  const plans=[
-  {key:"free",name:"Free",price:"$0",period:"forever",eyebrow:"STARTER",desc:"Everything you need to explore HudHud and organize your work.",features:["HudHud Command Center","Projects & opportunities","Core connections","HudHud Core"],button:"Current plan"},
-  {key:"pro",name:"Pro",price:"$9.99",period:"/ month",eyebrow:"MOST POPULAR",desc:"More power for active builders who want HudHud working alongside them.",features:["Everything in Free","Expanded project workflows","Priority HudHud actions","Advanced connections","More automation capacity"],button:"Choose Pro"},
-  {key:"premium",name:"Premium",price:"$9.99",period:"/ month",eyebrow:"FULL POWER",desc:"The complete HudHud operating layer for serious execution and connected work.",features:["Everything in Pro","Premium HudHud capabilities","Higher workflow limits","Priority access","Advanced automation"],button:"Choose Premium"}
+  {key:"free",name:"Free",monthlyPrice:"$0",lifetimePrice:"$0",monthlyPeriod:"forever",lifetimePeriod:"forever",eyebrow:"STARTER",desc:"Everything you need to explore HudHud and organize your work.",features:["HudHud Command Center","Projects & opportunities","Core connections","HudHud Core"],button:"Current plan"},
+  {key:"pro",name:"Pro",monthlyPrice:"$9.99",lifetimePrice:"$119.88",monthlyPeriod:"/ month",lifetimePeriod:"one-time",eyebrow:"MOST POPULAR",desc:"More power for active builders who want HudHud working alongside them.",features:["Everything in Free","Expanded project workflows","Priority HudHud actions","Advanced connections","More automation capacity"],button:"Choose Pro"},
+  {key:"premium",name:"Premium",monthlyPrice:"$9.99",lifetimePrice:"$119.88",monthlyPeriod:"/ month",lifetimePeriod:"one-time",eyebrow:"FULL POWER",desc:"The complete HudHud operating layer for serious execution and connected work.",features:["Everything in Pro","Premium HudHud capabilities","Higher workflow limits","Priority access","Advanced automation"],button:"Choose Premium"}
  ];
  return '<div class="premium-page">'+
-   '<div class="premium-hero"><div class="premium-orb">🦉</div><span class="eyebrow">HUDHUD MEMBERSHIP</span><h2>Build more with HudHud.</h2><p>Choose the workspace that fits how you work. Upgrade whenever you are ready.</p><div class="premium-toggle"><span class="active">Monthly</span><span>Simple pricing</span></div></div>'+
-   '<div class="premium-grid">'+plans.map(p=>'<article class="premium-plan '+(p.key==="pro"?"premium-popular ":"")+(p.key==="premium"?"premium-featured ":"")+'"><div class="premium-plan-glow"></div><div class="premium-plan-head"><span class="premium-tag">'+esc(p.eyebrow)+'</span>'+(p.key==="pro"?'<span class="premium-badge">POPULAR</span>':"")+'</div><h3>'+esc(p.name)+'</h3><p class="premium-desc">'+esc(p.desc)+'</p><div class="premium-price"><strong>'+esc(p.price)+'</strong><span>'+esc(p.period)+'</span></div><div class="premium-divider"></div><ul>'+p.features.map(f=>'<li><span>✓</span>'+esc(f)+'</li>').join("")+'</ul><button class="'+(p.key==="free"?"secondary":"primary")+' premium-button" data-premium-plan="'+p.key+'" '+(p.key==="free"?"disabled":"")+'>'+esc(p.button)+'</button></article>').join("")+'</div>'+
+   '<div class="premium-hero"><div class="premium-orb">🦉</div><span class="eyebrow">HUDHUD MEMBERSHIP</span><h2>Build more with HudHud.</h2><p>Choose the workspace that fits how you work. Upgrade whenever you are ready.</p><div class="premium-toggle"><button type="button" class="'+(lifetime?"":"active")+'" data-pricing-mode="monthly">Monthly</button><button type="button" class="'+(lifetime?"active":"")+'" data-pricing-mode="lifetime">Lifetime membership</button></div></div>'+
+   '<div class="premium-grid">'+plans.map(p=>'<article class="premium-plan '+(p.key==="pro"?"premium-popular ":"")+(p.key==="premium"?"premium-featured ":"")+'"><div class="premium-plan-glow"></div><div class="premium-plan-head"><span class="premium-tag">'+esc(p.eyebrow)+'</span>'+(p.key==="pro"?'<span class="premium-badge">POPULAR</span>':"")+'</div><h3>'+esc(p.name)+'</h3><p class="premium-desc">'+esc(p.desc)+'</p><div class="premium-price"><strong>'+esc(lifetime?p.lifetimePrice:p.monthlyPrice)+'</strong><span>'+esc(lifetime?p.lifetimePeriod:p.monthlyPeriod)+'</span></div>'+ (lifetime&&p.key!=="free"?'<div class="premium-annual-note">12 × $9.99 = $119.88 • pay once</div>':"") +'<div class="premium-divider"></div><ul>'+p.features.map(f=>'<li><span>✓</span>'+esc(f)+'</li>').join("")+'</ul><button class="'+(p.key==="free"?"secondary":"primary")+' premium-button" data-premium-plan="'+p.key+'" '+(p.key==="free"?"disabled":"")+'>'+esc(lifetime&&p.key!=="free"?"Get Lifetime Access":p.button)+'</button></article>').join("")+'</div>'+
    '<section class="premium-test-strip"><div><span class="premium-test-label">🧪 TEMPORARY TEST CHECKOUT</span><h3>Verify Stripe before launch</h3><p>Run a real Stripe Checkout test with a temporary <strong>$0.50</strong> one-time payment. Stripe\'s USD minimum is $0.50, so $0.01 cannot be charged as a USD Checkout payment.</p></div><button class="secondary premium-test-button" data-premium-plan="test">Test Checkout · $0.50</button></section>'+
    '<div class="premium-trust"><span>🔒 Secure Stripe Checkout</span><span>↻ Cancel anytime</span><span>⚡ Instant upgrade</span><span>🦉 HudHud-powered</span></div>'+
    '<div id="premiumStatus" class="premium-status"></div></div>';
@@ -481,23 +482,30 @@ function render(view){
 }
 
 async function bindPremium(){
+ document.querySelectorAll("[data-pricing-mode]").forEach(b=>b.onclick=()=>{
+   localStorage.setItem("hudhud_pricing_mode",b.dataset.pricingMode);
+   render("premium");
+ });
  document.querySelectorAll("[data-premium-plan]").forEach(b=>b.onclick=async()=>{
    const plan=b.dataset.premiumPlan;
    if(plan==="free")return;
    if(!currentUser){showAuthModal("signin");return;}
+   const lifetime=localStorage.getItem("hudhud_pricing_mode")==="lifetime";
+   const checkoutPlan=lifetime&&plan!=="test"?plan+"_lifetime":plan;
    const status=document.getElementById("premiumStatus");
    b.disabled=true;b.textContent="Opening Stripe…";
    if(status)status.textContent="";
    try{
      const token=await authAccessToken();
-     const r=await fetch("/api/stripe-checkout",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({plan})});
+     if(!token){showAuthModal("signin");b.disabled=false;b.textContent=lifetime?"Get Lifetime Access":plan==="test"?"Test Checkout · $0.50":plan==="pro"?"Choose Pro":"Choose Premium";return;}
+     const r=await fetch("/api/stripe-checkout",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({plan:checkoutPlan})});
      const d=await r.json().catch(()=>({}));
      if(!r.ok)throw new Error(d.error||"Could not start Stripe Checkout.");
      if(d.url)window.location.href=d.url; else throw new Error("Stripe did not return a Checkout URL.");
    }catch(e){
      if(status)status.textContent=e.message||"Checkout failed.";
      b.disabled=false;
-     b.textContent=plan==="test"?"Run $0.50 test":plan==="pro"?"Upgrade to Pro":"Go Premium";
+     b.textContent=lifetime?"Get Lifetime Access":plan==="test"?"Test Checkout · $0.50":plan==="pro"?"Choose Pro":"Choose Premium";
    }
  });
 }
