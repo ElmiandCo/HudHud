@@ -568,7 +568,7 @@ function newsletterProgram(){
   body='<div class="program-step-panel"><div class="review-grid"><div><span>Template</span><strong>'+esc((newsletterTemplates.find(t=>t.key===d.templateKey)||{}).name||"Custom")+'</strong></div><div><span>Subject</span><strong>'+esc(d.subject)+'</strong></div><div><span>Schedule</span><strong>'+esc(newsletterScheduleLabel(d))+'</strong></div><div><span>Recipients</span><strong>'+count+' contacts</strong></div></div><div class="review-preview"><div class="newsletter-preview-title">'+esc(d.subject)+'</div>'+d.sections.map(s=>'<article>'+(s.image?'<img src="'+esc(s.image)+'" alt="">':"")+'<h3>'+esc(s.heading)+'</h3><p>'+esc(s.text)+'</p></article>').join("")+'</div></div>';
  }
  return '<section class="program-page">'+
-  '<div class="program-breadcrumb"><button class="secondary mini-button" data-program-back>← Get Started</button><span>HUDHUD PROGRAM / NEWSLETTER</span></div>'+
+  '<div class="program-breadcrumb"><button class="secondary mini-button" data-program-back>← Get Started</button><span>HUDHUD PROGRAM / NEWSLETTER</span></div><div class="card sms-test-card"><div><span class="eyebrow">SMS CONNECTOR TEST</span><h3>Test HudHud SMS</h3><p>Send a live test message to the configured test number. This is separate from newsletter scheduling.</p></div><div class="sms-test-actions"><span class="pill">TEST NUMBER • (714) 696-6259</span><button class="secondary" data-test-sms>Send Test SMS</button></div><div id="smsTestStatus" class="studio-status"></div></div>'+
   '<div class="program-head"><div><span class="eyebrow">AUTOMATED NEWSLETTER</span><h2>Build it once. Let HudHud manage it.</h2><p>Template → content → schedule → recipients → analytics.</p></div><span class="program-status">STEP '+step+' OF 5</span></div>'+
   '<div class="wizard-progress">'+[1,2,3,4,5].map(i=>'<button class="'+(i===step?"active":i<step?"done":"")+'" data-nl-step="'+i+'"><span>'+i+'</span><small>'+["Template","Content","Schedule","Recipients","Review"][i-1]+'</small></button>').join("")+'</div>'+
   body+
@@ -637,6 +637,8 @@ function bindNewsletter(){
  document.querySelectorAll("[data-nl-resume]").forEach(b=>b.onclick=()=>updateNewsletterStatus(b.dataset.nlResume,"scheduled"));
  document.querySelectorAll("[data-nl-send]").forEach(b=>b.onclick=()=>sendNewsletterNow(b.dataset.nlSend));
  document.querySelectorAll("[data-nl-delete]").forEach(b=>b.onclick=()=>deleteNewsletter(b.dataset.nlDelete));
+ const smsTest=document.querySelector("[data-test-sms]");
+ if(smsTest)smsTest.onclick=sendTestSms;
  updateNewsletterPreview();
  loadNewsletterManager();
 }
@@ -654,6 +656,23 @@ async function activateNewsletter(){
  log("Activated newsletter: "+newsletterDraft.name+" for "+rec.length+" recipients");toast("Newsletter activated");newsletterDraft=null;render("newsletter");
 }
 async function updateNewsletterStatus(id,status){const {data,error}=await supabaseClient.from("hudhud_newsletters").select("*").eq("id",id).eq("user_id",currentUser.id).single();if(error||!data){toast(error?.message||"Newsletter not found");return;}const patch={status,updated_at:new Date().toISOString()};if(status==="scheduled"&&!data.next_send_at)patch.next_send_at=new Date(Date.now()+60000).toISOString();if(status==="paused")patch.next_send_at=null;const {error:updateError}=await supabaseClient.from("hudhud_newsletters").update(patch).eq("id",id).eq("user_id",currentUser.id);if(updateError)toast(updateError.message);else{toast(status==="paused"?"Newsletter paused":"Newsletter resumed");loadNewsletterManager();}}
+async function sendTestSms(){
+ if(!currentUser){showAuthModal("signin");return;}
+ const button=document.querySelector("[data-test-sms]"),status=document.getElementById("smsTestStatus");
+ if(button){button.disabled=true;button.textContent="Sending…";}
+ if(status)status.textContent="Sending test SMS…";
+ try{
+  const token=await authAccessToken();
+  const r=await fetch("/api/test-sms",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"SMS test failed.");
+  if(status)status.textContent="✓ Test SMS sent successfully.";
+  toast("Test SMS sent");
+ }catch(e){
+  if(status)status.textContent="SMS test failed: "+(e.message||"Unknown error.");
+  toast(e.message||"SMS test failed");
+ }finally{if(button){button.disabled=false;button.textContent="Send Test SMS";}}
+}
 async function sendNewsletterNow(id){if(!currentUser){showAuthModal("signin");return;}const token=await authAccessToken();const r=await fetch("/api/newsletter-send",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({newsletterId:id})});const d=await r.json().catch(()=>({}));if(!r.ok)toast(d.error||"Send failed");else{toast("Newsletter sent");loadNewsletterManager();}}
 async function deleteNewsletter(id){if(!confirm("Delete this newsletter and its send history?"))return;const {error}=await supabaseClient.from("hudhud_newsletters").delete().eq("id",id).eq("user_id",currentUser.id);if(error)toast(error.message);else{toast("Newsletter deleted");loadNewsletterManager();}}
 
