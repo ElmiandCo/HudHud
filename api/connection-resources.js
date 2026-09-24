@@ -34,22 +34,37 @@ async function providerAccount(req,provider){
   return rows[0];
 }
 async function githubResources(account){
-  if(!account&&!env("HUDHUD_GITHUB_TOKEN"))throw new Error("GitHub connection is not configured.");
-  const owner=env("HUDHUD_GITHUB_OWNER")||"ElmiandCo";
+  const fallback=env("HUDHUD_GITHUB_TOKEN");
+  if(!account&&!fallback)throw new Error("GitHub connection is not configured.");
+  const owner=env("HUDHUD_GITHUB_OWNER")||"ElmiAndCo";
   const repo=env("HUDHUD_GITHUB_REPO")||"HudHud";
-  const token=account?.access_token||env("HUDHUD_GITHUB_TOKEN");
-  const data=await jsonFetch("https://api.github.com/user/repos?affiliation=owner,collaborator,organization_member&per_page=100&sort=updated",{headers:{"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2026-03-10","Authorization":`Bearer ${token}`}});
-  const repos=(Array.isArray(data)?data:[]).map(r=>({id:String(r.id),name:r.name,full_name:r.full_name,private:!!r.private,default_branch:r.default_branch||"main",description:r.description||"",html_url:r.html_url||"",permissions:r.permissions||{}}));
-  const ensured=repos.some(r=>r.full_name===owner+"/"+repo)?repos:repos.concat([{id:"configured",name:repo,full_name:owner+"/"+repo,private:false,default_branch:"main",description:"Configured HudHud repository",html_url:`https://github.com/${owner}/${repo}`,permissions:{}}]);
-  return {provider:"github",resources:ensured};
+  const tokens=[account?.access_token,fallback].filter(Boolean);
+  let last;
+  for(const token of tokens){
+    try{
+      const data=await jsonFetch("https://api.github.com/user/repos?affiliation=owner,collaborator,organization_member&per_page=100&sort=updated",{headers:{"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2026-03-10","Authorization":"Bearer "+token}});
+      const repos=(Array.isArray(data)?data:[]).map(r=>({id:String(r.id),name:r.name,full_name:r.full_name,private:!!r.private,default_branch:r.default_branch||"main",description:r.description||"",html_url:r.html_url||"",permissions:r.permissions||{}}));
+      const ensured=repos.some(r=>r.full_name===owner+"/"+repo)?repos:repos.concat([{id:"configured",name:repo,full_name:owner+"/"+repo,private:false,default_branch:"main",description:"Configured HudHud repository",html_url:"https://github.com/"+owner+"/"+repo,permissions:{}}]);
+      return {provider:"github",resources:ensured};
+    }catch(e){last=e;}
+  }
+  throw last||new Error("GitHub connection is unavailable.");
 }
 async function vercelResources(account){
-  if(!account&&!env("HUDHUD_VERCEL_TOKEN"))throw new Error("Vercel connection is not configured.");
+  const fallback=env("HUDHUD_VERCEL_TOKEN");
+  if(!account&&!fallback)throw new Error("Vercel connection is not configured.");
   const url=new URL("https://api.vercel.com/v9/projects");
   if(env("HUDHUD_VERCEL_TEAM_ID"))url.searchParams.set("teamId",env("HUDHUD_VERCEL_TEAM_ID"));
   url.searchParams.set("limit","100");
-  const data=await jsonFetch(url.toString(),{headers:{Authorization:`Bearer ${account?.access_token||env("HUDHUD_VERCEL_TOKEN")}`}});
-  return {provider:"vercel",resources:(data.projects||[]).map(p=>({id:p.id||p.projectId,name:p.name,framework:p.framework||"",link:p.link||null,latestDeployments:p.latestDeployments||[],targets:p.targets||{},nodeVersion:p.nodeVersion||null}))};
+  const tokens=[account?.access_token,fallback].filter(Boolean);
+  let last;
+  for(const token of tokens){
+    try{
+      const data=await jsonFetch(url.toString(),{headers:{Authorization:"Bearer "+token}});
+      return {provider:"vercel",resources:(data.projects||[]).map(p=>({id:p.id||p.projectId,name:p.name,framework:p.framework||"",link:p.link||null,latestDeployments:p.latestDeployments||[],targets:p.targets||{},nodeVersion:p.nodeVersion||null}))};
+    }catch(e){last=e;}
+  }
+  throw last||new Error("Vercel connection is unavailable.");
 }
 async function supabaseResources(account){
   const base=cleanBase(env("HUDHUD_SUPABASE_URL")),key=env("HUDHUD_SUPABASE_KEY");
@@ -80,7 +95,12 @@ export default async function handler(req,res){
     await requireUser(req);
     const provider=String(req.query?.provider||"").toLowerCase();
     if(!["github","vercel","supabase"].includes(provider))return res.status(400).json({error:"Unknown connection provider."});
-    const account=await providerAccount(req,provider);
+    let account=null;
+    try{ account=await providerAccount(req,provider); }
+    catch(error){
+      const fallbackName=provider==="github"?"HUDHUD_GITHUB_TOKEN":provider==="vercel"?"HUDHUD_VERCEL_TOKEN":"HUDHUD_SUPABASE_URL";
+      if(!env(fallbackName))throw error;
+    }
     const data=provider==="github"?await githubResources(account):provider==="vercel"?await vercelResources(account):await supabaseResources(account);
     if(account)data.account={id:String(req.query.account_id),name:account.account_name,email:account.account_email||"",provider_account_id:account.provider_account_id};
     return res.status(200).json(data);
