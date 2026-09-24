@@ -1,8 +1,4 @@
-function bindProgramBack(){
- document.querySelectorAll("[data-program-back]").forEach(b=>b.onclick=()=>render("getstarted"));
- document.querySelectorAll("[data-site-start]").forEach(b=>b.onclick=()=>{if(!currentUser){showAuthModal("signin");return;}toast("Website launch workflow ready");});
- document.querySelectorAll("[data-video-start]").forEach(b=>b.onclick=()=>render("studio"));
-}(function(){
+(function(){
 "use strict";
 
 const KEY="hudhud_hq_state_v1";
@@ -665,6 +661,11 @@ function bindProgramBack(){
  document.querySelectorAll("[data-program-back]").forEach(b=>b.onclick=()=>render("getstarted"));
 }
 
+function bindProgramBack(){
+ document.querySelectorAll("[data-program-back]").forEach(b=>b.onclick=()=>render("getstarted"));
+ document.querySelectorAll("[data-site-start]").forEach(b=>b.onclick=()=>{if(!currentUser){showAuthModal("signin");return;}toast("Website launch workflow ready");});
+ document.querySelectorAll("[data-video-start]").forEach(b=>b.onclick=()=>render("studio"));
+}
 function render(view){
  if(["projects","opportunities","connections","documents","activity","premium"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
