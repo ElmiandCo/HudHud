@@ -517,12 +517,157 @@ function loadCommandResources(){const host=document.getElementById("commandResou
 function openCommandToolModal(){const host=document.getElementById("commandToolModal");if(!host)return;host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-command-tool></div><div class="resource-dialog"><button class="resource-close" data-close-command-tool>×</button><div class="eyebrow">ADD TOOL</div><h2>Connect another service</h2><p class="resource-subtitle">Authentication and permissions will be added as integrations are enabled.</p><div class="command-tool-grid">'+["AWS","Azure","Google Cloud","Gmail","Google Calendar","Slack","Notion","Linear","Jira","Microsoft 365","OpenAI","Anthropic","Google Gemini","Groq","xAI"].map(x=>'<button class="command-tool-placeholder"><span>＋</span><div><strong>'+x+'</strong><small>Integration</small></div><em>Coming soon</em></button>').join("")+'</div></div></div>';host.querySelectorAll("[data-close-command-tool]").forEach(b=>b.onclick=()=>host.innerHTML="")}
 function showCommandNode(key){const names={github:"GitHub",vercel:"Vercel",supabase:"Supabase",stripe:"Stripe"};const host=document.getElementById("commandToolModal");if(host)host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-command-tool></div><div class="resource-dialog"><button class="resource-close" data-close-command-tool>×</button><div class="eyebrow">CONNECTION</div><h2>'+names[key]+'</h2><p class="resource-subtitle">Use Connections to configure accounts and resource scope.</p><div class="form-actions"><button class="primary" data-open-connections>Open Connections</button></div></div></div>';document.querySelector("[data-open-connections]")?.addEventListener("click",()=>{host.innerHTML="";render("connections")})}
 function bindCommandCenter(){document.querySelectorAll("[data-command-diagnostic]").forEach(b=>b.onclick=runCommandDiagnostic);document.querySelectorAll("[data-command-add-tool]").forEach(b=>b.onclick=openCommandToolModal);document.querySelectorAll("[data-command-node]").forEach(b=>b.onclick=()=>showCommandNode(b.dataset.commandNode));document.querySelectorAll("[data-analytics-series]").forEach(b=>b.onchange=renderAnalytics);document.getElementById("analyticsRange")?.addEventListener("change",renderAnalytics);renderAnalytics();}
+
+let newsletterDraft=null;
+
+const newsletterTemplates=[
+ {key:"weekly-update",name:"Weekly Business Update",description:"Clean executive update with highlights, priorities and next steps.",sections:[
+  {heading:"This Week",text:"Share the most important update from your business this week.",image:""},
+  {heading:"Highlights",text:"Add your wins, launches, customer updates or useful news.",image:""},
+  {heading:"Next Steps",text:"Tell readers what is coming next.",image:""}
+ ]},
+ {key:"product-news",name:"Product & Company News",description:"Product announcements, launches and customer-facing news.",sections:[
+  {heading:"What’s New",text:"Introduce the latest product, feature or announcement.",image:""},
+  {heading:"Why It Matters",text:"Explain the value in a few clear sentences.",image:""},
+  {heading:"Learn More",text:"Add a call to action, link or next step.",image:""}
+ ]},
+ {key:"newsletter",name:"Modern Newsletter",description:"Flexible newsletter with a hero, stories and a closing CTA.",sections:[
+  {heading:"Featured Story",text:"Your main newsletter story goes here.",image:""},
+  {heading:"More To Know",text:"Add another useful story or resource.",image:""},
+  {heading:"Stay Connected",text:"Close with a short message and call to action.",image:""}
+ ]}
+];
+
+function getStarted(){
+ return '<section class="getstarted-page">'+
+  '<div class="getstarted-hero"><span class="eyebrow">HUDHUD PROGRAMS</span><h1>Get something done.</h1><p>Pick a program. HudHud walks you through the steps, handles the technical work, and keeps the result organized for you.</p></div>'+
+  '<div class="program-grid">'+
+   '<button class="program-card" data-program="site"><span class="program-icon">🌐</span><span class="program-kicker">LAUNCH</span><h3>Site Online in 3–5 mins</h3><small>You can customize more later with HudHudAI’s help.</small><strong>Start Website →</strong></button>'+
+   '<button class="program-card featured" data-program="newsletter"><span class="program-icon">📰</span><span class="program-kicker">AUTOMATION</span><h3>Automated Newsletter</h3><small>Build it, schedule it, send it and monitor every campaign.</small><strong>Start Newsletter →</strong></button>'+
+   '<button class="program-card" data-program="video"><span class="program-icon">🎬</span><span class="program-kicker">CREATE</span><h3>AI Video with HudHudAI</h3><small>Walk through the idea, script, style, review and export steps.</small><strong>Create AI Video →</strong></button>'+
+  '</div>'+
+  '<div class="program-lower"><div class="card"><span class="eyebrow">COMING PROGRAMS</span><h3>More one-click business launches</h3><div class="coming-grid"><span>🖥️ VPS + Gateway</span><span>🤖 AI Agent</span><span>📄 AI PDF</span><span>💳 Payments</span><span>📊 Analytics</span><span>📱 Social Content</span></div></div></div>'+
+ '</section>';
+}
+
+function newsletterProgram(){
+ if(!newsletterDraft)newsletterDraft={step:1,templateKey:"weekly-update",name:"Weekly Business Update",subject:"Weekly Business Update",sections:JSON.parse(JSON.stringify(newsletterTemplates[0].sections)),frequency:"weekly",sendTime:"09:00",days:[1],startDate:new Date().toISOString().slice(0,10),endDate:"",recipientsText:"",status:"draft"};
+ const d=newsletterDraft;
+ const step=d.step;
+ let body="";
+ if(step===1){
+  body='<div class="program-step-panel"><div class="template-grid">'+newsletterTemplates.map(t=>'<button class="template-option '+(d.templateKey===t.key?"selected":"")+'" data-news-template="'+t.key+'"><span>'+esc(t.name)+'</span><small>'+esc(t.description)+'</small></button>').join("")+'</div><label class="wizard-label">Newsletter name<input id="nlName" value="'+esc(d.name)+'" placeholder="My Newsletter"></label><label class="wizard-label">Email subject<input id="nlSubject" value="'+esc(d.subject)+'" placeholder="What readers will see in their inbox"></label></div>';
+ }else if(step===2){
+  body='<div class="program-step-panel"><div class="wizard-hint">Choose the sections, text and image URLs HudHud should use. Images can be changed later.</div><div class="newsletter-sections">'+d.sections.map((s,i)=>'<div class="newsletter-section-editor"><div class="section-number">'+String(i+1).padStart(2,"0")+'</div><div class="section-fields"><input data-nl-heading="'+i+'" value="'+esc(s.heading||"")+'" placeholder="Section heading"><textarea data-nl-text="'+i+'" placeholder="Write the section text…">'+esc(s.text||"")+'</textarea><input data-nl-image="'+i+'" value="'+esc(s.image||"")+'" placeholder="Optional image URL (https://…)">'+(s.image?'<img class="nl-image-preview" src="'+esc(s.image)+'" alt="">':"")+'</div></div>').join("")+'</div><button class="secondary" data-nl-add-section>+ Add section</button></div>';
+ }else if(step===3){
+  body='<div class="program-step-panel schedule-panel"><label class="wizard-label">Frequency<select id="nlFrequency"><option value="once" '+(d.frequency==="once"?"selected":"")+'>Send once</option><option value="daily" '+(d.frequency==="daily"?"selected":"")+'>Daily</option><option value="weekly" '+(d.frequency==="weekly"?"selected":"")+'>Weekly</option><option value="monthly" '+(d.frequency==="monthly"?"selected":"")+'>Monthly</option></select></label><div class="wizard-two"><label class="wizard-label">First send date<input id="nlStartDate" type="date" value="'+esc(d.startDate)+'"></label><label class="wizard-label">Time<input id="nlSendTime" type="time" value="'+esc(d.sendTime)+'"></label></div><div id="nlDaysWrap" class="days-wrap"><span class="wizard-label">Days</span><div class="day-pills">'+["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((x,i)=>'<label><input type="checkbox" data-nl-day="'+i+'" '+(d.days.includes(i)?"checked":"")+'><span>'+x+'</span></label>').join("")+'</div></div><label class="wizard-label">End date <span class="muted">(optional)</span><input id="nlEndDate" type="date" value="'+esc(d.endDate||"")+'"></label><div class="schedule-preview" id="nlSchedulePreview"></div></div>';
+ }else if(step===4){
+  body='<div class="program-step-panel"><div class="wizard-hint">Paste one or many recipients. HudHud accepts emails separated by commas, spaces or new lines, and <strong>Name &lt;email@example.com&gt;</strong> format.</div><label class="wizard-label">Recipients<textarea id="nlRecipients" class="bulk-recipients" placeholder="you@example.com&#10;Jane Doe &lt;jane@example.com&gt;">'+esc(d.recipientsText||"")+'</textarea></label><div class="recipient-count" id="nlRecipientCount">0 valid recipients</div></div>';
+ }else{
+  const count=parseRecipients(d.recipientsText).length;
+  body='<div class="program-step-panel"><div class="review-grid"><div><span>Template</span><strong>'+esc((newsletterTemplates.find(t=>t.key===d.templateKey)||{}).name||"Custom")+'</strong></div><div><span>Subject</span><strong>'+esc(d.subject)+'</strong></div><div><span>Schedule</span><strong>'+esc(newsletterScheduleLabel(d))+'</strong></div><div><span>Recipients</span><strong>'+count+' contacts</strong></div></div><div class="review-preview"><div class="newsletter-preview-title">'+esc(d.subject)+'</div>'+d.sections.map(s=>'<article>'+(s.image?'<img src="'+esc(s.image)+'" alt="">':"")+'<h3>'+esc(s.heading)+'</h3><p>'+esc(s.text)+'</p></article>').join("")+'</div></div>';
+ }
+ return '<section class="program-page">'+
+  '<div class="program-breadcrumb"><button class="secondary mini-button" data-program-back>← Get Started</button><span>HUDHUD PROGRAM / NEWSLETTER</span></div>'+
+  '<div class="program-head"><div><span class="eyebrow">AUTOMATED NEWSLETTER</span><h2>Build it once. Let HudHud manage it.</h2><p>Template → content → schedule → recipients → analytics.</p></div><span class="program-status">STEP '+step+' OF 5</span></div>'+
+  '<div class="wizard-progress">'+[1,2,3,4,5].map(i=>'<button class="'+(i===step?"active":i<step?"done":"")+'" data-nl-step="'+i+'"><span>'+i+'</span><small>'+["Template","Content","Schedule","Recipients","Review"][i-1]+'</small></button>').join("")+'</div>'+
+  body+
+  '<div class="wizard-actions"><button class="secondary" data-nl-prev '+(step===1?"disabled":"")+'>Back</button><button class="primary" data-nl-next>'+ (step===5?"Activate Newsletter":"Continue") +'</button></div>'+
+  '<div id="nlManagerHost"></div></section>';
+}
+
+function parseRecipients(raw){
+ const found=[];const re=/([A-ZÀ-ÿ0-9][^,;\\n<]*?)?\\s*<\\s*([A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,})\\s*>|([A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,})/gi;
+ let m;while((m=re.exec(String(raw||"")))){const email=(m[2]||m[3]).toLowerCase();if(!found.some(x=>x.email===email))found.push({email,name:(m[1]||"").trim()});}
+ return found;
+}
+function newsletterScheduleLabel(d){if(d.frequency==="once")return "Once • "+d.startDate+" at "+d.sendTime;if(d.frequency==="daily")return "Daily • "+d.sendTime;if(d.frequency==="monthly")return "Monthly • day "+new Date(d.startDate+"T00:00:00").getDate()+" • "+d.sendTime;return "Weekly • "+(d.days.length?d.days.map(i=>["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][i]).join(", "):"choose days")+" • "+d.sendTime;}
+function newsletterNextSend(d){
+ const base=new Date((d.startDate||new Date().toISOString().slice(0,10))+"T"+(d.sendTime||"09:00")+":00");
+ if(Number.isNaN(base.getTime()))return null;
+ if(d.frequency==="once")return base.toISOString();
+ if(d.frequency==="daily"){if(base<=new Date())base.setDate(base.getDate()+1);return base.toISOString();}
+ if(d.frequency==="monthly"){if(base<=new Date())base.setMonth(base.getMonth()+1);return base.toISOString();}
+ const days=d.days.length?d.days:[1];let candidate=new Date(base);for(let i=0;i<8;i++){if(candidate>new Date()&&days.includes(candidate.getDay()))return candidate.toISOString();candidate.setDate(candidate.getDate()+1);}return base.toISOString();
+}
+function newsletterHtml(d){
+ return '<div style="font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#24202a">'+d.sections.map(s=>'<section style="margin:0 0 28px">'+(s.image?'<img src="'+esc(s.image)+'" style="width:100%;max-height:320px;object-fit:cover;border-radius:12px" alt="">':"")+'<h2>'+esc(s.heading)+'</h2><p style="font-size:16px;line-height:1.65;white-space:pre-wrap">'+esc(s.text)+'</p></section>').join("")+'</div>';
+}
+async function newsletterCloud(){
+ if(!currentUser)return {templates:[],contacts:[],newsletters:[],sends:[]};
+ const [t,c,n]=await Promise.all([
+  supabaseClient.from("hudhud_newsletter_templates").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false}),
+  supabaseClient.from("hudhud_newsletter_contacts").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false}),
+  supabaseClient.from("hudhud_newsletters").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false})
+ ]);
+ const error=[t,c,n].find(x=>x.error)?.error;if(error)throw error;
+ const ids=(n.data||[]).map(x=>x.id);
+ let sends=[];if(ids.length){const s=await supabaseClient.from("hudhud_newsletter_sends").select("*").in("newsletter_id",ids).order("scheduled_for",{ascending:false}).limit(200);if(s.error)throw s.error;sends=s.data||[];}
+ return {templates:t.data||[],contacts:c.data||[],newsletters:n.data||[],sends};
+}
+async function newsletterManagerHtml(){
+ try{
+  const data=await newsletterCloud();
+  if(!data.newsletters.length)return '<div class="card newsletter-manager"><div class="muted">NEWSLETTER MANAGER</div><h3>No newsletters yet</h3><p>Create your first newsletter above. Once activated, HudHud will keep the schedule and send history here.</p></div>';
+  return '<div class="newsletter-manager"><div class="manager-head"><div><span class="eyebrow">NEWSLETTER MANAGER</span><h3>Your automations</h3></div><span class="muted">'+data.newsletters.length+' campaign(s)</span></div><div class="newsletter-stats"><div class="card"><span>ACTIVE</span><strong>'+data.newsletters.filter(x=>x.status==="scheduled").length+'</strong></div><div class="card"><span>SENDS</span><strong>'+data.sends.filter(x=>x.status==="sent").length+'</strong></div><div class="card"><span>RECIPIENTS</span><strong>'+data.newsletters.reduce((a,x)=>a+0,0)+'</strong></div></div><div class="newsletter-list">'+data.newsletters.map(n=>{const sends=data.sends.filter(s=>s.newsletter_id===n.id),last=sends.find(s=>s.status==="sent");return '<article class="newsletter-manager-row"><div><div class="manager-title">'+esc(n.name)+'</div><div class="manager-meta">'+esc(n.subject)+' • '+esc(n.frequency)+' • '+(n.next_send_at?new Date(n.next_send_at).toLocaleString():"No next send")+'</div><div class="manager-badges"><span class="pill">'+esc(n.status)+'</span><span class="pill">'+sends.filter(s=>s.status==="sent").length+' sent</span><span class="pill">'+(last?.recipient_count||0)+' last recipients</span></div></div><div class="manager-actions">'+(n.status==="scheduled"?'<button class="secondary" data-nl-pause="'+n.id+'">Pause</button>':'<button class="secondary" data-nl-resume="'+n.id+'">Resume</button>')+'<button class="secondary" data-nl-send="'+n.id+'">Send now</button><button class="danger" data-nl-delete="'+n.id+'">Delete</button></div></article>';}).join("")+'</div><div class="card newsletter-analytics"><div class="muted">NEWSLETTER ANALYTICS</div><h3>What went out, when, and to whom</h3><div class="send-history">'+(data.sends.length?data.sends.slice(0,30).map(s=>'<div class="send-history-row"><span>'+new Date(s.sent_at||s.scheduled_for).toLocaleString()+'</span><strong>'+esc(data.newsletters.find(n=>n.id===s.newsletter_id)?.name||"Newsletter")+'</strong><span>'+s.recipient_count+' recipients</span><span class="pill">'+esc(s.status)+'</span></div>').join(""):'<span class="muted">No sends recorded yet.</span>')+'</div></div></div>';
+ }catch(e){return '<div class="card"><strong>Newsletter manager could not load.</strong><p>'+esc(e.message||String(e))+'</p></div>';}
+}
+async function bindGetStarted(){
+ document.querySelectorAll("[data-program]").forEach(b=>b.onclick=()=>{newsletterDraft=null;if(b.dataset.program==="newsletter"){newsletterDraft={step:1,templateKey:"weekly-update",name:"Weekly Business Update",subject:"Weekly Business Update",sections:JSON.parse(JSON.stringify(newsletterTemplates[0].sections)),frequency:"weekly",sendTime:"09:00",days:[1],startDate:new Date().toISOString().slice(0,10),endDate:"",recipientsText:"",status:"draft"};render("newsletter");}else if(b.dataset.program==="site")render("siteprogram");else render("videoprogram");});
+}
+function siteProgram(){return '<section class="program-page"><div class="program-breadcrumb"><button class="secondary mini-button" data-program-back>← Get Started</button></div><div class="program-head"><div><span class="eyebrow">WEBSITE LAUNCH</span><h2>Site Online in 3–5 mins</h2><p class="program-subline">You can customize more later with HudHudAI’s help.</p></div></div><div class="simple-program-steps">'+["Tell HudHud about your business","Choose a starter design","Generate the site","Connect GitHub / Vercel","Publish and verify"].map((x,i)=>'<div><span>'+String(i+1).padStart(2,"0")+'</span><strong>'+x+'</strong><small>'+ (i===0?"Your name, description and contact details.":i===1?"Pick a clean starter layout.":i===2?"HudHud prepares the website files.":i===3?"Connect your deployment accounts.":"HudHud checks the live URL.")+'</small><button class="secondary" '+(i>0?"disabled":"")+'> '+(i===0?"Start":"Coming next")+' </button></div>').join("")+'</div></section>';}
+function videoProgram(){return '<section class="program-page"><div class="program-breadcrumb"><button class="secondary mini-button" data-program-back>← Get Started</button></div><div class="program-head"><div><span class="eyebrow">HUDHUDAI VIDEO</span><h2>Create an AI Video</h2><p class="program-subline">HudHud walks you from idea to a production-ready MP4 workflow.</p></div></div><div class="simple-program-steps">'+["Describe the video","Create the script","Choose visual style","Generate / review","Export MP4"].map((x,i)=>'<div><span>'+String(i+1).padStart(2,"0")+'</span><strong>'+x+'</strong><small>'+ (i===0?"Tell HudHud the goal, audience and message.":i===1?"HudHudAI helps structure the script.":i===2?"Set format, pacing, voice and visual direction.":i===3?"Connect the configured video provider and review the result.":"Export the finished video when approved.")+'</small><button class="secondary" '+(i<1?"":"disabled")+'>'+ (i===0?"Start":"Coming next")+'</button></div>').join("")+'</div></section>';}
+
+function bindNewsletter(){
+ const d=newsletterDraft;if(!d)return;
+ document.querySelectorAll("[data-program-back]").forEach(b=>b.onclick=()=>{newsletterDraft=null;render("getstarted")});
+ document.querySelectorAll("[data-nl-step]").forEach(b=>b.onclick=()=>{d.step=Number(b.dataset.nlStep);render("newsletter")});
+ document.querySelectorAll("[data-news-template]").forEach(b=>b.onclick=()=>{const t=newsletterTemplates.find(x=>x.key===b.dataset.newsTemplate);if(t){d.templateKey=t.key;d.name=t.name;d.subject=t.name;d.sections=JSON.parse(JSON.stringify(t.sections));render("newsletter")}});
+ const name=document.getElementById("nlName"),subject=document.getElementById("nlSubject");if(name)name.oninput=()=>d.name=name.value;if(subject)subject.oninput=()=>d.subject=subject.value;
+ document.querySelectorAll("[data-nl-add-section]").forEach(b=>b.onclick=()=>{d.sections.push({heading:"New Section",text:"",image:""});render("newsletter")});
+ document.querySelectorAll("[data-nl-heading]").forEach(el=>el.oninput=()=>d.sections[Number(el.dataset.nlHeading)].heading=el.value);
+ document.querySelectorAll("[data-nl-text]").forEach(el=>el.oninput=()=>d.sections[Number(el.dataset.nlText)].text=el.value);
+ document.querySelectorAll("[data-nl-image]").forEach(el=>el.oninput=()=>{d.sections[Number(el.dataset.nlImage)].image=el.value});
+ const freq=document.getElementById("nlFrequency"),date=document.getElementById("nlStartDate"),time=document.getElementById("nlSendTime"),end=document.getElementById("nlEndDate");
+ if(freq)freq.onchange=()=>{d.frequency=freq.value;render("newsletter")};if(date)date.onchange=()=>{d.startDate=date.value;updateNewsletterPreview()};if(time)time.onchange=()=>{d.sendTime=time.value;updateNewsletterPreview()};if(end)end.onchange=()=>d.endDate=end.value;
+ document.querySelectorAll("[data-nl-day]").forEach(el=>el.onchange=()=>{d.days=Array.from(document.querySelectorAll("[data-nl-day]:checked")).map(x=>Number(x.dataset.nlDay));updateNewsletterPreview()});
+ const rec=document.getElementById("nlRecipients");if(rec){rec.oninput=()=>{d.recipientsText=rec.value;const c=document.getElementById("nlRecipientCount");if(c)c.textContent=parseRecipients(rec.value).length+" valid recipients";}}
+ document.querySelector("[data-nl-prev]")?.addEventListener("click",()=>{if(d.step>1){d.step--;render("newsletter")}});
+ document.querySelector("[data-nl-next]")?.addEventListener("click",async()=>{if(d.step<5){if(d.step===4&&!parseRecipients(d.recipientsText).length){toast("Add at least one valid recipient");return;}d.step++;render("newsletter");return;}await activateNewsletter()});
+ document.querySelectorAll("[data-nl-pause]").forEach(b=>b.onclick=()=>updateNewsletterStatus(b.dataset.nlPause,"paused"));
+ document.querySelectorAll("[data-nl-resume]").forEach(b=>b.onclick=()=>updateNewsletterStatus(b.dataset.nlResume,"scheduled"));
+ document.querySelectorAll("[data-nl-send]").forEach(b=>b.onclick=()=>sendNewsletterNow(b.dataset.nlSend));
+ document.querySelectorAll("[data-nl-delete]").forEach(b=>b.onclick=()=>deleteNewsletter(b.dataset.nlDelete));
+ updateNewsletterPreview();
+ loadNewsletterManager();
+}
+function updateNewsletterPreview(){const el=document.getElementById("nlSchedulePreview");if(el&&newsletterDraft)el.textContent="Next send: "+(newsletterNextSend(newsletterDraft)?new Date(newsletterNextSend(newsletterDraft)).toLocaleString():"Choose a valid date and time.");}
+async function loadNewsletterManager(){const host=document.getElementById("nlManagerHost");if(host)host.innerHTML=await newsletterManagerHtml();document.querySelectorAll("[data-nl-pause],[data-nl-resume],[data-nl-send],[data-nl-delete]").forEach(b=>{if(b.dataset.nlPause)b.onclick=()=>updateNewsletterStatus(b.dataset.nlPause,"paused");if(b.dataset.nlResume)b.onclick=()=>updateNewsletterStatus(b.dataset.nlResume,"scheduled");if(b.dataset.nlSend)b.onclick=()=>sendNewsletterNow(b.dataset.nlSend);if(b.dataset.nlDelete)b.onclick=()=>deleteNewsletter(b.dataset.nlDelete);});}
+async function activateNewsletter(){
+ if(!currentUser){showAuthModal("signin");return;}
+ const rec=parseRecipients(newsletterDraft.recipientsText);if(!rec.length){toast("Add recipients first");return;}
+ if(!newsletterDraft.name||!newsletterDraft.subject){toast("Add a newsletter name and subject");return;}
+ const token=await authAccessToken();if(!token){showAuthModal("signin");return;}
+ const contacts=[];for(const x of rec){const {data,error}=await supabaseClient.from("hudhud_newsletter_contacts").upsert({user_id:currentUser.id,email:x.email,name:x.name||""},{onConflict:"user_id,email"}).select().single();if(error){toast("Could not save recipients");return;}contacts.push(data);}
+ const {data:news,error}=await supabaseClient.from("hudhud_newsletters").insert({user_id:currentUser.id,name:newsletterDraft.name,subject:newsletterDraft.subject,content:{sections:newsletterDraft.sections,templateKey:newsletterDraft.templateKey,html:newsletterHtml(newsletterDraft)},frequency:newsletterDraft.frequency,send_time:newsletterDraft.sendTime+":00",days_of_week:newsletterDraft.days,start_date:newsletterDraft.startDate||null,end_date:newsletterDraft.endDate||null,next_send_at:newsletterNextSend(newsletterDraft),status:"scheduled"}).select().single();
+ if(error){toast(error.message);return;}
+ const rows=contacts.map(x=>({newsletter_id:news.id,contact_id:x.id}));const {error:rr}=await supabaseClient.from("hudhud_newsletter_recipients").insert(rows);if(rr){toast(rr.message);return;}
+ log("Activated newsletter: "+newsletterDraft.name+" for "+rec.length+" recipients");toast("Newsletter activated");newsletterDraft=null;render("newsletter");
+}
+async function updateNewsletterStatus(id,status){const {error}=await supabaseClient.from("hudhud_newsletters").update({status,updated_at:new Date().toISOString(),next_send_at:status==="scheduled"?newsletterNextSend({frequency:"daily",startDate:new Date().toISOString().slice(0,10),sendTime:"09:00"}):null}).eq("id",id).eq("user_id",currentUser.id);if(error)toast(error.message);else loadNewsletterManager();}
+async function sendNewsletterNow(id){if(!currentUser){showAuthModal("signin");return;}const token=await authAccessToken();const r=await fetch("/api/newsletter-send",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({newsletterId:id})});const d=await r.json().catch(()=>({}));if(!r.ok)toast(d.error||"Send failed");else{toast("Newsletter sent");loadNewsletterManager();}}
+async function deleteNewsletter(id){if(!confirm("Delete this newsletter and its send history?"))return;const {error}=await supabaseClient.from("hudhud_newsletters").delete().eq("id",id).eq("user_id",currentUser.id);if(error)toast(error.message);else{toast("Newsletter deleted");loadNewsletterManager();}}
+
+function bindProgramBack(){
+ document.querySelectorAll("[data-program-back]").forEach(b=>b.onclick=()=>render("getstarted"));
+}
+
 function render(view){
  if(["projects","opportunities","connections","documents","activity","premium"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
- const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter};
+ const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
  m.innerHTML=(pages[view]||home)();
  bind(view);
  if(view==="home") { bindChat(); bindHomeAuth(); }
@@ -531,6 +676,9 @@ function render(view){
  if(view==="system") bindSystem();
  if(view==="connections") bindConnections();
  if(view==="premium") bindPremium();
+ if(view==="getstarted") bindGetStarted();
+ if(view==="newsletter") bindNewsletter();
+ if(view==="siteprogram"||view==="videoprogram") bindProgramBack();
  if(view==="command"||view==="analytics"){bindCommandCenter();loadCommandResources();}
 }
 
