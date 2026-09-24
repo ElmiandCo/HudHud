@@ -693,20 +693,24 @@ async function openConnectionModal(provider){
  host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-resource-modal></div><div class="resource-dialog"><div class="resource-loading"><span class="thinking-feather">🪶</span>Loading '+esc(provider)+' resources…</div></div></div>';
  const token=await authAccessToken();
  try{
-   let data=connectionResourceCache[provider];
-   if(!data){
-     const r=await fetch("/api/connection-resources?provider="+encodeURIComponent(provider),{headers:{Authorization:"Bearer "+token},cache:"no-store"});
-     const raw=await r.text();data=JSON.parse(raw);if(!r.ok)throw new Error(data.error||"Resource discovery failed");
-     connectionResourceCache[provider]=data;
-   }
    const existing=state.connections.find(x=>x.provider===provider)||null;
    const settings=existing?.settings||{};
+   const ar=await fetch("/api/provider-accounts",{headers:{Authorization:"Bearer "+token},cache:"no-store"});
+   const ad=await ar.json().catch(()=>({accounts:[]}));
+   if(!ar.ok)throw new Error(ad.error||"Could not load connected accounts.");
+   const accounts=(ad.accounts||[]).filter(x=>x.provider===provider);
+   const accountId=String(settings.account_id||"");
+   const query="/api/connection-resources?provider="+encodeURIComponent(provider)+(accountId?"&account_id="+encodeURIComponent(accountId):"");
+   const r=await fetch(query,{headers:{Authorization:"Bearer "+token},cache:"no-store"});
+   const raw=await r.text();const data=JSON.parse(raw);if(!r.ok)throw new Error(data.error||"Resource discovery failed");
+   connectionResourceCache[provider]=data;
    const selected=new Set(Array.isArray(settings.resources)?settings.resources:[]);
    const selectedProjects=new Set(projectConnectionRowsForProvider(provider).map(x=>x.project_id));
    host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-resource-modal></div><div class="resource-dialog">'+
      '<button class="resource-close" data-close-resource-modal>×</button>'+
      '<div class="eyebrow">CONNECTION SETTINGS</div><h2>'+connectionIcon(provider)+' '+esc(provider.charAt(0).toUpperCase()+provider.slice(1))+'</h2>'+
      '<p class="resource-subtitle">Choose the resources HudHud should focus on. These settings belong to your account; secrets remain server-side.</p>'+
+     '<div class="resource-setting"><label><span>ACCOUNT</span><select id="connectionProviderAccount"><option value="">Use current server connection</option>'+accounts.map(a=>'<option value="'+esc(a.id)+'" '+(String(a.id)===accountId?"selected":"")+'>'+esc(a.account_name)+(a.account_email?" • "+esc(a.account_email):"")+'</option>').join("")+'</select></label></div>'+
      (provider==="supabase"&&data.project?'<div class="resource-project"><strong>Supabase project</strong><small>'+esc(data.project.ref||"Configured project")+' • '+esc(data.project.url||"")+'</small></div>':'')+
      '<div class="resource-setting"><label><input id="connectionFocusSelected" type="checkbox" '+(settings.focus==="selected"?"checked":"")+'><span>Focus only on selected resources</span></label></div>'+
      '<div class="resource-section"><div class="resource-section-head"><strong>AVAILABLE RESOURCES</strong><span>'+data.resources.length+' found</span></div><div class="resource-list">'+
@@ -733,8 +737,9 @@ async function saveConnectionModal(provider){
  const host=document.getElementById("connectionModalHost");if(!host)return;
  const resources=Array.from(host.querySelectorAll("[data-resource-id]:checked")).map(x=>x.dataset.resourceId);
  const focus=host.querySelector("#connectionFocusSelected")?.checked?"selected":"all";
+ const account_id=host.querySelector("#connectionProviderAccount")?.value||null;
  const projects=Array.from(host.querySelectorAll("[data-resource-project]:checked")).map(x=>x.dataset.resourceProject);
- const item=await cloudUpsertConnection(provider,{resources,focus},(connectionResourceCache[provider]?.resources||[]).length+" resource(s) available");
+ const item=await cloudUpsertConnection(provider,{resources,focus,account_id},(connectionResourceCache[provider]?.resources||[]).length+" resource(s) available");
  if(!item)return;
  const rows=Object.entries(projectConnections).flatMap(([projectId,items])=>items.filter(x=>x.connection_id!==item.id).map(x=>({...x,project_id:projectId})));
  projects.forEach(projectId=>rows.push({project_id:projectId,connection_id:item.id,settings:{resources}}));
