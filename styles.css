@@ -217,3 +217,36 @@
 :root[data-theme="day"] .resource-item strong{color:#3c3344}
 @media(max-width:700px){.resource-dialog{padding:20px}.project-connections-head{align-items:flex-start;flex-direction:column}.hudhud-step-button{width:36px;min-width:36px}}
 .account-provider-block{border:1px solid #27222e;border-radius:12px;padding:14px;margin-top:12px;background:#0e0d12}.account-provider-head{display:flex;align-items:center;gap:10px}.account-provider-head>span{font-size:18px}.account-provider-head strong{flex:1;font-size:13px}.account-add{padding:8px 10px;font-size:10px}.account-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #211d27;padding:12px 0 0;margin-top:12px}.account-row>div{min-width:0}.account-row strong,.account-row small{display:block}.account-row strong{font-size:12px}.account-row small{color:#77717e;font-size:9px;margin-top:3px;overflow:hidden;text-overflow:ellipsis}.account-actions{display:flex;align-items:center;gap:7px}.account-remove{padding:6px 8px;font-size:9px}.account-empty{color:#77717e;font-size:10px;padding:12px 0 0}.connection-settings{display:flex;align-items:center;justify-content:space-between;gap:18px}
+
+
+/* HudHud Premium */
+.premium-page{max-width:1180px;margin:0 auto;padding-bottom:30px}
+.premium-hero{text-align:center;max-width:720px;margin:8px auto 26px}
+.premium-hero h2{font-size:34px;margin:9px 0 8px}
+.premium-hero p{font-size:12px;line-height:1.7}
+.premium-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.premium-plan{position:relative;display:flex;flex-direction:column;min-height:390px;padding:20px}
+.premium-plan.premium-featured{border-color:#72508c;box-shadow:0 16px 45px rgba(154,104,202,.13)}
+.premium-plan.premium-test{border-style:dashed;border-color:#6d5b76}
+.premium-plan-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.premium-tag{display:inline-block;font-size:8px;letter-spacing:1.2px;color:#b178ff;margin-bottom:8px}
+.premium-plan h3{font-size:20px;margin:0}
+.premium-price{text-align:right;white-space:nowrap}
+.premium-price strong{display:block;font-size:27px}
+.premium-price span{display:block;color:#716a78;font-size:8px;margin-top:2px}
+.premium-plan>p{color:#817a87;font-size:10px;line-height:1.55;min-height:50px}
+.premium-plan ul{list-style:none;padding:0;margin:6px 0 20px;display:grid;gap:9px;color:#bdb4c5;font-size:10px}
+.premium-plan li{line-height:1.4}
+.premium-button{width:100%;margin-top:auto}
+.premium-button:disabled{opacity:.7;cursor:default}
+.premium-note{margin-top:15px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+.premium-note h3{margin:5px 0}
+.premium-note p{margin:0;color:#817a87;font-size:10px}
+.stripe-badge{border:1px solid #3a2c4b;border-radius:20px;padding:8px 11px;font-size:8px;letter-spacing:1.2px;color:#b178ff}
+.premium-status{text-align:center;min-height:20px;margin-top:12px;color:#e79aa5;font-size:10px}
+:root[data-theme="day"] .premium-plan{background:#fff;border-color:#ddd6e5}
+:root[data-theme="day"] .premium-plan.premium-featured{border-color:#bca2cf}
+:root[data-theme="day"] .premium-plan.premium-test{border-color:#c8bccf}
+:root[data-theme="day"] .premium-note{background:#fff;border-color:#ddd6e5}
+@media(max-width:1050px){.premium-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.premium-hero h2{font-size:27px}.premium-grid{grid-template-columns:1fr}.premium-plan{min-height:auto}.premium-plan>p{min-height:0}.premium-note{align-items:flex-start;flex-direction:column}}
