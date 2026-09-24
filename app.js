@@ -628,7 +628,106 @@ async function reconnectConnection(name,button){
  }catch(e){toast("Reconnect failed: "+(e.message||e));}
  finally{if(button){button.disabled=false;button.textContent="↻ Attempt reconnect";}}
 }
+async function authAccessToken(){
+ if(!supabaseClient)return "";
+ const {data}=await supabaseClient.auth.getSession();
+ return data.session?.access_token||"";
+}
+function connectionIcon(provider){return provider==="github"?"🐙":provider==="vercel"?"▲":"⚡";}
+async function openConnectionModal(provider){
+ if(!currentUser){showAuthModal("signin");return;}
+ const host=document.getElementById("connectionModalHost");if(!host)return;
+ host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-resource-modal></div><div class="resource-dialog"><div class="resource-loading"><span class="thinking-feather">🪶</span>Loading '+esc(provider)+' resources…</div></div></div>';
+ const token=await authAccessToken();
+ try{
+   let data=connectionResourceCache[provider];
+   if(!data){
+     const r=await fetch("/api/connection-resources?provider="+encodeURIComponent(provider),{headers:{Authorization:"Bearer "+token},cache:"no-store"});
+     const raw=await r.text();data=JSON.parse(raw);if(!r.ok)throw new Error(data.error||"Resource discovery failed");
+     connectionResourceCache[provider]=data;
+   }
+   const existing=state.connections.find(x=>x.provider===provider)||null;
+   const settings=existing?.settings||{};
+   const selected=new Set(Array.isArray(settings.resources)?settings.resources:[]);
+   const selectedProjects=new Set(projectConnectionRowsForProvider(provider).map(x=>x.project_id));
+   host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-resource-modal></div><div class="resource-dialog">'+
+     '<button class="resource-close" data-close-resource-modal>×</button>'+
+     '<div class="eyebrow">CONNECTION SETTINGS</div><h2>'+connectionIcon(provider)+' '+esc(provider.charAt(0).toUpperCase()+provider.slice(1))+'</h2>'+
+     '<p class="resource-subtitle">Choose the resources HudHud should focus on. These settings belong to your account; secrets remain server-side.</p>'+
+     '<div class="resource-setting"><label><input id="connectionFocusSelected" type="checkbox" '+(settings.focus==="selected"?"checked":"")+'><span>Focus only on selected resources</span></label></div>'+
+     '<div class="resource-section"><div class="resource-section-head"><strong>AVAILABLE RESOURCES</strong><span>'+data.resources.length+' found</span></div><div class="resource-list">'+
+       (data.resources.length?data.resources.map(x=>'<label class="resource-item"><input type="checkbox" data-resource-id="'+esc(x.id)+'" '+(selected.has(String(x.id))?"checked":"")+'><span><strong>'+esc(x.name||x.full_name||x.id)+'</strong><small>'+esc(x.full_name||x.framework||x.type||"")+'</small></span></label>').join(""):'<div class="empty"><strong>No resources returned.</strong>Check the connection credentials and permissions.</div>')+
+     '</div></div>'+
+     '<div class="resource-section"><div class="resource-section-head"><strong>INCLUDE IN PROJECTS</strong><span>Optional</span></div><div class="resource-project-list">'+
+       ((state.projects||[]).length?state.projects.map(p=>'<label class="resource-item"><input type="checkbox" data-resource-project="'+esc(p.id)+'" '+(selectedProjects.has(String(p.id))?"checked":"")+'><span><strong>'+esc(p.name)+'</strong><small>'+esc(p.status||"Planning")+'</small></span></label>').join(""):'<div class="muted">Create a project first.</div>')+
+     '</div></div>'+
+     '<div class="form-actions"><button type="button" class="secondary" data-close-resource-modal>Cancel</button><button type="button" class="primary" data-save-connection="'+provider+'">Save connection</button></div>'+
+   '</div></div>';
+   host.querySelectorAll("[data-close-resource-modal]").forEach(b=>b.onclick=closeResourceModal);
+   host.querySelector("[data-save-connection]").onclick=()=>saveConnectionModal(provider);
+ }catch(e){
+   host.querySelector(".resource-dialog").innerHTML='<button class="resource-close" data-close-resource-modal>×</button><div class="eyebrow">CONNECTION ERROR</div><h2>Could not load '+esc(provider)+'</h2><p class="resource-subtitle">'+esc(e.message||String(e))+'</p><div class="form-actions"><button class="secondary" data-close-resource-modal>Close</button></div>';
+   host.querySelector("[data-close-resource-modal]").onclick=closeResourceModal;
+ }
+}
+function projectConnectionRowsForProvider(provider){
+ const ids=new Set(state.connections.filter(c=>c.provider===provider).map(c=>c.id));
+ return Object.values(projectConnections).flat().filter(x=>ids.has(x.connection_id));
+}
+function closeResourceModal(){const host=document.getElementById("connectionModalHost");if(host)host.innerHTML="";}
+async function saveConnectionModal(provider){
+ const host=document.getElementById("connectionModalHost");if(!host)return;
+ const resources=Array.from(host.querySelectorAll("[data-resource-id]:checked")).map(x=>x.dataset.resourceId);
+ const focus=host.querySelector("#connectionFocusSelected")?.checked?"selected":"all";
+ const projects=Array.from(host.querySelectorAll("[data-resource-project]:checked")).map(x=>x.dataset.resourceProject);
+ const item=await cloudUpsertConnection(provider,{resources,focus},(connectionResourceCache[provider]?.resources||[]).length+" resource(s) available");
+ if(!item)return;
+ const rows=Object.entries(projectConnections).flatMap(([projectId,items])=>items.filter(x=>x.connection_id!==item.id).map(x=>({...x,project_id:projectId})));
+ projects.forEach(projectId=>rows.push({project_id:projectId,connection_id:item.id,settings:{resources}}));
+ const projectIds=new Set((state.projects||[]).map(p=>p.id));
+ for(const projectId of projectIds){
+   const wanted=rows.filter(x=>x.project_id===projectId);
+   await cloudSaveProjectConnections(projectId,wanted);
+ }
+ closeResourceModal();render("connections");toast(provider.charAt(0).toUpperCase()+provider.slice(1)+" settings saved");
+}
+async function openProjectConnectionsModal(projectId){
+ const project=state.projects.find(p=>p.id===projectId);if(!project)return;
+ const host=document.getElementById("connectionModalHost")||document.body.appendChild(Object.assign(document.createElement("div"),{id:"connectionModalHost"}));
+ const available=state.connections.filter(c=>c.provider);
+ const current=new Set(projectConnectionRows(projectId).map(x=>x.connection_id));
+ host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-resource-modal></div><div class="resource-dialog"><button class="resource-close" data-close-resource-modal>×</button><div class="eyebrow">PROJECT CONNECTIONS</div><h2>🔗 '+esc(project.name)+'</h2><p class="resource-subtitle">Select the connections HudHud is allowed to use while executing this project.</p><div class="resource-project-list">'+
+   (available.length?available.map(c=>'<label class="resource-item project-connection-option"><input type="checkbox" data-project-connection="'+esc(c.id)+'" '+(current.has(c.id)?"checked":"")+'><span><strong>'+connectionIcon(c.provider)+' '+esc(c.name)+'</strong><small>'+esc((c.settings?.focus==="selected"?"Focused resources":"All configured resources"))+'</small></span><button type="button" class="mini-link" data-open-connection="'+esc(c.provider)+'">Settings</button></label>').join(""):'<div class="empty"><strong>No configured connections.</strong><p>Open GitHub or Vercel in Connections first.</p></div>')+
+   '</div><div class="form-actions"><button type="button" class="secondary" data-close-resource-modal>Cancel</button><button type="button" class="primary" data-save-project-connections="'+esc(projectId)+'">Save project connections</button></div></div></div>';
+ host.querySelectorAll("[data-close-resource-modal]").forEach(b=>b.onclick=closeResourceModal);
+ host.querySelector("[data-save-project-connections]")?.addEventListener("click",async()=>{const ids=Array.from(host.querySelectorAll("[data-project-connection]:checked")).map(x=>x.dataset.projectConnection);const rows=ids.map(id=>({project_id:projectId,connection_id:id,settings:state.connections.find(c=>c.id===id)?.settings||{}}));if(await cloudSaveProjectConnections(projectId,rows)){closeResourceModal();render("projects");toast("Project connections saved");}});
+ host.querySelectorAll(".mini-link[data-open-connection]").forEach(b=>b.onclick=()=>openConnectionModal(b.dataset.openConnection));
+}
+async function runHudHudStep(projectId,index,button){
+ const project=state.projects.find(p=>p.id===projectId),step=project?.steps?.[index];
+ if(!project||!step)return;
+ if(button){button.disabled=true;button.textContent="🪶";}
+ try{
+   const token=await authAccessToken();
+   if(!token)throw new Error("Please sign in again.");
+   const r=await fetch("/api/hudhud-step",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({project,step,connections:selectedProjectConnections(projectId)})});
+   const raw=await r.text();let data={};try{data=JSON.parse(raw)}catch{}
+   if(!r.ok||!data.completed)throw new Error(data.error||"HudHud could not complete this step.");
+   step.done=true;
+   const allDone=project.steps.length>0&&project.steps.every(s=>s.done);
+   if(allDone){project.preDoneStatus=project.preDoneStatus||project.status||"Active";project.status="Done";}
+   project.updatedAt=new Date().toISOString();save();
+   await cloudUpdateProject(project);
+   log("HudHud completed project step: "+project.name+" • "+step.name);
+   toast("HudHud completed: "+step.name);
+   addMessage("HudHud",data.reply||"Step completed.","hud");
+   render("projects");
+ }catch(e){toast("HudHud step failed: "+(e.message||String(e)));if(button){button.disabled=false;button.textContent="🦉";}}
+}
 function bindConnections(){
+ document.querySelectorAll("[data-open-connection]").forEach(b=>b.onclick=e=>{e.preventDefault();openConnectionModal(b.dataset.openConnection);});
+ document.querySelectorAll("[data-project-connections]").forEach(b=>b.onclick=()=>openProjectConnectionsModal(b.dataset.projectConnections));
+ document.querySelectorAll("[data-hudhud-step]").forEach(b=>b.onclick=()=>runHudHudStep(b.dataset.hudhudStep,Number(b.dataset.stepIndex),b));
  document.querySelectorAll("[data-connection-refresh]").forEach(b=>b.onclick=refreshConnections);
  document.querySelectorAll("[data-connection-reconnect]").forEach(b=>b.onclick=()=>reconnectConnection(b.dataset.connectionReconnect,b));
  document.querySelectorAll("[data-connection-reconnect-all]").forEach(b=>b.onclick=async()=>{
