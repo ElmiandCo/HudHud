@@ -319,3 +319,100 @@
 .sms-test-actions button:disabled{opacity:.6;cursor:wait}
 #smsTestStatus{margin-top:10px}
 @media(max-width:700px){.sms-test-card{align-items:flex-start;flex-direction:column}.sms-test-actions{justify-content:flex-start}}
+
+
+/* HUDHUD DESIGN LANGUAGE — smart, efficient, professional, user-friendly */
+.question-card,
+.input-canvas,
+.hudhud-canvas{
+  background:linear-gradient(145deg,rgba(20,16,28,.96),rgba(11,10,15,.98));
+  border:1px solid #30263a;
+  border-radius:14px;
+  box-shadow:0 12px 35px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.question-card{padding:18px;margin:14px 0}
+.question-label{display:block;color:#cfc5d8;font-size:12px;font-weight:700;letter-spacing:.35px;margin-bottom:7px}
+.question-hint{display:block;color:#77717e;font-size:10px;line-height:1.6;margin-top:6px}
+.hudhud-input,
+.question-card input,
+.question-card textarea,
+.question-card select,
+.input-canvas input,
+.input-canvas textarea,
+.input-canvas select{
+  width:100%;
+  background:#0b0a0f;
+  color:#f3f0ea;
+  border:1px solid #302a37;
+  border-radius:10px;
+  padding:12px 13px;
+  outline:none;
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.hudhud-input::placeholder,
+.question-card input::placeholder,
+.question-card textarea::placeholder,
+.input-canvas input::placeholder,
+.input-canvas textarea::placeholder{color:#625b68}
+.hudhud-input:focus,
+.question-card input:focus,
+.question-card textarea:focus,
+.question-card select:focus,
+.input-canvas input:focus,
+.input-canvas textarea:focus,
+.input-canvas select:focus{
+  border-color:#8a5fba;
+  box-shadow:0 0 0 3px rgba(138,95,186,.12),0 0 18px rgba(138,95,186,.08);
+  background:#0d0b11;
+}
+.question-card textarea,.input-canvas textarea{min-height:110px;resize:vertical}
+.question-card select,.input-canvas select{appearance:auto}
+.hudhud-canvas{padding:18px;min-height:120px;position:relative;overflow:hidden}
+.hudhud-canvas canvas{display:block;max-width:100%}
+canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,#0e0d12,#0b0a0f);border:1px solid #30263a;border-radius:14px}
+:root[data-theme="day"] .question-card,
+:root[data-theme="day"] .input-canvas,
+:root[data-theme="day"] .hudhud-canvas{
+  background:linear-gradient(145deg,#fff,#f8f5fa);
+  border-color:#ddd6e5;
+  box-shadow:0 10px 28px rgba(54,37,68,.08);
+}
+:root[data-theme="day"] .hudhud-input,
+:root[data-theme="day"] .question-card input,
+:root[data-theme="day"] .question-card textarea,
+:root[data-theme="day"] .question-card select,
+:root[data-theme="day"] .input-canvas input,
+:root[data-theme="day"] .input-canvas textarea,
+:root[data-theme="day"] .input-canvas select{
+  background:#fff;color:#211d27;border-color:#d9d1df;
+}
+:root[data-theme="day"] .hudhud-input:focus,
+:root[data-theme="day"] .question-card input:focus,
+:root[data-theme="day"] .question-card textarea:focus,
+:root[data-theme="day"] .question-card select:focus{
+  background:#fff;
+}
+.hudhud-leaf{
+  position:fixed;
+  top:-48px;
+  left:0;
+  z-index:9999;
+  pointer-events:none;
+  user-select:none;
+  font-size:clamp(18px,2.2vw,28px);
+  opacity:.82;
+  filter:drop-shadow(0 3px 8px rgba(0,0,0,.28));
+  animation:hudhud-leaf-fall var(--leaf-duration,2.9s) cubic-bezier(.2,.7,.25,1) forwards;
+  transform:translate3d(0,0,0) rotate(0deg);
+}
+@keyframes hudhud-leaf-fall{
+  0%{transform:translate3d(0,-12px,0) rotate(0deg);opacity:0}
+  10%{opacity:.82}
+  35%{transform:translate3d(var(--leaf-drift,38px),32vh,0) rotate(120deg)}
+  65%{transform:translate3d(calc(var(--leaf-drift,38px) * -0.35),68vh,0) rotate(245deg)}
+  100%{transform:translate3d(calc(var(--leaf-drift,38px) * .55),115vh,0) rotate(390deg);opacity:0}
+}
+@media (prefers-reduced-motion:reduce){
+  .hudhud-leaf{display:none!important}
+  .hudhud-input,.question-card input,.question-card textarea,.question-card select,.input-canvas input,.input-canvas textarea,.input-canvas select{transition:none}
+}
