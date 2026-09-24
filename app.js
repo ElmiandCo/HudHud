@@ -647,7 +647,7 @@ async function handleWorkspaceCommand(message){
  const text=String(message||"").trim();
 
  const ordinal=n=>{
-   const m=String(n||"").toLowerCase().match(/^(\\d+)(?:st|nd|rd|th)?$/);
+   const m=String(n||"").toLowerCase().match(/^(\d+)(?:st|nd|rd|th)?$/);
    return m?Number(m[1]):null;
  };
  const findItem=(kind,name)=>{
@@ -656,7 +656,7 @@ async function handleWorkspaceCommand(message){
    if(/^(?:last|latest)$/i.test(requested))return collection[0]||null;
    return collection.find(x=>String(x.name||"").trim().toLowerCase()===requested.toLowerCase())||null;
  };
- const stepCommand=text.match(/\\b(?:mark|set|make|change|update)\\s+(?:step\\s+)?(\\d+)(?:st|nd|rd|th)?\\s+(?:of|from|in)\\s+(?:project\\s+)?[“"' ]*([^”"']+?)[”"' ]*\\s+(?:to\\s+)?(?:done|complete|completed)\\b/i);
+ const stepCommand=text.match(/\b(?:mark|set|make|change|update)\s+(?:step\s+)?(\d+)(?:st|nd|rd|th)?\s+(?:of|from|in)\s+(?:project\s+)?[“"' ]*([^”"']+?)[”"' ]*\s+(?:to\s+)?(?:done|complete|completed)\b/i);
  if(stepCommand){
    const index=ordinal(stepCommand[1])-1;
    const project=findItem("project",stepCommand[2]);
@@ -673,7 +673,7 @@ async function handleWorkspaceCommand(message){
    return {reply:"Done. Step "+(index+1)+" (“"+step.name+"”) in project “"+project.name+"” is marked done."+((project.status==="Done")?" The project is now Done.":"")};
  }
 
- const deleteMatch=text.match(/\\bdelete\\s+(?:the\\s+)?(?:(last|latest)\\s+)?(project|opportunity)(?:\\s+[“"' ]*([^”"']+?)[”"' ]*)?\\s*$/i);
+ const deleteMatch=text.match(/\bdelete\s+(?:the\s+)?(?:(last|latest)\s+)?(project|opportunity)(?:\s+[“"' ]*([^”"']+?)[”"' ]*)?\s*$/i);
  if(deleteMatch){
    const kind=deleteMatch[2].toLowerCase(),requested=deleteMatch[3]||deleteMatch[1]||"last";
    const item=findItem(kind,requested);
@@ -688,7 +688,7 @@ async function handleWorkspaceCommand(message){
    return {reply:"Done. I deleted the "+kind+" “"+item.name+"”."};
  }
 
- const statusUpdate=text.match(/\\b(?:update|change|set)\\s+(?:project\\s*\\?:\\s*|project\\s+)([“"' ]?)([^”"']+?)\\1(?:'s)?\\s+status\\s+(?:to|=)\\s*[“"' ]?(planning|active|on hold)[”"']?/i);
+ const statusUpdate=text.match(/\b(?:update|change|set)\s+(?:project\s*\?:\s*|project\s+)([“"' ]?)([^”"']+?)\1(?:'s)?\s+status\s+(?:to|=)\s*[“"' ]?(planning|active|on hold)[”"']?/i);
  if(statusUpdate){
    const requestedName=String(statusUpdate[2]).trim().replace(/[.?!]+/,"");
    const nextRaw=statusUpdate[3].toLowerCase();
@@ -702,13 +702,13 @@ async function handleWorkspaceCommand(message){
    return {reply:"Done. Project “"+project.name+"” is now “"+nextStatus+"”. (Previously “"+previous+"”.)"};
  }
 
- const createMatch=text.match(/\\b(?:create|add)\\s+(?:a\\s+)?(?:new\\s+)?project\\s+(?:called|named|titled)\\s+[“"']([^”"']+)[”"']/i);
- const looseMatch=text.match(/\\b(?:create|add)\\s+(?:a\\s+)?(?:new\\s+)?project\\s+(?:called|named|titled)\\s+(.+?)(?:\\s+(?:here|on this site|to this site))?$/i);
+ const createMatch=text.match(/\b(?:create|add)\s+(?:a\s+)?(?:new\s+)?project\s+(?:called|named|titled)\s+[“"']([^”"']+)[”"']/i);
+ const looseMatch=text.match(/\b(?:create|add)\s+(?:a\s+)?(?:new\s+)?project\s+(?:called|named|titled)\s+(.+?)(?:\s+(?:here|on this site|to this site))?$/i);
  const match=createMatch||looseMatch;
  if(!match)return null;
  let name=String(match[1]).trim().replace(/[.?!]+$/,"");
  if(!name)return null;
- const statusMatch=text.match(/\\bstatus\\s*[:=]?\\s*(planning|active|on hold)\\b/i);
+ const statusMatch=text.match(/\bstatus\s*[:=]?\s*(planning|active|on hold)\b/i);
  const rawStatus=statusMatch?statusMatch[1].toLowerCase():"planning";
  const status=rawStatus==="active"?"Active":rawStatus==="on hold"?"On hold":"Planning";
  const project={id:"project_"+Date.now(),name:name,description:"Created from the HudHud command center.",status:status,createdAt:new Date().toISOString(),steps:[]};
