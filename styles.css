@@ -145,3 +145,53 @@
 :root[data-theme="day"] #authForm input{background:#fff;color:#211d27;border-color:#ddd6e5}
 :root[data-theme="day"] .auth-user{color:#706a78}
 @media(max-width:800px){.auth-user{display:none}}
+
+/* Connection resource popups + project-scoped tools */
+.connection-clickable{position:relative;width:100%;text-align:left;cursor:pointer;color:inherit;font:inherit;transition:.18s}
+.connection-clickable:hover{transform:translateY(-2px);border-color:#6a4a82;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.connection-open-hint{display:block;margin-top:12px;color:#b178ff;font-size:9px;letter-spacing:.6px}
+.project-connections{margin:13px 0 15px;padding:12px;border:1px solid #29232f;border-radius:10px;background:#0b0a0f}
+.project-connections-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
+.project-connections-head>span{font-size:8px;letter-spacing:1.3px;color:#817a87}
+.mini-button{font-size:9px!important;padding:6px 9px!important}
+.project-connection-chips{display:flex;gap:6px;flex-wrap:wrap}
+.project-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid #3a2c4b;background:#15101b;color:#c8b8d5;border-radius:14px;padding:6px 9px;font-size:9px}
+.workspace-step-row{display:flex;align-items:stretch;gap:6px}
+.workspace-step-row .workspace-step{flex:1}
+.hudhud-step-button{width:39px;min-width:39px;border:1px solid #3a2c4b;background:#17101e;color:#d5b6ed;border-radius:9px;cursor:pointer;font-size:16px;transition:.15s}
+.hudhud-step-button:hover{border-color:#9a68ca;background:#21172c;transform:scale(1.03)}
+.hudhud-step-button:disabled{opacity:.55;cursor:wait}
+.step-builder-item{display:grid;gap:6px}
+.step-prompt-field{height:36px;background:#0b0a0f;color:#cfc7d5;border:1px solid #302a37;border-radius:8px;padding:9px 11px;font-size:10px;outline:none}
+.step-prompt-field:focus{border-color:#8a5fba}
+.resource-modal{position:fixed;inset:0;z-index:1200}
+.resource-backdrop{position:absolute;inset:0;background:rgba(3,2,5,.78);backdrop-filter:blur(9px)}
+.resource-dialog{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(720px,calc(100vw - 28px));max-height:88vh;overflow:auto;background:#0e0d12;border:1px solid #3a2c4b;border-radius:17px;padding:25px;box-shadow:0 30px 90px rgba(0,0,0,.6)}
+.resource-close{position:absolute;right:15px;top:10px;border:0;background:transparent;color:#817a87;font-size:25px;cursor:pointer}
+.resource-dialog h2{margin:8px 0 5px;font-size:25px}
+.resource-subtitle{color:#817a87;font-size:11px;line-height:1.6;margin:0 35px 17px 0}
+.resource-setting{padding:11px 12px;background:#121016;border:1px solid #29232f;border-radius:9px;margin-bottom:15px}
+.resource-setting label{display:flex;align-items:center;gap:8px;font-size:10px;color:#bdb4c5;cursor:pointer}
+.resource-section{margin-top:17px}
+.resource-section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.resource-section-head strong{font-size:8px;letter-spacing:1.3px;color:#a99db2}
+.resource-section-head span{font-size:9px;color:#716a78}
+.resource-list,.resource-project-list{display:grid;gap:7px}
+.resource-item{display:flex;align-items:center;gap:10px;border:1px solid #29232f;background:#0b0a0f;border-radius:9px;padding:10px 11px;cursor:pointer}
+.resource-item:hover{border-color:#5d4470}
+.resource-item input{accent-color:#9a68ca}
+.resource-item>span{display:grid;gap:3px;min-width:0;flex:1}
+.resource-item strong{font-size:10px;color:#d9d2df;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.resource-item small{font-size:8px;color:#716a78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-connection-option{align-items:center}
+.mini-link{border:0;background:transparent;color:#b178ff;font-size:9px;cursor:pointer}
+.resource-loading{min-height:180px;display:grid;place-items:center;color:#aaa2b2;font-size:11px;gap:8px}
+:root[data-theme="day"] .connection-clickable:hover{border-color:#bca2cf}
+:root[data-theme="day"] .project-connections{background:#f8f6fb;border-color:#ddd6e5}
+:root[data-theme="day"] .project-chip{background:#eee8f3;border-color:#d9cce3;color:#4c3d58}
+:root[data-theme="day"] .hudhud-step-button{background:#f3edf7;border-color:#d9cce3;color:#68458a}
+:root[data-theme="day"] .step-prompt-field{background:#fff;color:#211d27;border-color:#ddd6e5}
+:root[data-theme="day"] .resource-dialog{background:#fff;border-color:#d9cce3;color:#211d27}
+:root[data-theme="day"] .resource-setting,.resource-item{background:#f8f6fb;border-color:#ddd6e5}
+:root[data-theme="day"] .resource-item strong{color:#3c3344}
+@media(max-width:700px){.resource-dialog{padding:20px}.project-connections-head{align-items:flex-start;flex-direction:column}.hudhud-step-button{width:36px;min-width:36px}}
