@@ -34,7 +34,7 @@ async function providerAccount(req,provider){
   return rows[0];
 }
 async function githubResources(account){
-  if(!env("HUDHUD_GITHUB_TOKEN"))throw new Error("GitHub connection is not configured.");
+  if(!account&&!env("HUDHUD_GITHUB_TOKEN"))throw new Error("GitHub connection is not configured.");
   const owner=env("HUDHUD_GITHUB_OWNER")||"ElmiandCo";
   const repo=env("HUDHUD_GITHUB_REPO")||"HudHud";
   const data=await jsonFetch("https://api.github.com/user/repos?affiliation=owner,collaborator,organization_member&per_page=100&sort=updated",{headers:{"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2026-03-10","Authorization":`Bearer ${env("HUDHUD_GITHUB_TOKEN")}`}});
