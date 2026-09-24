@@ -310,3 +310,12 @@
 :root[data-theme="day"] .program-card,:root[data-theme="day"] .program-step-panel,:root[data-theme="day"] .wizard-progress button,:root[data-theme="day"] .newsletter-manager-row,:root[data-theme="day"] .simple-program-steps>div{background:#fff;border-color:#ddd6e5;color:#211d27}:root[data-theme="day"] .program-card small,:root[data-theme="day"] .program-head p{color:#706a78}:root[data-theme="day"] .template-option,:root[data-theme="day"] .newsletter-section-editor,:root[data-theme="day"] .review-grid>div{background:#f8f6fb;border-color:#ddd6e5;color:#3c3344}:root[data-theme="day"] .wizard-label input,:root[data-theme="day"] .wizard-label textarea,:root[data-theme="day"] .wizard-label select,:root[data-theme="day"] .section-fields input,:root[data-theme="day"] .section-fields textarea{background:#fff;color:#211d27;border-color:#ddd6e5}
 @media(max-width:900px){.program-grid{grid-template-columns:1fr}.template-grid{grid-template-columns:1fr}.review-grid{grid-template-columns:repeat(2,1fr)}.newsletter-manager-row{align-items:flex-start;flex-direction:column}.manager-actions{justify-content:flex-start}.send-history-row{grid-template-columns:1fr 1fr}.wizard-progress small{display:none}}
 @media(max-width:600px){.wizard-two,.newsletter-stats,.review-grid{grid-template-columns:1fr}.program-head{flex-direction:column}.simple-program-steps>div{grid-template-columns:32px 1fr}.simple-program-steps small{grid-column:2}.simple-program-steps button{grid-column:2;grid-row:auto;justify-self:start}}
+
+/* Newsletter SMS connector test */
+.sms-test-card{margin:16px 0;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.sms-test-card h3{margin:6px 0}
+.sms-test-card p{margin:0;max-width:680px}
+.sms-test-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.sms-test-actions button:disabled{opacity:.6;cursor:wait}
+#smsTestStatus{margin-top:10px}
+@media(max-width:700px){.sms-test-card{align-items:flex-start;flex-direction:column}.sms-test-actions{justify-content:flex-start}}
