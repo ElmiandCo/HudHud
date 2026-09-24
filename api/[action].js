@@ -384,6 +384,73 @@ async function cronHandler(req,res){
 }
 
 
+function smsBaseUrl(){return String(process.env.HUDHUD_PUBLIC_URL||"").replace(/\/+$/,"");}
+function normalizePhone(value){
+ const digits=String(value||"").replace(/\D/g,"");
+ if(!digits)return "";
+ if(digits.length===10)return "+1"+digits;
+ if(digits.length===11&&digits.startsWith("1"))return "+"+digits;
+ return "+"+digits;
+}
+async function smsDb(path,{method="GET",body}={}){
+ const key=process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY;if(!key)throw new Error("SMS storage is not configured.");
+ const r=await fetch(base()+"/rest/v1/"+path,{method,headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json",Prefer:"return=representation"},body:body===undefined?undefined:JSON.stringify(body)});
+ const t=await r.text();let data=[];try{data=t?JSON.parse(t):[];}catch{data=[];}if(!r.ok)throw new Error((data&&data.message)||t||"SMS database request failed.");return data;
+}
+async function twilioSend(to,body){
+ const sid=process.env.TWILIO_ACCOUNT_SID,token=process.env.TWILIO_AUTH_TOKEN,from=process.env.TWILIO_FROM_NUMBER;
+ if(!sid||!token||!from)throw new Error("Twilio is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER.");
+ const auth=Buffer.from(sid+":"+token).toString("base64");
+ const r=await fetch("https://api.twilio.com/2010-04-01/Accounts/"+encodeURIComponent(sid)+"/Messages.json",{method:"POST",headers:{Authorization:"Basic "+auth,"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({To:normalizePhone(to),From:normalizePhone(from),Body:String(body).slice(0,1600)})});
+ const t=await r.text();let data={};try{data=JSON.parse(t)}catch{}if(!r.ok)throw new Error(data.message||"Twilio could not send the message.");return data;
+}
+function validTwilioSignature(req){
+ const token=process.env.TWILIO_AUTH_TOKEN;if(!token)return false;
+ const signature=String(req.headers["x-twilio-signature"]||"");
+ const url=smsBaseUrl()+"/api/sms-webhook";
+ const params=req.body&&typeof req.body==="object"?req.body:{};
+ const data=url+Object.keys(params).sort().map(k=>k+String(params[k])).join("");
+ const expected=crypto.createHmac("sha1",token).update(data).digest("base64");
+ return !!signature&&crypto.timingSafeEqual(Buffer.from(signature),Buffer.from(expected));
+}
+async function smsSendHandler(req,res){
+ if(req.method!=="POST")return res.status(405).json({error:"Method not allowed."});
+ try{
+  const user=await userFromBearer(req),body=req.body||{},contactId=String(body.contact_id||""),conversationId=String(body.conversation_id||""),message=String(body.body||"").trim();
+  if(!contactId||!message)return res.status(400).json({error:"Contact and message are required."});
+  const contacts=await smsDb("hudhud_contacts?id=eq."+encodeURIComponent(contactId)+"&user_id=eq."+encodeURIComponent(user.id)+"&select=*");
+  const contact=contacts[0];if(!contact)throw new Error("Contact not found.");
+  const conversations=await smsDb("hudhud_conversations?id=eq."+encodeURIComponent(conversationId)+"&user_id=eq."+encodeURIComponent(user.id)+"&contact_id=eq."+encodeURIComponent(contactId)+"&select=*");
+  if(!conversations[0])throw new Error("Conversation not found.");
+  if(!contact.phone)throw new Error("This contact does not have a phone number.");
+  const tw=await twilioSend(contact.phone,message),now=new Date().toISOString();
+  const rows=await smsDb("hudhud_messages",{method:"POST",body:{user_id:user.id,conversation_id:conversationId,direction:"outbound",channel:"sms",body:message,provider_message_id:tw.sid||null,delivery_status:tw.status||"queued",sent_at:now,metadata:{provider:"twilio"}}});
+  await smsDb("hudhud_conversations?id=eq."+encodeURIComponent(conversationId),{method:"PATCH",body:{last_message_at:now,updated_at:now}});
+  return res.status(200).json({ok:true,message:rows[0]||null,provider_id:tw.sid||null});
+ }catch(e){return res.status(400).json({error:e.message||"SMS send failed."});}
+}
+async function smsWebhookHandler(req,res){
+ if(req.method!=="POST")return res.status(405).send("Method not allowed.");
+ try{
+  if(!validTwilioSignature(req))return res.status(403).send("Invalid Twilio signature.");
+  const from=normalizePhone(req.body?.From),to=normalizePhone(req.body?.To),body=String(req.body?.Body||"").trim(),sid=String(req.body?.MessageSid||"");
+  if(!from||!to||!body)return res.status(400).send("Missing message fields.");
+  const owners=await smsDb("hudhud_sms_numbers?phone_number=eq."+encodeURIComponent(to)+"&status=eq.active&select=*");
+  const owner=owners[0];if(!owner)return res.status(404).send("HudHud number not registered.");
+  const contacts=await smsDb("hudhud_contacts?user_id=eq."+encodeURIComponent(owner.user_id)+"&phone=eq."+encodeURIComponent(from)+"&select=*");
+  let contact=contacts[0];
+  if(!contact){const created=await smsDb("hudhud_contacts",{method:"POST",body:{user_id:owner.user_id,name:from,phone:from,status:"active",metadata:{source:"sms"}}});contact=created[0];}
+  const convs=await smsDb("hudhud_conversations?user_id=eq."+encodeURIComponent(owner.user_id)+"&contact_id=eq."+encodeURIComponent(contact.id)+"&channel=eq.sms&status=eq.active&select=*&limit=1");
+  let conv=convs[0];
+  if(!conv){const created=await smsDb("hudhud_conversations",{method:"POST",body:{user_id:owner.user_id,contact_id:contact.id,channel:"sms",status:"active"}});conv=created[0];}
+  const now=new Date().toISOString();
+  await smsDb("hudhud_messages",{method:"POST",body:{user_id:owner.user_id,conversation_id:conv.id,direction:"inbound",channel:"sms",body,provider_message_id:sid||null,delivery_status:"received",received_at:now,metadata:{provider:"twilio",from,to}}});
+  await smsDb("hudhud_conversations?id=eq."+encodeURIComponent(conv.id),{method:"PATCH",body:{last_message_at:now,updated_at:now}});
+  res.setHeader("Content-Type","text/xml");
+  return res.status(200).send("<Response></Response>");
+ }catch(e){return res.status(400).send("Webhook failed.");}
+}
+
 function newsletterRoute(req){
   const q=String(req.query?.newsletter||"").toLowerCase();
   if(q) return q;
@@ -409,6 +476,10 @@ export default async function handler(req,res){
   if(["connection-oauth","connection-resources","connection-status"].includes(action)){
     return connectionHandler(req,res);
   }
+
+  if(["sms-send"].includes(action)){ return smsSendHandler(req,res); }
+
+  if(action==="sms-webhook"){ return smsWebhookHandler(req,res); }
 
   if(["newsletter-send","newsletter-cron"].includes(action)){
     return newsletterHandler(req,res);
