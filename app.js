@@ -704,12 +704,95 @@ function hudhudFlyby(count=2){
   }catch(e){/* decorative animation must never affect the app */}
 }
 
+
+function social(){
+ const providers=[
+  ["tiktok","TikTok","🎵","Short-form video, profile and public content.","https://www.tiktok.com/@"],
+  ["instagram","Instagram","📸","Profile, posts and public creator presence.","https://www.instagram.com/"],
+  ["facebook","Facebook","f","Profile and public page presence.","https://www.facebook.com/"],
+  ["x","X","𝕏","Profile and public posts.","https://x.com/"],
+  ["youtube","YouTube","▶","Channel and public video presence.","https://www.youtube.com/@"],
+  ["linkedin","LinkedIn","in","Professional profile and public activity.","https://www.linkedin.com/in/"]
+ ];
+ return '<section class="social-page"><div class="section-head"><div><span class="eyebrow">SOCIAL</span><h2>Your social presence</h2><span class="muted">Connect services so HudHud can learn from the social information you authorize.</span></div><div class="social-summary"><strong id="socialConnectedCount">—</strong><span>connected</span></div></div><div class="social-permission-banner card"><div><strong>🔐 You stay in control</strong><p>Connecting a service does not give HudHud permission to publish, message or use private data. Those capabilities can be authorized separately.</p></div></div><div id="socialGrid" class="social-grid">'+providers.map(p=>'<article class="card social-card" data-social-provider="'+p[0]+'"><div class="social-card-top"><div class="social-logo">'+p[2]+'</div><span class="pill social-status">Not connected</span></div><h3>'+p[1]+'</h3><p>'+p[3]+'</p><div class="social-account" data-social-account="'+p[0]+'">—</div><div class="social-actions"><button class="secondary" data-social-connect="'+p[0]+'">Connect</button><button class="secondary" data-social-view="'+p[0]+'" disabled>View</button><button class="secondary" data-social-remove="'+p[0]+'" disabled>Remove</button></div></article>').join('')+'</div></section>';
+}
+async function bindSocial(){
+ if(!hasCloudUser())return;
+ const {data,error}=await supabaseClient.from("hudhud_social_accounts").select("*").eq("user_id",currentUser.id).order("updated_at",{ascending:false});
+ if(error){console.error(error);toast("Could not load Social");return;}
+ const rows=data||[];
+ const count=document.getElementById("socialConnectedCount"); if(count)count.textContent=rows.length;
+ rows.forEach(row=>{
+   const card=document.querySelector('[data-social-provider="'+row.provider+'"]'); if(!card)return;
+   const status=card.querySelector(".social-status"),acct=card.querySelector('[data-social-account="'+row.provider+'"]');
+   if(status){status.textContent=row.status||"Connected";status.classList.add("connected");}
+   if(acct)acct.textContent=row.username?("@"+row.username):"Connected account";
+   const view=card.querySelector('[data-social-view="'+row.provider+'"]'),remove=card.querySelector('[data-social-remove="'+row.provider+'"]');
+   if(view){view.disabled=!row.profile_url;view.onclick=()=>window.open(row.profile_url,"_blank","noopener,noreferrer");}
+   if(remove){remove.disabled=false;remove.onclick=async()=>{if(!confirm("Remove this social connection?"))return;const {error:e}=await supabaseClient.from("hudhud_social_accounts").delete().eq("id",row.id).eq("user_id",currentUser.id);if(e){toast("Could not remove connection");return;}toast("Social connection removed");render("social");};}
+   const btn=card.querySelector('[data-social-connect="'+row.provider+'"]'); if(btn){btn.textContent="Update";btn.onclick=()=>editSocial(row.provider,row);}
+ });
+ document.querySelectorAll("[data-social-connect]").forEach(btn=>{if(btn.textContent==="Update")return;btn.onclick=()=>editSocial(btn.dataset.socialConnect,null);});
+}
+async function editSocial(provider,row){
+ const names={tiktok:"TikTok",instagram:"Instagram",facebook:"Facebook",x:"X",youtube:"YouTube",linkedin:"LinkedIn"};
+ const name=names[provider]||provider;
+ const username=prompt(name+" username/handle:",row?.username||""); if(username===null)return;
+ const url=prompt("Public profile URL (optional):",row?.profile_url||""); if(url===null)return;
+ const payload={user_id:currentUser.id,provider,username:username.trim().replace(/^@/,""),profile_url:url.trim()||null,status:"Connected",permissions:row?.permissions||{profile:true,public_content:true},metadata:row?.metadata||{},updated_at:new Date().toISOString()};
+ const {error}=await supabaseClient.from("hudhud_social_accounts").upsert(payload,{onConflict:"user_id,provider"});
+ if(error){console.error(error);toast("Could not save social connection");return;}
+ toast(name+" connected");render("social");
+}
+function lifemap(){
+ return '<section><div class="section-head"><div><span class="eyebrow">HUDHUD LIFEMAP</span><h2>Your LifeMap</h2><span class="muted">The map you define about your life — goals, routines, people, projects and priorities. This is separate from what HudHud infers or learns.</span></div><button class="primary" data-lifemap-add>Add item</button></div><div class="knowledge-separation"><div><strong>🗺️ LifeMap</strong><span>User-defined structure, plans and context.</span></div><div><strong>🧠 What HudHud Knows</strong><span>Observed or learned information with its own metadata.</span></div></div><div id="lifemapList" class="knowledge-list"><div class="card muted">Loading your LifeMap…</div></div></section>';
+}
+async function bindLifeMap(){
+ if(!hasCloudUser())return;
+ const {data,error}=await supabaseClient.from("hudhud_lifemap").select("*").eq("user_id",currentUser.id).order("updated_at",{ascending:false});
+ const host=document.getElementById("lifemapList"); if(error){if(host)host.innerHTML='<div class="card">Could not load LifeMap.</div>';return;}
+ if(host)host.innerHTML=data?.length?data.map(x=>'<article class="card knowledge-card"><div><span class="eyebrow">'+esc(x.category)+'</span><h3>'+esc(x.title)+'</h3><p>'+esc(x.value)+'</p><small>Updated '+new Date(x.updated_at).toLocaleString()+'</small></div><div class="knowledge-actions"><button class="secondary" data-lifemap-edit="'+x.id+'">Edit</button><button class="secondary" data-lifemap-delete="'+x.id+'">Remove</button></div></article>').join(""):'<div class="empty"><strong>Your LifeMap is empty.</strong><span>Add the things you want HudHud to understand as your intentional life structure.</span></div>';
+ document.querySelectorAll("[data-lifemap-add]").forEach(b=>b.onclick=()=>editLifeMap(null));
+ document.querySelectorAll("[data-lifemap-edit]").forEach(b=>b.onclick=()=>editLifeMap(data.find(x=>x.id===b.dataset.lifemapEdit)));
+ document.querySelectorAll("[data-lifemap-delete]").forEach(b=>b.onclick=async()=>{if(!confirm("Remove this LifeMap item?"))return;await supabaseClient.from("hudhud_lifemap").delete().eq("id",b.dataset.lifemapDelete).eq("user_id",currentUser.id);render("lifemap");});
+}
+async function editLifeMap(row){
+ const category=prompt("Category (Goals, Routine, Work, People, Priorities, etc.):",row?.category||""); if(category===null)return;
+ const title=prompt("Title:",row?.title||""); if(title===null)return;
+ const value=prompt("Details:",row?.value||""); if(value===null)return;
+ const payload={user_id:currentUser.id,category:category.trim(),title:title.trim(),value:value.trim(),status:row?.status||"Active",metadata:row?.metadata||{},updated_at:new Date().toISOString()};
+ const q=row?supabaseClient.from("hudhud_lifemap").update(payload).eq("id",row.id).eq("user_id",currentUser.id):supabaseClient.from("hudhud_lifemap").insert(payload);
+ const {error}=await q;if(error){toast("Could not save LifeMap item");return;}toast("LifeMap updated");render("lifemap");
+}
+function knowledge(){
+ return '<section><div class="section-head"><div><span class="eyebrow">HUDHUD MEMORY / OBSERVATIONS</span><h2>What HudHud Knows</h2><span class="muted">A living report of information HudHud has learned or observed. Each item carries its own source, confidence, timestamps and usage metadata.</span></div><button class="primary" data-knowledge-add>Add observation</button></div><div class="knowledge-notice card"><strong>🧠 Separate from LifeMap</strong><p>LifeMap describes the user-defined life structure. This page describes HudHud’s evolving knowledge. HudHud can update, retire or remove knowledge as new authorized evidence appears.</p></div><div id="knowledgeList" class="knowledge-list"><div class="card muted">Loading what HudHud knows…</div></div></section>';
+}
+async function bindKnowledge(){
+ if(!hasCloudUser())return;
+ const {data,error}=await supabaseClient.from("hudhud_knowledge").select("*").eq("user_id",currentUser.id).eq("user_visible",true).order("updated_at",{ascending:false});
+ const host=document.getElementById("knowledgeList"); if(error){if(host)host.innerHTML='<div class="card">Could not load HudHud knowledge.</div>';return;}
+ if(host)host.innerHTML=data?.length?data.map(x=>'<article class="card knowledge-card"><div><div class="knowledge-top"><span class="eyebrow">'+esc(x.category)+'</span><span class="pill">'+esc(x.status)+'</span></div><h3>'+esc(x.title)+'</h3><p>'+esc(x.value)+'</p><div class="knowledge-meta"><span>Source: '+esc(x.source||"HudHud")+'</span><span>Confidence: '+(x.confidence==null?"—":esc(x.confidence)+"%")+'</span><span>Last observed: '+new Date(x.last_observed_at).toLocaleString()+'</span><span>AI use: '+(x.ai_usable?"Allowed":"Off")+'</span></div></div><div class="knowledge-actions"><button class="secondary" data-knowledge-edit="'+x.id+'">Edit</button><button class="secondary" data-knowledge-delete="'+x.id+'">Remove</button></div></article>').join(""):'<div class="empty"><strong>HudHud has not recorded any visible knowledge yet.</strong><span>Once authorized sources and agent workflows are connected, this becomes the living report HudHud maintains about you.</span></div>';
+ document.querySelectorAll("[data-knowledge-add]").forEach(b=>b.onclick=()=>editKnowledge(null));
+ document.querySelectorAll("[data-knowledge-edit]").forEach(b=>b.onclick=()=>editKnowledge(data.find(x=>x.id===b.dataset.knowledgeEdit)));
+ document.querySelectorAll("[data-knowledge-delete]").forEach(b=>b.onclick=async()=>{if(!confirm("Remove this knowledge item?"))return;await supabaseClient.from("hudhud_knowledge").delete().eq("id",b.dataset.knowledgeDelete).eq("user_id",currentUser.id);render("knowledge");});
+}
+async function editKnowledge(row){
+ const category=prompt("Category:",row?.category||""); if(category===null)return;
+ const title=prompt("What does HudHud know?:",row?.title||""); if(title===null)return;
+ const value=prompt("Details:",row?.value||""); if(value===null)return;
+ const source=prompt("Source:",row?.source||"User"); if(source===null)return;
+ const confidence=prompt("Confidence 0–100:",row?.confidence??"80"); if(confidence===null)return;
+ const payload={user_id:currentUser.id,category:category.trim(),title:title.trim(),value:value.trim(),source:source.trim(),confidence:Math.max(0,Math.min(100,Number(confidence)||0)),status:row?.status||"Active",last_observed_at:new Date().toISOString(),user_visible:true,ai_usable:row?.ai_usable!==false,metadata:row?.metadata||{},updated_at:new Date().toISOString()};
+ const q=row?supabaseClient.from("hudhud_knowledge").update(payload).eq("id",row.id).eq("user_id",currentUser.id):supabaseClient.from("hudhud_knowledge").insert(payload);
+ const {error}=await q;if(error){toast("Could not save knowledge");return;}toast("HudHud knowledge updated");render("knowledge");
+}
+
 function render(view){
- if(["projects","opportunities","connections","documents","activity","premium"].includes(view)&&!requireAuth(view))return;
+ if(["projects","opportunities","connections","documents","activity","premium","social","lifemap","knowledge"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
- const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
+ const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,social:social,lifemap:lifemap,knowledge:knowledge,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
  m.innerHTML=(pages[view]||home)();
  hudhudFlyby(view==="home"?1:2);
  bind(view);
@@ -718,6 +801,9 @@ function render(view){
  if(view==="studio") bindStudio();
  if(view==="system") bindSystem();
  if(view==="connections") bindConnections();
+ if(view==="social") bindSocial();
+ if(view==="lifemap") bindLifeMap();
+ if(view==="knowledge") bindKnowledge();
  if(view==="premium") bindPremium();
  if(view==="getstarted") bindGetStarted();
  if(view==="newsletter") bindNewsletter();
