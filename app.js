@@ -689,18 +689,17 @@ function hudhudFlyby(count=2){
   try{
     if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
     const total=Math.max(1,Math.min(3,Number(count)||2));
-    const leaves=["🍂","🍃","🍁"];
     for(let n=0;n<total;n++){
-      const leaf=document.createElement("span");
-      leaf.className="hudhud-leaf";
-      leaf.setAttribute("aria-hidden","true");
-      leaf.textContent=leaves[Math.floor(Math.random()*leaves.length)];
-      leaf.style.left=(Math.random()*88+4)+"vw";
-      leaf.style.setProperty("--leaf-drift",((Math.random()-.5)*180)+"px");
-      leaf.style.setProperty("--leaf-duration",(2.4+Math.random()*1.4)+"s");
-      leaf.style.animationDelay=(n*.18)+"s";
-      document.body.appendChild(leaf);
-      setTimeout(()=>leaf.remove(),4300+n*180);
+      const feather=document.createElement("span");
+      feather.className="hudhud-feather";
+      feather.setAttribute("aria-hidden","true");
+      feather.textContent="🪶";
+      feather.style.left=(Math.random()*88+4)+"vw";
+      feather.style.setProperty("--feather-drift",((Math.random()-.5)*180)+"px");
+      feather.style.setProperty("--feather-duration",(2.4+Math.random()*1.4)+"s");
+      feather.style.animationDelay=(n*.18)+"s";
+      document.body.appendChild(feather);
+      setTimeout(()=>feather.remove(),4300+n*180);
     }
   }catch(e){/* decorative animation must never affect the app */}
 }
