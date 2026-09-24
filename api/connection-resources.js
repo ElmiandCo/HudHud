@@ -37,7 +37,8 @@ async function githubResources(account){
   if(!account&&!env("HUDHUD_GITHUB_TOKEN"))throw new Error("GitHub connection is not configured.");
   const owner=env("HUDHUD_GITHUB_OWNER")||"ElmiandCo";
   const repo=env("HUDHUD_GITHUB_REPO")||"HudHud";
-  const data=await jsonFetch("https://api.github.com/user/repos?affiliation=owner,collaborator,organization_member&per_page=100&sort=updated",{headers:{"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2026-03-10","Authorization":`Bearer ${env("HUDHUD_GITHUB_TOKEN")}`}});
+  const token=account?.access_token||env("HUDHUD_GITHUB_TOKEN");
+  const data=await jsonFetch("https://api.github.com/user/repos?affiliation=owner,collaborator,organization_member&per_page=100&sort=updated",{headers:{"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2026-03-10","Authorization":`Bearer ${token}`}});
   const repos=(Array.isArray(data)?data:[]).map(r=>({id:String(r.id),name:r.name,full_name:r.full_name,private:!!r.private,default_branch:r.default_branch||"main",description:r.description||"",html_url:r.html_url||"",permissions:r.permissions||{}}));
   const ensured=repos.some(r=>r.full_name===owner+"/"+repo)?repos:repos.concat([{id:"configured",name:repo,full_name:owner+"/"+repo,private:false,default_branch:"main",description:"Configured HudHud repository",html_url:`https://github.com/${owner}/${repo}`,permissions:{}}]);
   return {provider:"github",resources:ensured};
