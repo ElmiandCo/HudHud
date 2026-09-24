@@ -1,0 +1,32 @@
+name: HudHud Newsletter Scheduler
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  process-newsletters:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Process due newsletters
+        env:
+          HUDHUD_CRON_URL: ${{ vars.HUDHUD_CRON_URL }}
+          HUDHUD_CRON_SECRET: ${{ secrets.HUDHUD_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${HUDHUD_CRON_URL:-}" ]; then
+            echo "Missing repository variable HUDHUD_CRON_URL."
+            exit 1
+          fi
+
+          if [ -z "${HUDHUD_CRON_SECRET:-}" ]; then
+            echo "Missing repository secret HUDHUD_CRON_SECRET."
+            exit 1
+          fi
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${HUDHUD_CRON_SECRET}" \
+            "${HUDHUD_CRON_URL%/}/api/newsletter-cron"
