@@ -11,6 +11,8 @@ let authMode="signin";
 let pendingView=null;
 let legacyWorkspace=null;
 let pendingWorkspaceMessage=null;
+let projectConnections={};
+let connectionResourceCache={};
 
 function load(){
   try { return Object.assign({},initial,JSON.parse(localStorage.getItem(KEY)||"{}")); }
@@ -66,18 +68,21 @@ async function handleAuthSession(session){
 async function loadCloudState(){
  if(!hasCloudUser())return;
  const uid=currentUser.id;
- const [p,o,c,a]=await Promise.all([
+ const [p,o,c,a,pc]=await Promise.all([
    supabaseClient.from("hudhud_projects").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
    supabaseClient.from("hudhud_opportunities").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
    supabaseClient.from("hudhud_connections").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
-   supabaseClient.from("hudhud_activity").select("*").eq("user_id",uid).order("created_at",{ascending:false}).limit(50)
+   supabaseClient.from("hudhud_activity").select("*").eq("user_id",uid).order("created_at",{ascending:false}).limit(50),
+   supabaseClient.from("hudhud_project_connections").select("*").eq("user_id",uid).order("created_at",{ascending:false})
  ]);
- const error=[p,o,c,a].find(x=>x.error)?.error;
+ const error=[p,o,c,a,pc].find(x=>x.error)?.error;
  if(error){console.error("HudHud cloud load failed",error);toast("Could not load your workspace");return;}
  state.projects=(p.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
  state.opportunities=(o.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
  state.connections=(c.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
  state.activity=(a.data||[]).map(x=>({text:x.text,at:x.created_at,id:x.id}));
+ projectConnections={};
+ (pc.data||[]).forEach(x=>{(projectConnections[x.project_id]||(projectConnections[x.project_id]=[])).push({...x,settings:x.settings||{}});});
  save();
 }
 async function importLegacyWorkspace(){
@@ -121,6 +126,32 @@ async function cloudInsertConnection(item){
  const {data,error}=await supabaseClient.from("hudhud_connections").insert({user_id:currentUser.id,name:item.name,details:item.details||"",status:item.status||"Recorded",created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
  if(data?.id)item.id=data.id;
  if(error){toast("Connection save failed");console.error(error);return false;} return true;
+}
+async function cloudUpsertConnection(provider,settings,detail){
+ if(!hasCloudUser())return null;
+ const payload={user_id:currentUser.id,provider,name:provider.charAt(0).toUpperCase()+provider.slice(1),details:detail||"",status:"Configured",settings:settings||{},updated_at:new Date().toISOString()};
+ const {data,error}=await supabaseClient.from("hudhud_connections").upsert(payload,{onConflict:"user_id,provider"}).select().single();
+ if(error){console.error("Connection settings save failed",error);toast("Connection settings failed");return null;}
+ const item={...data,createdAt:data.created_at,updatedAt:data.updated_at};
+ const old=state.connections.findIndex(x=>x.provider===provider);
+ if(old>=0)state.connections[old]=item;else state.connections.unshift(item);
+ save();
+ return item;
+}
+async function cloudSaveProjectConnections(projectId,rows){
+ if(!hasCloudUser()||!projectId)return false;
+ const {error:deleteError}=await supabaseClient.from("hudhud_project_connections").delete().eq("user_id",currentUser.id).eq("project_id",projectId);
+ if(deleteError){console.error(deleteError);toast("Project connection update failed");return false;}
+ if(rows.length){
+   const {error}=await supabaseClient.from("hudhud_project_connections").insert(rows.map(x=>({user_id:currentUser.id,project_id:projectId,connection_id:x.connection_id,settings:x.settings||{}})));
+   if(error){console.error(error);toast("Project connection update failed");return false;}
+ }
+ projectConnections[projectId]=rows;
+ return true;
+}
+function projectConnectionRows(projectId){return projectConnections[projectId]||[];}
+function selectedProjectConnections(projectId){
+ return projectConnectionRows(projectId).map(row=>state.connections.find(c=>c.id===row.connection_id)||null).filter(Boolean).map(c=>({...c,projectSettings:projectConnectionRows(projectId).find(r=>r.connection_id===c.id)?.settings||{}}));
 }
 async function cloudInsertActivity(textValue){
  if(!hasCloudUser())return;
