@@ -516,7 +516,7 @@ function addMessage(who,text,kind){
  const s=document.createElement("span");s.textContent=text;
  d.appendChild(b);d.appendChild(s);box.appendChild(d);box.scrollTop=box.scrollHeight;
 }
-function handleWorkspaceCommand(message){
+async function handleWorkspaceCommand(message){
  const text=String(message||"").trim();
 
  const statusUpdate=text.match(/\b(?:update|change|set)\s+(?:project\s*\\?:\s*|project\s+)([“"']?)([^”"']+?)\1(?:'s)?\s+status\s+(?:to|=)\s*[“"']?(planning|active|on hold)[”"']?/i);
@@ -563,7 +563,7 @@ async function sendToHudHud(message){
      status.textContent="HUDHUD • sign in required for workspace actions";
      return;
    }
-   const workspaceAction=handleWorkspaceCommand(message);
+   const workspaceAction=await handleWorkspaceCommand(message);
    if(workspaceAction){
      addMessage("HudHud",workspaceAction.reply,"hud");
      status.textContent="HUDHUD • workspace action complete";
