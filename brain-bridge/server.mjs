@@ -25,15 +25,30 @@ function send(res, status, body) {
 
 
 async function command(command,args=[],options={}){const {stdout="",stderr=""}=await execFileAsync(command,args,{timeout:30000,maxBuffer:100000,...options});return {stdout:stdout.trim(),stderr:stderr.trim()};}
+async function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+async function tailscaleCommand(args=[],options={}){const candidates=["/usr/local/bin/tailscale","/opt/homebrew/bin/tailscale","/Applications/Tailscale.app/Contents/MacOS/Tailscale"];let lastError=null;for(const path of candidates){try{return await command(path,args,{...options,env:{...process.env,TAILSCALE_BE_CLI:"1"}});}catch(error){lastError=error;}}throw lastError||new Error("Tailscale CLI not found.");}
+async function waitForLocalService(url,timeoutMs=20000){const started=Date.now();while(Date.now()-started<timeoutMs){try{const r=await fetch(url,{signal:AbortSignal.timeout(2500)});if(r.ok)return true;}catch{}await sleep(1000);}return false;}
 async function control(action){
  if(!CONTROL_ENABLED)throw new Error("Local control is disabled.");
  const uid=String(process.getuid?.()||"");
- if(action==="health"){const result={gpt4all:{online:false},bridge:{online:true},tailscale:{online:false}};try{await command("/usr/bin/curl",["-fsS","http://127.0.0.1:4891/v1/models"],{timeout:5000});result.gpt4all.online=true;}catch{}try{const x=await command("/usr/bin/tailscale",["funnel","status"],{timeout:8000});result.tailscale.online=/8787/.test(x.stdout);}catch{}return result;}
- if(action==="start-gpt4all"){await command("/usr/bin/open",["-a","GPT4All"]);return {message:"GPT4All launch requested."};}
- if(action==="start-tailscale"){await command("/usr/bin/open",["-a","Tailscale"]);return {message:"Tailscale launch requested."};}
- if(action==="start-funnel"){try{await command("/usr/local/bin/tailscale",["funnel","--bg","8787"],{timeout:15000});}catch{await command("/opt/homebrew/bin/tailscale",["funnel","--bg","8787"],{timeout:15000});}return {message:"Tailscale Funnel requested."};}
+ if(action==="health"){
+   const result={gpt4all:{online:false},bridge:{online:true},tailscale:{online:false}};
+   try{const r=await fetch("http://127.0.0.1:4891/v1/models",{signal:AbortSignal.timeout(5000)});result.gpt4all.online=r.ok;}catch{}
+   try{const x=await tailscaleCommand(["funnel","status"],{timeout:8000});result.tailscale.online=/8787/.test(x.stdout);}catch{}
+   return result;
+ }
+ if(action==="start-gpt4all"){await command("/usr/bin/open",["-a","GPT4All"]);const ready=await waitForLocalService("http://127.0.0.1:4891/v1/models",30000);return {message:ready?"GPT4All is online on port 4891.":"GPT4All launch requested; the local API is still starting.",online:ready};}
+ if(action==="start-tailscale"){await command("/usr/bin/open",["-a","Tailscale"]);return {message:"Tailscale launch requested. Sign-in/network startup may require a few seconds."};}
+ if(action==="start-funnel"){await tailscaleCommand(["wait","--timeout=20s"],{timeout:25000});await tailscaleCommand(["funnel","--bg","8787"],{timeout:15000});return {message:"Tailscale Funnel requested for HudHud Bridge."};}
  if(action==="restart-bridge"){if(!uid)throw new Error("Could not determine the logged-in user.");await command("/bin/launchctl",["kickstart","-k",`gui/${uid}/${BRIDGE_LABEL}`]);return {message:"HudHud Bridge restart requested."};}
- if(action==="start-everything"){await command("/usr/bin/open",["-a","GPT4All"]);await command("/usr/bin/open",["-a","Tailscale"]).catch(()=>{});try{await command("/usr/local/bin/tailscale",["funnel","--bg","8787"],{timeout:15000});}catch{try{await command("/opt/homebrew/bin/tailscale",["funnel","--bg","8787"],{timeout:15000});}catch{}}return {message:"HudHud startup sequence requested."};}
+ if(action==="start-everything"){
+   await command("/usr/bin/open",["-a","GPT4All"]);
+   await command("/usr/bin/open",["-a","Tailscale"]).catch(()=>{});
+   const brainReady=await waitForLocalService("http://127.0.0.1:4891/v1/models",30000);
+   let funnelReady=false;
+   try{await tailscaleCommand(["wait","--timeout=20s"],{timeout:25000});await tailscaleCommand(["funnel","--bg","8787"],{timeout:15000});const x=await tailscaleCommand(["funnel","status"],{timeout:8000});funnelReady=/8787/.test(x.stdout);}catch{}
+   return {message:"HudHud startup sequence completed.",gpt4all:brainReady,tailscale:funnelReady};
+ }
  throw new Error("Unknown system action.");
 }
 
