@@ -712,6 +712,7 @@ function render(view){
  if(!m)return;
  const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
  m.innerHTML=(pages[view]||home)();
+ hudhudFlyby(view==="home"?1:2);
  bind(view);
  if(view==="home") { bindChat(); bindHomeAuth(); }
  if(view==="core") bindThemeToggle();
