@@ -671,6 +671,7 @@ async function openConnectionModal(provider){
      '<button class="resource-close" data-close-resource-modal>×</button>'+
      '<div class="eyebrow">CONNECTION SETTINGS</div><h2>'+connectionIcon(provider)+' '+esc(provider.charAt(0).toUpperCase()+provider.slice(1))+'</h2>'+
      '<p class="resource-subtitle">Choose the resources HudHud should focus on. These settings belong to your account; secrets remain server-side.</p>'+
+     (provider==="supabase"&&data.project?'<div class="resource-project"><strong>Supabase project</strong><small>'+esc(data.project.ref||"Configured project")+' • '+esc(data.project.url||"")+'</small></div>':'')+
      '<div class="resource-setting"><label><input id="connectionFocusSelected" type="checkbox" '+(settings.focus==="selected"?"checked":"")+'><span>Focus only on selected resources</span></label></div>'+
      '<div class="resource-section"><div class="resource-section-head"><strong>AVAILABLE RESOURCES</strong><span>'+data.resources.length+' found</span></div><div class="resource-list">'+
        (data.resources.length?data.resources.map(x=>'<label class="resource-item"><input type="checkbox" data-resource-id="'+esc(x.id)+'" '+(selected.has(String(x.id))?"checked":"")+'><span><strong>'+esc(x.name||x.full_name||x.id)+'</strong><small>'+esc(x.full_name||x.framework||x.type||"")+'</small></span></label>').join(""):'<div class="empty"><strong>No resources returned.</strong>Check the connection credentials and permissions.</div>')+
