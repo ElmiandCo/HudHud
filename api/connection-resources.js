@@ -7,7 +7,8 @@ async function jsonFetch(url,options={}){
 }
 function env(name){return process.env[name]||"";}
 async function requireUser(req){
-  const base=cleanBase(env("HUDHUD_SUPABASE_URL")),key=env("HUDHUD_SUPABASE_KEY");\n  // Management OAuth accounts are used for account-level discovery; the configured project remains the default REST resource source.
+  const base=cleanBase(env("HUDHUD_SUPABASE_URL")),key=env("HUDHUD_SUPABASE_KEY");
+  // Management OAuth accounts are used for account-level discovery; the configured project remains the default REST resource source.
   const auth=String(req.headers.authorization||"");
   const token=auth.replace(/^Bearer\s+/i,"").trim();
   if(!base||!key||!token)throw new Error("Authentication required.");
@@ -15,7 +16,24 @@ async function requireUser(req){
   if(!r.ok)throw new Error("Authentication expired. Please sign in again.");
   return r.json();
 }
-async function providerAccount(req,provider){\n  const id=String(req.query?.account_id||"");\n  if(!id)return null;\n  const service=env("HUDHUD_SUPABASE_SERVICE_ROLE_KEY");\n  if(!service)throw new Error("Provider account storage is not configured.");\n  const url=cleanBase(env("HUDHUD_SUPABASE_URL"));\n  const auth=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"").trim();\n  if(!auth)throw new Error("Authentication required.");\n  const u=await fetch(url+"/auth/v1/user",{headers:{apikey:env("HUDHUD_SUPABASE_KEY"),Authorization:"Bearer "+auth}});\n  if(!u.ok)throw new Error("Authentication expired. Please sign in again.");\n  const user=await u.json();\n  const r=await fetch(url+"/rest/v1/hudhud_provider_accounts?id=eq."+encodeURIComponent(id)+"&user_id=eq."+encodeURIComponent(user.id)+"&select=provider,access_token,account_name,account_email,provider_account_id",{headers:{apikey:service,Authorization:"Bearer "+service}});\n  const rows=await r.json();\n  if(!r.ok||!rows[0])throw new Error("Connected provider account not found.");\n  if(rows[0].provider!==provider||!rows[0].access_token)throw new Error("Connected provider account is unavailable.");\n  return rows[0];\n}\nasync function githubResources(account){
+async function providerAccount(req,provider){
+  const id=String(req.query?.account_id||"");
+  if(!id)return null;
+  const service=env("HUDHUD_SUPABASE_SERVICE_ROLE_KEY");
+  if(!service)throw new Error("Provider account storage is not configured.");
+  const url=cleanBase(env("HUDHUD_SUPABASE_URL"));
+  const auth=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"").trim();
+  if(!auth)throw new Error("Authentication required.");
+  const u=await fetch(url+"/auth/v1/user",{headers:{apikey:env("HUDHUD_SUPABASE_KEY"),Authorization:"Bearer "+auth}});
+  if(!u.ok)throw new Error("Authentication expired. Please sign in again.");
+  const user=await u.json();
+  const r=await fetch(url+"/rest/v1/hudhud_provider_accounts?id=eq."+encodeURIComponent(id)+"&user_id=eq."+encodeURIComponent(user.id)+"&select=provider,access_token,account_name,account_email,provider_account_id",{headers:{apikey:service,Authorization:"Bearer "+service}});
+  const rows=await r.json();
+  if(!r.ok||!rows[0])throw new Error("Connected provider account not found.");
+  if(rows[0].provider!==provider||!rows[0].access_token)throw new Error("Connected provider account is unavailable.");
+  return rows[0];
+}
+async function githubResources(account){
   if(!env("HUDHUD_GITHUB_TOKEN"))throw new Error("GitHub connection is not configured.");
   const owner=env("HUDHUD_GITHUB_OWNER")||"ElmiandCo";
   const repo=env("HUDHUD_GITHUB_REPO")||"HudHud";
@@ -61,7 +79,9 @@ export default async function handler(req,res){
     await requireUser(req);
     const provider=String(req.query?.provider||"").toLowerCase();
     if(!["github","vercel","supabase"].includes(provider))return res.status(400).json({error:"Unknown connection provider."});
-    const account=await providerAccount(req,provider);\n    const data=provider==="github"?await githubResources(account):provider==="vercel"?await vercelResources(account):await supabaseResources(account);\n    if(account)data.account={id:String(req.query.account_id),name:account.account_name,email:account.account_email||"",provider_account_id:account.provider_account_id};
+    const account=await providerAccount(req,provider);
+    const data=provider==="github"?await githubResources(account):provider==="vercel"?await vercelResources(account):await supabaseResources(account);
+    if(account)data.account={id:String(req.query.account_id),name:account.account_name,email:account.account_email||"",provider_account_id:account.provider_account_id};
     return res.status(200).json(data);
   }catch(error){
     const message=error?.message||"Connection resources unavailable.";
