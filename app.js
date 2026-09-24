@@ -779,6 +779,7 @@ async function runHudHudStep(projectId,index,button){
  }catch(e){toast("HudHud step failed: "+(e.message||String(e)));if(button){button.disabled=false;button.textContent="🦉";}}
 }
 function bindConnections(){
+ document.querySelectorAll("[data-open-provider-accounts]").forEach(b=>b.onclick=openProviderAccounts);
  document.querySelectorAll("[data-open-connection]").forEach(b=>b.onclick=e=>{e.preventDefault();openConnectionModal(b.dataset.openConnection);});
  document.querySelectorAll("[data-project-connections]").forEach(b=>b.onclick=()=>openProjectConnectionsModal(b.dataset.projectConnections));
  document.querySelectorAll("[data-hudhud-step]").forEach(b=>b.onclick=()=>runHudHudStep(b.dataset.hudhudStep,Number(b.dataset.stepIndex),b));
