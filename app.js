@@ -801,34 +801,68 @@ function updateConnectionRows(conns){
 function renderLiveStats(){const c=document.getElementById("metricCommands"),e=document.getElementById("metricEvents"),lc=document.getElementById("lastCheckSignal"),b=document.getElementById("liveBrief");if(c)c.textContent=liveStats.commands;if(e)e.textContent=state.activity.length;if(lc)lc.textContent=liveStats.lastCheck?liveStats.lastCheck.toLocaleTimeString():"—";const focus=document.getElementById("briefFocus")?.value||"all";if(b){if(focus==="runtime")b.textContent="Runtime watch: brain, bridge and tunnel are being checked every 5 seconds.";else if(focus==="connections")b.textContent="Connection watch: GitHub, Vercel and Supabase are being checked live.";else if(focus==="activity")b.textContent=state.activity[0]?.text||"No recent activity yet.";else b.textContent="Live control is active. HudHud is watching runtime, integrations and recent activity.";}const la=document.getElementById("liveActivity");if(la)la.innerHTML=state.activity.slice(0,6).map(x=>"<div class=\"live-event\"><span></span><div><strong>"+esc(x.text)+"</strong><small>"+new Date(x.at).toLocaleTimeString()+"</small></div></div>").join("")||"<div class=\"muted\">Waiting for activity…</div>";}
 async function refreshConnections(){try{const r=await fetch("/api/connection-status",{cache:"no-store"});const data=await r.json();if(!r.ok)throw new Error(data.error||"Connection check failed");updateConnectionRows(data.connections||{});const latency=document.getElementById("metricLatency");if(latency)latency.textContent=(data.latencyMs??"—")+" ms";toast("Connections refreshed");}catch(e){toast("Connection check failed");}}
 async function reconnectConnection(name,button){
- if(button){button.disabled=true;button.textContent="↻ Reconnecting…";}
- try{
-   const r=await fetch("/api/connection-status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({connection:name})});
-   const data=await r.json();
-   if(!r.ok)throw new Error(data.error||"Reconnect failed");
-   const result=data.result||{};
-   updateConnectionRows({[name]:result});
-   if(result.status==="connected"){
-     log("Reconnected "+name);
-     toast(name.charAt(0).toUpperCase()+name.slice(1)+" connected");
-   }else if(result.status==="not_configured"){
-     toast(name.charAt(0).toUpperCase()+name.slice(1)+" needs server credentials");
-   }else{
-     toast(name.charAt(0).toUpperCase()+name.slice(1)+" is "+String(result.status).replace("_"," "));
-   }
- }catch(e){toast("Reconnect failed: "+(e.message||e));}
- finally{if(button){button.disabled=false;button.textContent="↻ Attempt reconnect";}}
+ if(button){button.disabled=true;button.textContent="↻ Opening authorization…";}
+ if(!["github","vercel","supabase"].includes(name)){
+   if(button){button.disabled=false;button.textContent="↻ Reauthorize";}
+   return;
+ }
+ window.location.href="/api/connection-oauth?action=start&provider="+encodeURIComponent(name);
 }
-async function authAccessToken(){
+async function authAccessToken(forceRefresh=false){
  try{
    await initSupabase();
    if(!supabaseClient)return "";
-   let {data}=await supabaseClient.auth.getSession();
-   if(data.session?.access_token)return data.session.access_token;
+   const {data,error}=await supabaseClient.auth.getSession();
+   if(error)throw error;
+   const session=data.session;
+   if(!session)return "";
+   const expiresAt=Number(session.expires_at||0);
+   const now=Math.floor(Date.now()/1000);
+   if(!forceRefresh && (!expiresAt || expiresAt>now+60))return session.access_token||"";
    const refreshed=await supabaseClient.auth.refreshSession();
+   if(refreshed.error)throw refreshed.error;
    return refreshed.data.session?.access_token||"";
  }catch(e){
+   console.warn("HudHud auth token recovery failed",e);
    return "";
+ }
+}
+async function authorizedFetch(input,options={},retry=true){
+ let token=await authAccessToken(false);
+ if(!token)throw new Error("Authentication expired. Please sign in again.");
+ const headers=new Headers(options.headers||{});
+ headers.set("Authorization","Bearer "+token);
+ let response=await fetch(input,{...options,headers});
+ if(response.status===401 && retry){
+   token=await authAccessToken(true);
+   if(!token)throw new Error("Authentication expired. Please sign in again.");
+   headers.set("Authorization","Bearer "+token);
+   response=await fetch(input,{...options,headers});
+ }
+ return response;
+}
+async function resetConnectionSettings(){
+ if(!currentUser){showAuthModal("signin");return;}
+ if(!confirm("Reset HudHud connection settings? This clears selected resources and project links, but does not revoke your GitHub, Vercel or Supabase authorization."))return;
+ try{
+   await initSupabase();
+   const providerIds=state.connections.filter(x=>["github","vercel","supabase"].includes(x.provider)).map(x=>x.id).filter(Boolean);
+   if(providerIds.length){
+     const {error}=await supabaseClient.from("hudhud_project_connections").delete().eq("user_id",currentUser.id).in("connection_id",providerIds);
+     if(error)throw error;
+     const {error:connectionError}=await supabaseClient.from("hudhud_connections").delete().eq("user_id",currentUser.id).in("id",providerIds);
+     if(connectionError)throw connectionError;
+   }
+   state.connections=state.connections.filter(x=>!["github","vercel","supabase"].includes(x.provider));
+   Object.keys(projectConnections).forEach(k=>projectConnections[k]=projectConnections[k].filter(x=>!providerIds.includes(x.connection_id)));
+   connectionResourceCache={};
+   save();
+   toast("Connection settings reset");
+   await refreshConnections();
+   openProviderAccounts();
+ }catch(e){
+   console.error(e);
+   toast("Reset failed: "+(e.message||String(e)));
  }
 }
 function connectionIcon(provider){return provider==="github"?"🐙":provider==="vercel"?"▲":"⚡";}
@@ -840,13 +874,13 @@ async function openConnectionModal(provider){
  try{
    const existing=state.connections.find(x=>x.provider===provider)||null;
    const settings=existing?.settings||{};
-   const ar=await fetch("/api/provider-accounts",{headers:{Authorization:"Bearer "+token},cache:"no-store"});
+   const ar=await authorizedFetch("/api/provider-accounts",{cache:"no-store"});
    const ad=await ar.json().catch(()=>({accounts:[]}));
    if(!ar.ok)throw new Error(ad.error||"Could not load connected accounts.");
    const accounts=(ad.accounts||[]).filter(x=>x.provider===provider);
    const accountId=String(settings.account_id||"");
    const query="/api/connection-resources?provider="+encodeURIComponent(provider)+(accountId?"&account_id="+encodeURIComponent(accountId):"");
-   const r=await fetch(query,{headers:{Authorization:"Bearer "+token},cache:"no-store"});
+   const r=await authorizedFetch(query,{cache:"no-store"});
    const raw=await r.text();const data=JSON.parse(raw);if(!r.ok)throw new Error(data.error||"Resource discovery failed");
    connectionResourceCache[provider]=data;
    const selected=new Set(Array.isArray(settings.resources)?settings.resources:[]);
@@ -934,13 +968,9 @@ function bindConnections(){
  document.querySelectorAll("[data-project-connections]").forEach(b=>b.onclick=()=>openProjectConnectionsModal(b.dataset.projectConnections));
  document.querySelectorAll("[data-hudhud-step]").forEach(b=>b.onclick=()=>runHudHudStep(b.dataset.hudhudStep,Number(b.dataset.stepIndex),b));
  document.querySelectorAll("[data-connection-refresh]").forEach(b=>b.onclick=refreshConnections);
+ document.querySelectorAll("[data-connection-reset]").forEach(b=>b.onclick=resetConnectionSettings);
  document.querySelectorAll("[data-connection-reconnect]").forEach(b=>b.onclick=()=>reconnectConnection(b.dataset.connectionReconnect,b));
- document.querySelectorAll("[data-connection-reconnect-all]").forEach(b=>b.onclick=async()=>{
-   b.disabled=true;b.textContent="↻ Reconnecting…";
-   await Promise.all(["github","vercel","supabase"].map(name=>reconnectConnection(name)));
-   await refreshConnections();
-   b.disabled=false;b.textContent="↻ Attempt reconnect";
- });
+ document.querySelectorAll("[data-connection-reconnect-all]").forEach(b=>b.onclick=()=>openProviderAccounts());
  refreshConnections();
 }
 function bindSystem(){document.querySelectorAll("[data-system-action]").forEach(b=>b.onclick=()=>systemAction(b.dataset.systemAction));document.querySelectorAll("[data-system-refresh]").forEach(b=>b.onclick=refreshSystem);const focus=document.getElementById("briefFocus");if(focus){focus.value=localStorage.getItem("hudhud_brief_focus")||"all";focus.onchange=()=>{localStorage.setItem("hudhud_brief_focus",focus.value);renderLiveStats();};}renderLiveStats();refreshSystem();clearInterval(healthTimer);healthTimer=setInterval(refreshSystem,5000);}
