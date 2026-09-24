@@ -1,4 +1,8 @@
-(function(){
+function bindProgramBack(){
+ document.querySelectorAll("[data-program-back]").forEach(b=>b.onclick=()=>render("getstarted"));
+ document.querySelectorAll("[data-site-start]").forEach(b=>b.onclick=()=>{if(!currentUser){showAuthModal("signin");return;}toast("Website launch workflow ready");});
+ document.querySelectorAll("[data-video-start]").forEach(b=>b.onclick=()=>render("studio"));
+}(function(){
 "use strict";
 
 const KEY="hudhud_hq_state_v1";
@@ -615,9 +619,8 @@ async function newsletterManagerHtml(){
 async function bindGetStarted(){
  document.querySelectorAll("[data-program]").forEach(b=>b.onclick=()=>{newsletterDraft=null;if(b.dataset.program==="newsletter"){newsletterDraft={step:1,templateKey:"weekly-update",name:"Weekly Business Update",subject:"Weekly Business Update",sections:JSON.parse(JSON.stringify(newsletterTemplates[0].sections)),frequency:"weekly",sendTime:"09:00",days:[1],startDate:new Date().toISOString().slice(0,10),endDate:"",recipientsText:"",status:"draft"};render("newsletter");}else if(b.dataset.program==="site")render("siteprogram");else render("videoprogram");});
 }
-function siteProgram(){return '<section class="program-page"><div class="program-breadcrumb"><button class="secondary mini-button" data-program-back>← Get Started</button></div><div class="program-head"><div><span class="eyebrow">WEBSITE LAUNCH</span><h2>Site Online in 3–5 mins</h2><p class="program-subline">You can customize more later with HudHudAI’s help.</p></div></div><div class="simple-program-steps">'+["Tell HudHud about your business","Choose a starter design","Generate the site","Connect GitHub / Vercel","Publish and verify"].map((x,i)=>'<div><span>'+String(i+1).padStart(2,"0")+'</span><strong>'+x+'</strong><small>'+ (i===0?"Your name, description and contact details.":i===1?"Pick a clean starter layout.":i===2?"HudHud prepares the website files.":i===3?"Connect your deployment accounts.":"HudHud checks the live URL.")+'</small><button class="secondary" '+(i>0?"disabled":"")+'> '+(i===0?"Start":"Coming next")+' </button></div>').join("")+'</div></section>';}
-function videoProgram(){return '<section class="program-page"><div class="program-breadcrumb"><button class="secondary mini-button" data-program-back>← Get Started</button></div><div class="program-head"><div><span class="eyebrow">HUDHUDAI VIDEO</span><h2>Create an AI Video</h2><p class="program-subline">HudHud walks you from idea to a production-ready MP4 workflow.</p></div></div><div class="simple-program-steps">'+["Describe the video","Create the script","Choose visual style","Generate / review","Export MP4"].map((x,i)=>'<div><span>'+String(i+1).padStart(2,"0")+'</span><strong>'+x+'</strong><small>'+ (i===0?"Tell HudHud the goal, audience and message.":i===1?"HudHudAI helps structure the script.":i===2?"Set format, pacing, voice and visual direction.":i===3?"Connect the configured video provider and review the result.":"Export the finished video when approved.")+'</small><button class="secondary" '+(i<1?"":"disabled")+'>'+ (i===0?"Start":"Coming next")+'</button></div>').join("")+'</div></section>';}
-
+function siteProgram(){return '<section class="program-page"><div class="program-breadcrumb"><button class="secondary mini-button" data-program-back>← Get Started</button></div><div class="program-head"><div><span class="eyebrow">WEBSITE LAUNCH</span><h2>Site Online in 3–5 mins</h2><p class="program-subline">You can customize more later with HudHudAI’s help.</p></div></div><div class="simple-program-steps">'+["Tell HudHud about your business","Choose a starter design","Generate the site","Connect GitHub / Vercel","Publish and verify"].map((x,i)=>'<div><span>'+String(i+1).padStart(2,"0")+'</span><strong>'+x+'</strong><small>'+ (i===0?"Your name, description and contact details.":i===1?"Pick a clean starter layout.":i===2?"HudHud prepares the website files.":i===3?"Connect your deployment accounts.":"HudHud checks the live URL.")+'</small><button class="secondary" '+(i>0?"disabled":"data-site-start")+'>'+ (i===0?"Start":"Coming next")+'</button></div>').join('')+'</div></section>';}
+function videoProgram(){return '<section class="program-page"><div class="program-breadcrumb"><button class="secondary mini-button" data-program-back>← Get Started</button></div><div class="program-head"><div><span class="eyebrow">HUDHUDAI VIDEO</span><h2>Create an AI Video</h2><p class="program-subline">HudHud walks you from idea to a production-ready MP4 workflow.</p></div></div><div class="simple-program-steps">'+["Describe the video","Create the script","Choose visual style","Generate / review","Export MP4"].map((x,i)=>'<div><span>'+String(i+1).padStart(2,"0")+'</span><strong>'+x+'</strong><small>'+ (i===0?"Tell HudHud the goal, audience and message.":i===1?"HudHudAI helps structure the script.":i===2?"Set format, pacing, voice and visual direction.":i===3?"Connect the configured video provider and review the result.":"Export the finished video when approved.")+'</small><button class="secondary" '+(i===0?"data-video-start":"disabled")+'>'+ (i===0?"Start":"Coming next")+'</button></div>').join('')+'</div></section>';}
 function bindNewsletter(){
  const d=newsletterDraft;if(!d)return;
  document.querySelectorAll("[data-program-back]").forEach(b=>b.onclick=()=>{newsletterDraft=null;render("getstarted")});
@@ -654,7 +657,7 @@ async function activateNewsletter(){
  const rows=contacts.map(x=>({newsletter_id:news.id,contact_id:x.id}));const {error:rr}=await supabaseClient.from("hudhud_newsletter_recipients").insert(rows);if(rr){toast(rr.message);return;}
  log("Activated newsletter: "+newsletterDraft.name+" for "+rec.length+" recipients");toast("Newsletter activated");newsletterDraft=null;render("newsletter");
 }
-async function updateNewsletterStatus(id,status){const {error}=await supabaseClient.from("hudhud_newsletters").update({status,updated_at:new Date().toISOString(),next_send_at:status==="scheduled"?newsletterNextSend({frequency:"daily",startDate:new Date().toISOString().slice(0,10),sendTime:"09:00"}):null}).eq("id",id).eq("user_id",currentUser.id);if(error)toast(error.message);else loadNewsletterManager();}
+async function updateNewsletterStatus(id,status){const {data,error}=await supabaseClient.from("hudhud_newsletters").select("*").eq("id",id).eq("user_id",currentUser.id).single();if(error||!data){toast(error?.message||"Newsletter not found");return;}const patch={status,updated_at:new Date().toISOString()};if(status==="scheduled"&&!data.next_send_at)patch.next_send_at=new Date(Date.now()+60000).toISOString();if(status==="paused")patch.next_send_at=null;const {error:updateError}=await supabaseClient.from("hudhud_newsletters").update(patch).eq("id",id).eq("user_id",currentUser.id);if(updateError)toast(updateError.message);else{toast(status==="paused"?"Newsletter paused":"Newsletter resumed");loadNewsletterManager();}}
 async function sendNewsletterNow(id){if(!currentUser){showAuthModal("signin");return;}const token=await authAccessToken();const r=await fetch("/api/newsletter-send",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({newsletterId:id})});const d=await r.json().catch(()=>({}));if(!r.ok)toast(d.error||"Send failed");else{toast("Newsletter sent");loadNewsletterManager();}}
 async function deleteNewsletter(id){if(!confirm("Delete this newsletter and its send history?"))return;const {error}=await supabaseClient.from("hudhud_newsletters").delete().eq("id",id).eq("user_id",currentUser.id);if(error)toast(error.message);else{toast("Newsletter deleted");loadNewsletterManager();}}
 
@@ -1149,10 +1152,8 @@ function bindSystem(){document.querySelectorAll("[data-system-action]").forEach(
 
 function bindHomeAuth(){
  document.querySelectorAll("[data-auth-start]").forEach(b=>b.onclick=async()=>{
-   if(currentUser){render("projects");return;}
-   await initSupabase().catch(()=>{});
-   if(currentUser){render("projects");return;}
-   showAuthModal("signin");
+   if(currentUser){render("getstarted");return;}
+   render("getstarted");
  });
 }
 
