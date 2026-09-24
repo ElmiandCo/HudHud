@@ -451,6 +451,30 @@ async function smsWebhookHandler(req,res){
  }catch(e){return res.status(400).send("Webhook failed.");}
 }
 
+function bridgeAuthorized(req){
+ const secret=String(process.env.HUDHUD_DEVICE_BRIDGE_SECRET||"");
+ const supplied=String(req.headers["x-hudhud-bridge-secret"]||"").trim();
+ return !!secret&&!!supplied&&crypto.timingSafeEqual(Buffer.from(secret),Buffer.from(supplied));
+}
+async function deviceIngestHandler(req,res){
+ if(req.method!=="POST")return res.status(405).json({error:"Method not allowed."});
+ if(!bridgeAuthorized(req))return res.status(401).json({error:"Device bridge authorization failed."});
+ try{
+  const body=req.body||{},userId=String(body.user_id||""),device=body.device||{};
+  if(!userId||!device.external_id||!device.name)return res.status(400).json({error:"user_id, device.external_id and device.name are required."});
+  const method=String(device.connection_method||"Tailscale");
+  const deviceRows=await smsDb("hudhud_devices?user_id=eq."+encodeURIComponent(userId)+"&connection_method=eq."+encodeURIComponent(method)+"&external_id=eq."+encodeURIComponent(String(device.external_id))+"&select=id&limit=1");
+  const payload={user_id:userId,external_id:String(device.external_id),device_type:String(device.device_type||"Other"),name:String(device.name),platform:device.platform||null,manufacturer:device.manufacturer||null,model:device.model||null,status:String(device.status||"Connected"),connection_method:method,permissions:device.permissions||{metrics:true,activity:true},metadata:device.metadata||{},connected_at:device.connected_at||new Date().toISOString(),last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+  let saved;
+  if(deviceRows[0]) saved=await smsDb("hudhud_devices?id=eq."+encodeURIComponent(deviceRows[0].id),{method:"PATCH",body:payload});
+  else saved=await smsDb("hudhud_devices",{method:"POST",body:payload});
+  const deviceId=saved[0]?.id||deviceRows[0]?.id;
+  if(deviceId&&Array.isArray(body.metrics)&&body.metrics.length) await smsDb("hudhud_device_metrics",{method:"POST",body:body.metrics.slice(0,25).map(x=>({user_id:userId,device_id:deviceId,metric_type:String(x.metric_type||"metric"),value_numeric:x.value_numeric==null?null:Number(x.value_numeric),unit:x.unit||null,recorded_at:x.recorded_at||new Date().toISOString(),metadata:x.metadata||{}}))});
+  if(deviceId&&Array.isArray(body.activity)&&body.activity.length) await smsDb("hudhud_device_activity",{method:"POST",body:body.activity.slice(0,25).map(x=>({user_id:userId,device_id:deviceId,activity_type:String(x.activity_type||"activity"),title:x.title||null,started_at:x.started_at||new Date().toISOString(),ended_at:x.ended_at||null,duration_seconds:x.duration_seconds==null?null:Number(x.duration_seconds),metadata:x.metadata||{}}))});
+  return res.status(200).json({ok:true,device_id:deviceId});
+ }catch(e){return res.status(400).json({error:e.message||"Device ingest failed."});}
+}
+
 function newsletterRoute(req){
   const q=String(req.query?.newsletter||"").toLowerCase();
   if(q) return q;
@@ -478,6 +502,8 @@ export default async function handler(req,res){
   }
 
   if(["sms-send"].includes(action)){ return smsSendHandler(req,res); }
+
+  if(action==="device-ingest"){ return deviceIngestHandler(req,res); }
 
   if(action==="sms-webhook"){ return smsWebhookHandler(req,res); }
 
