@@ -33,13 +33,27 @@ async function vercelResources(){
   return {provider:"vercel",resources:(data.projects||[]).map(p=>({id:p.id||p.projectId,name:p.name,framework:p.framework||"",link:p.link||null,latestDeployments:p.latestDeployments||[],targets:p.targets||{},nodeVersion:p.nodeVersion||null}))};
 }
 async function supabaseResources(){
-  // Supabase resource discovery
   const base=cleanBase(env("HUDHUD_SUPABASE_URL")),key=env("HUDHUD_SUPABASE_KEY");
   if(!base||!key)throw new Error("Supabase connection is not configured.");
-  const data=await jsonFetch(base+"/rest/v1/",{headers:{apikey:key,Authorization:`Bearer ${key}`}});
-  const paths=data.paths||{};
-  const resources=Object.keys(paths).filter(p=>p.startsWith("/")&&!p.startsWith("/rpc/")).map(p=>p.slice(1)).filter(Boolean).map(name=>({id:name,name,type:"table"}));
-  return {provider:"supabase",resources};
+  const headers={apikey:key,Authorization:"Bearer "+key};
+  let resources=[];
+  try{
+    const data=await jsonFetch(base+"/rest/v1/",{headers});
+    const paths=data.paths||{};
+    resources=Object.keys(paths).filter(p=>p.startsWith("/")&&!p.startsWith("/rpc/")).map(p=>p.slice(1)).filter(Boolean).map(name=>({id:name,name,type:"table"}));
+  }catch{}
+  if(!resources.length){
+    const known=["hudhud_projects","hudhud_opportunities","hudhud_connections","hudhud_activity","hudhud_project_connections"];
+    const checks=await Promise.all(known.map(async name=>{
+      try{
+        const data=await jsonFetch(base+"/rest/v1/"+encodeURIComponent(name)+"?select=*&limit=1",{headers});
+        return data?{id:name,name,type:"table"}:null;
+      }catch{return null;}
+    }));
+    resources=checks.filter(Boolean);
+  }
+  const match=base.match(/https?:\/\/([a-z0-9-]+)\.supabase\.co/i);
+  return {provider:"supabase",project:{ref:match?match[1]:"",url:base},resources};
 }
 export default async function handler(req,res){
   if(req.method!=="GET"){res.setHeader("Allow","GET");return res.status(405).json({error:"Method not allowed."});}
