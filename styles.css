@@ -392,7 +392,7 @@ canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,
 :root[data-theme="day"] .question-card select:focus{
   background:#fff;
 }
-.hudhud-leaf{
+.hudhud-feather{
   position:fixed;
   top:-48px;
   left:0;
@@ -402,17 +402,17 @@ canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,
   font-size:clamp(18px,2.2vw,28px);
   opacity:.82;
   filter:drop-shadow(0 3px 8px rgba(0,0,0,.28));
-  animation:hudhud-leaf-fall var(--leaf-duration,2.9s) cubic-bezier(.2,.7,.25,1) forwards;
+  animation:hudhud-feather-fall var(--feather-duration,2.9s) cubic-bezier(.2,.7,.25,1) forwards;
   transform:translate3d(0,0,0) rotate(0deg);
 }
-@keyframes hudhud-leaf-fall{
+@keyframes hudhud-feather-fall{
   0%{transform:translate3d(0,-12px,0) rotate(0deg);opacity:0}
   10%{opacity:.82}
-  35%{transform:translate3d(var(--leaf-drift,38px),32vh,0) rotate(120deg)}
-  65%{transform:translate3d(calc(var(--leaf-drift,38px) * -0.35),68vh,0) rotate(245deg)}
-  100%{transform:translate3d(calc(var(--leaf-drift,38px) * .55),115vh,0) rotate(390deg);opacity:0}
+  35%{transform:translate3d(var(--feather-drift,38px),32vh,0) rotate(120deg)}
+  65%{transform:translate3d(calc(var(--feather-drift,38px) * -0.35),68vh,0) rotate(245deg)}
+  100%{transform:translate3d(calc(var(--feather-drift,38px) * .55),115vh,0) rotate(390deg);opacity:0}
 }
 @media (prefers-reduced-motion:reduce){
-  .hudhud-leaf{display:none!important}
+  .hudhud-feather{display:none!important}
   .hudhud-input,.question-card input,.question-card textarea,.question-card select,.input-canvas input,.input-canvas textarea,.input-canvas select{transition:none}
 }
