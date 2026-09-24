@@ -33,6 +33,7 @@ async function vercelResources(){
   return {provider:"vercel",resources:(data.projects||[]).map(p=>({id:p.id||p.projectId,name:p.name,framework:p.framework||"",link:p.link||null,latestDeployments:p.latestDeployments||[],targets:p.targets||{},nodeVersion:p.nodeVersion||null}))};
 }
 async function supabaseResources(){
+  // Supabase resource discovery
   const base=cleanBase(env("HUDHUD_SUPABASE_URL")),key=env("HUDHUD_SUPABASE_KEY");
   if(!base||!key)throw new Error("Supabase connection is not configured.");
   const data=await jsonFetch(base+"/rest/v1/",{headers:{apikey:key,Authorization:`Bearer ${key}`}});
