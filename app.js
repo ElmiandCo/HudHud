@@ -719,7 +719,7 @@ async function handleWorkspaceCommand(message){
 }
 
 function requiresWorkspaceAuth(message){
- return /\b(?:create|add|update|change|set)\b[\s\S]*\b(?:project|opportunity|connection)\b/i.test(String(message||""));
+ return /\b(?:create|add|update|change|set|delete|remove|mark|complete|finish|reopen)\b[\s\S]*\b(?:project|opportunity|step|connection)\b/i.test(String(message||""));
 }
 async function sendToHudHud(message){
  const status=document.getElementById("brainStatus");
