@@ -396,7 +396,7 @@ function connections(){
 function premium(){
  const plans=[
   {key:"free",name:"Free",price:"$0",period:"forever",eyebrow:"STARTER",desc:"Everything you need to explore HudHud and organize your work.",features:["HudHud Command Center","Projects & opportunities","Core connections","HudHud Core"],button:"Current plan"},
-  {key:"pro",name:"Pro",price:"$5.99",period:"/ month",eyebrow:"MOST POPULAR",desc:"More power for active builders who want HudHud working alongside them.",features:["Everything in Free","Expanded project workflows","Priority HudHud actions","Advanced connections","More automation capacity"],button:"Choose Pro"},
+  {key:"pro",name:"Pro",price:"$9.99",period:"/ month",eyebrow:"MOST POPULAR",desc:"More power for active builders who want HudHud working alongside them.",features:["Everything in Free","Expanded project workflows","Priority HudHud actions","Advanced connections","More automation capacity"],button:"Choose Pro"},
   {key:"premium",name:"Premium",price:"$9.99",period:"/ month",eyebrow:"FULL POWER",desc:"The complete HudHud operating layer for serious execution and connected work.",features:["Everything in Pro","Premium HudHud capabilities","Higher workflow limits","Priority access","Advanced automation"],button:"Choose Premium"}
  ];
  return '<div class="premium-page">'+
@@ -469,7 +469,7 @@ function render(view){
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
- const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system};
+ const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium};
  m.innerHTML=(pages[view]||home)();
  bind(view);
  if(view==="home") { bindChat(); bindHomeAuth(); }
