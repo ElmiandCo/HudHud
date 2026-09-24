@@ -502,7 +502,7 @@ function render(view){
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
- const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter};
+ const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter};
  m.innerHTML=(pages[view]||home)();
  bind(view);
  if(view==="home") { bindChat(); bindHomeAuth(); }
@@ -511,7 +511,7 @@ function render(view){
  if(view==="system") bindSystem();
  if(view==="connections") bindConnections();
  if(view==="premium") bindPremium();
- if(view==="command"){bindCommandCenter();loadCommandResources();}
+ if(view==="command"||view==="analytics"){bindCommandCenter();loadCommandResources();}
 }
 
 async function bindPremium(){
