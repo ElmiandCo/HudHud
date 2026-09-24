@@ -705,6 +705,34 @@ function hudhudFlyby(count=2){
 }
 
 
+function devices(){
+ return '<section class="devices-page"><div class="section-head"><div><span class="eyebrow">HUDHUD DEVICE MAP</span><h2>Your Devices</h2><span class="muted">The devices you use to interact with HudHud. Connections and permissions are managed separately for each device.</span></div><button class="primary" data-device-add>＋ Add device</button></div><div class="knowledge-separation"><div><strong>🖥️ Computers</strong><span>Desktop and laptop environments where HudHud can assist you.</span></div><div><strong>📱 Mobile</strong><span>Phones and tablets that can act as your mobile bridge.</span></div><div><strong>⌚ Wearables</strong><span>Apple Watch, Fitbit, Garmin, Oura and other authorized wearables.</span></div><div><strong>🔐 Permissions</strong><span>Connection never means unrestricted access. Each data category requires its own authorization.</span></div></div><div id="devicesList" class="device-grid"><div class="card muted">Loading your devices…</div></div></section>';
+}
+async function bindDevices(){
+ if(!hasCloudUser())return;
+ const host=document.getElementById("devicesList");
+ const {data,error}=await supabaseClient.from("hudhud_devices").select("*").eq("user_id",currentUser.id).order("updated_at",{ascending:false});
+ if(error){if(host)host.innerHTML='<div class="card">Could not load your devices.</div>';return;}
+ const icon={Desktop:"🖥️",Laptop:"💻",Phone:"📱",Tablet:"📲",Wearable:"⌚",Other:"🔌"};
+ if(host)host.innerHTML=data?.length?data.map(x=>'<article class="card device-card"><div class="device-card-top"><div class="device-icon">'+(icon[x.device_type]||"🔌")+'</div><span class="pill">'+esc(x.status||"Registered")+'</span></div><h3>'+esc(x.name)+'</h3><p>'+esc([x.manufacturer,x.model,x.platform].filter(Boolean).join(" • ")||x.device_type)+'</p><div class="device-meta"><span>Type: '+esc(x.device_type)+'</span><span>Connection: '+esc(x.connection_method||"Not connected")+'</span><span>Last seen: '+(x.last_seen_at?esc(new Date(x.last_seen_at).toLocaleString()):"—")+'</span></div><div class="device-actions"><button class="secondary" data-device-edit="'+x.id+'">Edit</button><button class="secondary" data-device-connect="'+x.id+'">Connect</button><button class="danger" data-device-delete="'+x.id+'">Remove</button></div></article>').join(""):'<div class="empty device-empty"><strong>No devices registered yet.</strong><span>Add your computer, phone or wearable. Actual provider integrations will be connected with explicit permissions.</span></div>';
+ document.querySelectorAll("[data-device-add]").forEach(b=>b.onclick=()=>editDevice(null));
+ document.querySelectorAll("[data-device-edit]").forEach(b=>b.onclick=()=>editDevice(data.find(x=>x.id===b.dataset.deviceEdit)));
+ document.querySelectorAll("[data-device-connect]").forEach(b=>b.onclick=()=>{const row=data.find(x=>x.id===b.dataset.deviceConnect);if(row)toast(row.device_type==="Wearable"?"Wearable API connection will be configured here.":"Device bridge connection will be configured here.");});
+ document.querySelectorAll("[data-device-delete]").forEach(b=>b.onclick=async()=>{if(!confirm("Remove this device from HudHud?"))return;const {error}=await supabaseClient.from("hudhud_devices").delete().eq("id",b.dataset.deviceDelete).eq("user_id",currentUser.id);if(error){toast("Could not remove device");return;}toast("Device removed");render("devices");});
+}
+async function editDevice(row){
+ const type=prompt("Device type (Desktop, Laptop, Phone, Tablet, Wearable, Other):",row?.device_type||"Phone");if(type===null)return;
+ const name=prompt("Device name:",row?.name||"My "+type);if(name===null)return;
+ const platform=prompt("Platform (macOS, Windows, iOS, Android, watchOS, Fitbit OS, etc.):",row?.platform||"");if(platform===null)return;
+ const manufacturer=prompt("Manufacturer:",row?.manufacturer||"");if(manufacturer===null)return;
+ const model=prompt("Model:",row?.model||"");if(model===null)return;
+ const method=prompt("Connection method (HudHud App, API, Desktop Agent, Manual, etc.):",row?.connection_method||"Manual");if(method===null)return;
+ const payload={user_id:currentUser.id,device_type:type.trim()||"Other",name:name.trim()||"Unnamed device",platform:platform.trim()||null,manufacturer:manufacturer.trim()||null,model:model.trim()||null,status:row?.status||"Registered",connection_method:method.trim()||"Manual",permissions:row?.permissions||{},metadata:row?.metadata||{},connected_at:row?.connected_at||null,last_seen_at:row?.last_seen_at||null,updated_at:new Date().toISOString()};
+ const q=row?supabaseClient.from("hudhud_devices").update(payload).eq("id",row.id).eq("user_id",currentUser.id):supabaseClient.from("hudhud_devices").insert(payload);
+ const {error}=await q;if(error){console.error(error);toast("Could not save device");return;}toast("Device saved");render("devices");
+}
+
+
 function social(){
  const providers=[
   ["tiktok","TikTok","🎵","Short-form video, profile and public content.","https://www.tiktok.com/@"],
@@ -788,11 +816,11 @@ async function editKnowledge(row){
 }
 
 function render(view){
- if(["projects","opportunities","connections","documents","activity","premium","social","lifemap","knowledge"].includes(view)&&!requireAuth(view))return;
+ if(["projects","opportunities","connections","documents","activity","premium","social","devices","lifemap","knowledge"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
- const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,social:social,lifemap:lifemap,knowledge:knowledge,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
+ const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,social:social,devices:devices,lifemap:lifemap,knowledge:knowledge,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
  m.innerHTML=(pages[view]||home)();
  hudhudFlyby(view==="home"?1:2);
  bind(view);
@@ -802,6 +830,7 @@ function render(view){
  if(view==="system") bindSystem();
  if(view==="connections") bindConnections();
  if(view==="social") bindSocial();
+ if(view==="devices") bindDevices();
  if(view==="lifemap") bindLifeMap();
  if(view==="knowledge") bindKnowledge();
  if(view==="premium") bindPremium();
