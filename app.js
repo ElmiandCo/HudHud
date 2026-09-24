@@ -358,7 +358,23 @@ function connections(){
 
 function documents(){return '<div class="section-head"><div><h2>Documents</h2><span class="muted">Fresh workspace — no documents loaded.</span></div></div><div class="empty"><strong>No documents.</strong>The file layer comes later.</div>';}
 function activity(){return '<div class="section-head"><div><h2>Activity</h2><span class="muted">Real actions from this browser.</span></div><button class="danger" data-action="clear-activity">Clear activity</button></div>'+list(state.activity,"No activity yet.","Your real actions will appear here.");}
-function core(){return '<div class="section-head"><div><h2>HudHud Core</h2><span class="muted">Identity and workspace settings.</span></div></div><div class="grid"><div class="card"><div class="muted">IDENTITY</div><h3>HudHud</h3><p>AI command headquarters for Elmi Inc.</p></div><div class="card"><div class="muted">WORKSPACE</div><h3>Fresh</h3><p>Local browser state. No seeded business data.</p></div><div class="card"><div class="muted">DATE SOURCE</div><h3>System clock</h3><p>The date shown comes from the browser clock.</p></div></div><div class="card appearance-card"><div><div class="muted">APPEARANCE</div><h3>Day / Night</h3><p>Switch the visual theme instantly.</p></div><button id="themeToggle" class="theme-toggle" type="button"><span id="themeIcon">☾</span><span id="themeLabel">Night</span><i></i></button></div>';}
+function core(){
+ const meta=currentUser?.user_metadata||{};
+ const fullName=meta.full_name||meta.fullName||meta.name||[meta.first_name,meta.last_name].filter(Boolean).join(" ")||"Not provided";
+ const email=currentUser?.email||"Not signed in";
+ const ua=navigator.userAgent||"Unknown";
+ const platform=navigator.userAgentData?.platform||navigator.platform||"Unknown";
+ const browser=navigator.userAgentData?.brands?.map(x=>x.brand+" "+x.version).join(", ")||"Detected from browser";
+ const device=platform+" • "+(navigator.userAgentData?.mobile?"Mobile":"Desktop");
+ const screenSize=(window.screen?.width&&window.screen?.height)?window.screen.width+" × "+window.screen.height:"Unknown";
+ const language=navigator.language||"Unknown";
+ const online=navigator.onLine?"Online":"Offline";
+ return '<div class="section-head"><div><span class="eyebrow">HUDHUD CORE</span><h2>HudHud Core</h2><span class="muted">Your account identity and the device currently connected to HudHud.</span></div></div><div class="grid">'+
+ '<div class="card"><div class="muted">USER INFORMATION</div><h3>👤 '+esc(fullName)+'</h3><p><strong>Email:</strong> '+esc(email)+'</p><p class="muted">This identity comes from your signed-in HudHud account.</p></div>'+
+ '<div class="card"><div class="muted">DEVICE</div><h3>💻 '+esc(device)+'</h3><p><strong>Platform:</strong> '+esc(platform)+'</p><p><strong>Screen:</strong> '+esc(screenSize)+'</p><p><strong>Connection:</strong> '+esc(online)+'</p></div>'+
+ '<div class="card"><div class="muted">BROWSER</div><h3>🌐 '+esc(browser)+'</h3><p><strong>Language:</strong> '+esc(language)+'</p><p class="device-ua"><strong>User agent:</strong> '+esc(ua)+'</p></div>'+
+ '<div class="card"><div class="muted">WORKSPACE</div><h3>'+(currentUser?"Authenticated":"Not signed in")+'</h3><p>'+(currentUser?"Your private HudHud workspace is tied to this account.":"Sign in to associate your workspace with your account.")+'</p></div></div><div class="card appearance-card"><div><div class="muted">APPEARANCE</div><h3>Day / Night</h3><p>Switch the visual theme instantly.</p></div><button id="themeToggle" class="theme-toggle" type="button"><span id="themeIcon">☾</span><span id="themeLabel">Night</span><i></i></button><i></i></button></div>';
+}
 
 function stepOptions(){
  return Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+(i===0?" step":" steps")+'</option>').join("");
