@@ -706,19 +706,29 @@ function hudhudFlyby(count=2){
 
 
 function devices(){
- return '<section class="devices-page"><div class="section-head"><div><span class="eyebrow">HUDHUD DEVICE MAP</span><h2>Your Devices</h2><span class="muted">The devices you use to interact with HudHud. Connections and permissions are managed separately for each device.</span></div><button class="primary" data-device-add>＋ Add device</button></div><div class="knowledge-separation"><div><strong>🖥️ Computers</strong><span>Desktop and laptop environments where HudHud can assist you.</span></div><div><strong>📱 Mobile</strong><span>Phones and tablets that can act as your mobile bridge.</span></div><div><strong>⌚ Wearables</strong><span>Apple Watch, Fitbit, Garmin, Oura and other authorized wearables.</span></div><div><strong>🔐 Permissions</strong><span>Connection never means unrestricted access. Each data category requires its own authorization.</span></div></div><div id="devicesList" class="device-grid"><div class="card muted">Loading your devices…</div></div></section>';
+ return '<section class="devices-page"><div class="section-head"><div><span class="eyebrow">HUDHUD DEVICE MAP</span><h2>Your Devices</h2><span class="muted">Tailscale-connected devices can appear automatically. Everything else is added through the best available authentication method.</span></div><button class="primary" data-device-add>＋ Add device</button></div><div class="device-principles"><div><strong>🛰️ Tailscale</strong><span>Auto-discover trusted devices on your tailnet.</span></div><div><strong>🔐 Best auth</strong><span>OAuth, native permissions, API or HudHud bridge — whichever fits.</span></div><div><strong>📊 Metrics</strong><span>Only the measurements you authorize are collected.</span></div><div><strong>🏃 Activity</strong><span>HudHud uses activity to understand progress and timing.</span></div></div><div class="device-scope card"><div><div class="eyebrow">WHAT HUDHUD USES</div><h3>Metrics + Activity</h3><p>Devices are the connection layer. HudHud turns authorized signals into useful context for goals, planning and proactive help. It does not need unrestricted access to your device.</p></div><div class="scope-chips"><span>Metrics</span><span>Activity</span><span>Last seen</span><span>Permissions</span></div></div><div id="devicesList" class="device-grid"><div class="card muted">Loading your devices…</div></div></section>';
 }
 async function bindDevices(){
  if(!hasCloudUser())return;
  const host=document.getElementById("devicesList");
  const {data,error}=await supabaseClient.from("hudhud_devices").select("*").eq("user_id",currentUser.id).order("updated_at",{ascending:false});
  if(error){if(host)host.innerHTML='<div class="card">Could not load your devices.</div>';return;}
- const icon={Desktop:"🖥️",Laptop:"💻",Phone:"📱",Tablet:"📲",Wearable:"⌚",Other:"🔌"};
- if(host)host.innerHTML=data?.length?data.map(x=>'<article class="card device-card"><div class="device-card-top"><div class="device-icon">'+(icon[x.device_type]||"🔌")+'</div><span class="pill">'+esc(x.status||"Registered")+'</span></div><h3>'+esc(x.name)+'</h3><p>'+esc([x.manufacturer,x.model,x.platform].filter(Boolean).join(" • ")||x.device_type)+'</p><div class="device-meta"><span>Type: '+esc(x.device_type)+'</span><span>Connection: '+esc(x.connection_method||"Not connected")+'</span><span>Last seen: '+(x.last_seen_at?esc(new Date(x.last_seen_at).toLocaleString()):"—")+'</span></div><div class="device-actions"><button class="secondary" data-device-edit="'+x.id+'">Edit</button><button class="secondary" data-device-connect="'+x.id+'">Connect</button><button class="danger" data-device-delete="'+x.id+'">Remove</button></div></article>').join(""):'<div class="empty device-empty"><strong>No devices registered yet.</strong><span>Add your computer, phone or wearable. Actual provider integrations will be connected with explicit permissions.</span></div>';
+ const rows=data||[],icon={Desktop:"🖥️",Laptop:"💻",Phone:"📱",Tablet:"📲",Wearable:"⌚",Other:"🔌"};
+ const cards=await Promise.all(rows.map(async x=>{
+  const [m,a]=await Promise.all([
+   supabaseClient.from("hudhud_device_metrics").select("metric_type,value_numeric,unit,recorded_at").eq("device_id",x.id).eq("user_id",currentUser.id).order("recorded_at",{ascending:false}).limit(3),
+   supabaseClient.from("hudhud_device_activity").select("activity_type,title,started_at,duration_seconds").eq("device_id",x.id).eq("user_id",currentUser.id).order("started_at",{ascending:false}).limit(2)
+  ]);
+  const metrics=m.data||[],activities=a.data||[],auto=String(x.connection_method||"").toLowerCase().includes("tailscale");
+  const metricHtml=metrics.length?metrics.map(v=>'<span><b>'+esc(v.metric_type)+'</b> '+esc(v.value_numeric)+' '+esc(v.unit||"")+'</span>').join(""):'<span class="muted">No metrics yet</span>';
+  const activityHtml=activities.length?activities.map(v=>'<span><b>'+esc(v.title||v.activity_type)+'</b> '+new Date(v.started_at).toLocaleString()+'</span>').join(""):'<span class="muted">No activity yet</span>';
+  return '<article class="card device-card"><div class="device-card-top"><div class="device-icon">'+(icon[x.device_type]||"🔌")+'</div><span class="pill '+(auto?"device-auto":"")+'">'+(auto?"🛰️ Auto-discovered":esc(x.status||"Registered"))+'</span></div><div class="device-title-row"><div><h3>'+esc(x.name)+'</h3><p>'+esc([x.manufacturer,x.model,x.platform].filter(Boolean).join(" • ")||x.device_type)+'</p></div><span class="device-live">'+(x.last_seen_at?"● Seen":"○ Waiting")+'</span></div><div class="device-meta"><span>Connection: '+esc(x.connection_method||"Not connected")+'</span><span>Last seen: '+(x.last_seen_at?esc(new Date(x.last_seen_at).toLocaleString()):"—")+'</span></div><div class="device-signal"><div><small>METRICS</small>'+metricHtml+'</div><div><small>ACTIVITY</small>'+activityHtml+'</div></div><div class="device-actions"><button class="secondary" data-device-edit="'+x.id+'">Edit</button><button class="secondary" data-device-connect="'+x.id+'">Connect</button><button class="danger" data-device-delete="'+x.id+'">Remove</button></div></article>';
+ }));
+ if(host)host.innerHTML=cards.length?cards.join(""):'<div class="empty device-empty"><strong>No devices yet.</strong><span>Add a device or let the HudHud bridge discover one through Tailscale.</span></div>';
  document.querySelectorAll("[data-device-add]").forEach(b=>b.onclick=()=>editDevice(null));
- document.querySelectorAll("[data-device-edit]").forEach(b=>b.onclick=()=>editDevice(data.find(x=>x.id===b.dataset.deviceEdit)));
- document.querySelectorAll("[data-device-connect]").forEach(b=>b.onclick=()=>{const row=data.find(x=>x.id===b.dataset.deviceConnect);if(row)toast(row.device_type==="Wearable"?"Wearable API connection will be configured here.":"Device bridge connection will be configured here.");});
- document.querySelectorAll("[data-device-delete]").forEach(b=>b.onclick=async()=>{if(!confirm("Remove this device from HudHud?"))return;const {error}=await supabaseClient.from("hudhud_devices").delete().eq("id",b.dataset.deviceDelete).eq("user_id",currentUser.id);if(error){toast("Could not remove device");return;}toast("Device removed");render("devices");});
+ document.querySelectorAll("[data-device-edit]").forEach(b=>b.onclick=()=>editDevice(rows.find(x=>x.id===b.dataset.deviceEdit)));
+ document.querySelectorAll("[data-device-connect]").forEach(b=>b.onclick=()=>{const row=rows.find(x=>x.id===b.dataset.deviceConnect);if(row)toast(String(row.connection_method||"").toLowerCase().includes("tailscale")?"Tailscale discovery is automatic.":"Choose the provider-specific connection method next.");});
+ document.querySelectorAll("[data-device-delete]").forEach(b=>b.onclick=async()=>{if(!confirm("Remove this device from HudHud?"))return;const {error:e}=await supabaseClient.from("hudhud_devices").delete().eq("id",b.dataset.deviceDelete).eq("user_id",currentUser.id);if(e){toast("Could not remove device");return;}toast("Device removed");render("devices");});
 }
 async function editDevice(row){
  const type=prompt("Device type (Desktop, Laptop, Phone, Tablet, Wearable, Other):",row?.device_type||"Phone");if(type===null)return;
@@ -732,6 +742,37 @@ async function editDevice(row){
  const {error}=await q;if(error){console.error(error);toast("Could not save device");return;}toast("Device saved");render("devices");
 }
 
+
+function messages(){
+ return '<section class="messages-page"><div class="section-head"><div><span class="eyebrow">HUDHUD COMMUNICATIONS</span><h2>Messages</h2><span class="muted">Contacts, conversation history and SMS-ready threads. Replies can become context for HudHud when you authorize that use.</span></div><button class="primary" data-contact-add>＋ New contact</button></div><div class="messages-shell card"><aside class="conversation-list"><div class="message-search"><input id="messageSearch" class="hudhud-input" placeholder="Search contacts…"></div><div id="conversationList"><div class="muted">Loading conversations…</div></div></aside><section class="conversation-pane"><div id="conversationHeader" class="conversation-header"><div><strong>Select a conversation</strong><span>Choose a contact to view the thread.</span></div></div><div id="threadMessages" class="thread-messages"><div class="thread-empty"><span>💬</span><strong>Your conversations will live here.</strong><small>HudHud can use authorized replies as structured input — without turning every message into permanent memory.</small></div></div><form id="messageComposer" class="message-composer"><input id="messageInput" class="hudhud-input" maxlength="1600" placeholder="Message…" disabled><button class="primary" disabled>Send</button></form></section></div></section>';
+}
+let selectedConversationId=null;
+async function bindMessages(){
+ if(!hasCloudUser())return;
+ const list=document.getElementById("conversationList"),search=document.getElementById("messageSearch");let contacts=[],conversations=[];
+ const load=async()=>{
+  const [c,cv]=await Promise.all([supabaseClient.from("hudhud_contacts").select("*").eq("user_id",currentUser.id).order("name"),supabaseClient.from("hudhud_conversations").select("*").eq("user_id",currentUser.id).order("last_message_at",{ascending:false,nullsLast:true})]);
+  contacts=c.data||[];conversations=cv.data||[];const q=(search?.value||"").trim().toLowerCase();const visible=contacts.filter(x=>!q||String(x.name+" "+(x.phone||"")+" "+(x.email||"")).toLowerCase().includes(q));
+  if(list)list.innerHTML=visible.length?visible.map(contact=>{const conv=conversations.find(v=>v.contact_id===contact.id);return '<button class="conversation-row '+(conv?.id===selectedConversationId?"active":"")+'" data-conversation="'+esc(conv?.id||"")+'" data-contact="'+esc(contact.id)+'"><span class="conversation-avatar">'+esc((contact.name||"?").slice(0,1).toUpperCase())+'</span><span class="conversation-row-copy"><b>'+esc(contact.name)+'</b><small>'+(conv?esc(conv.channel.toUpperCase())+" • "+esc(conv.status):"No messages yet")+'</small></span></button>';}).join(""):'<div class="empty message-empty"><strong>No contacts yet.</strong><span>Add someone to start a thread.</span></div>';
+  document.querySelectorAll("[data-contact]").forEach(b=>b.onclick=()=>openConversation(b.dataset.contact,b.dataset.conversation,contacts));
+ };
+ if(search)search.oninput=load;await load();
+ document.querySelectorAll("[data-contact-add]").forEach(b=>b.onclick=async()=>{const name=prompt("Contact name:");if(name===null||!name.trim())return;const phone=prompt("Phone number (optional):","");if(phone===null)return;const email=prompt("Email (optional):","");if(email===null)return;const relationship=prompt("Relationship (optional):","");if(relationship===null)return;const {error}=await supabaseClient.from("hudhud_contacts").insert({user_id:currentUser.id,name:name.trim(),phone:phone.trim()||null,email:email.trim()||null,relationship:relationship.trim()||null});if(error){toast("Could not add contact");return;}toast("Contact added");await load();});
+ async function openConversation(contactId,conversationId,allContacts){
+  const contact=allContacts.find(x=>x.id===contactId);if(!contact)return;
+  if(!conversationId){const {data,error}=await supabaseClient.from("hudhud_conversations").insert({user_id:currentUser.id,contact_id:contact.id,channel:"sms",status:"active"}).select("*").single();if(error){toast("Could not create conversation");return;}conversationId=data.id;}
+  selectedConversationId=conversationId;await renderThread(contact,conversationId);await load();
+ }
+ async function renderThread(contact,conversationId){
+  const header=document.getElementById("conversationHeader"),host=document.getElementById("threadMessages"),input=document.getElementById("messageInput"),form=document.getElementById("messageComposer");
+  if(header)header.innerHTML='<div class="conversation-person"><span class="conversation-avatar large">'+esc((contact.name||"?").slice(0,1).toUpperCase())+'</span><div><strong>'+esc(contact.name)+'</strong><span>'+esc(contact.phone||contact.email||"No contact channel yet")+'</span></div></div><span class="pill">SMS</span>';
+  const {data}=await supabaseClient.from("hudhud_messages").select("*").eq("user_id",currentUser.id).eq("conversation_id",conversationId).order("created_at");
+  if(host)host.innerHTML=data?.length?data.map(m=>'<div class="thread-message '+(m.direction==="outbound"?"outbound":"inbound")+'"><div>'+esc(m.body)+'</div><small>'+new Date(m.created_at).toLocaleString()+(m.delivery_status?" • "+esc(m.delivery_status):"")+'</small></div>').join(""):'<div class="thread-empty"><span>🪶</span><strong>Start the conversation.</strong><small>Your messages and replies will appear here.</small></div>';
+  if(host)host.scrollTop=host.scrollHeight;
+  if(input){input.disabled=!contact.phone;input.placeholder=contact.phone?"Message "+contact.name+"…":"Add a phone number to enable SMS";input.dataset.conversation=conversationId;input.dataset.contact=contact.id;}
+  if(form){form.querySelector("button").disabled=!contact.phone;form.onsubmit=async e=>{e.preventDefault();const body=input.value.trim();if(!body)return;const token=await authAccessToken();if(!token){toast("Sign in again to send.");return;}const button=form.querySelector("button");button.disabled=true;try{const rr=await fetch("/api/sms-send",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({contact_id:contact.id,conversation_id:conversationId,body})});const dd=await rr.json().catch(()=>({}));if(!rr.ok)throw new Error(dd.error||"SMS could not be sent.");input.value="";await renderThread(contact,conversationId);await load();}catch(e){toast(e.message||"SMS failed");}finally{button.disabled=!contact.phone;}};}
+ }
+}
 
 function social(){
  const providers=[
@@ -816,11 +857,11 @@ async function editKnowledge(row){
 }
 
 function render(view){
- if(["projects","opportunities","connections","documents","activity","premium","social","devices","lifemap","knowledge"].includes(view)&&!requireAuth(view))return;
+ if(["projects","opportunities","connections","documents","activity","premium","social","messages","devices","lifemap","knowledge"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
- const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,social:social,devices:devices,lifemap:lifemap,knowledge:knowledge,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
+ const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,social:social,messages:messages,devices:devices,lifemap:lifemap,knowledge:knowledge,tools:tools,studio:studio,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
  m.innerHTML=(pages[view]||home)();
  hudhudFlyby(view==="home"?1:2);
  bind(view);
@@ -830,6 +871,7 @@ function render(view){
  if(view==="system") bindSystem();
  if(view==="connections") bindConnections();
  if(view==="social") bindSocial();
+ if(view==="messages") bindMessages();
  if(view==="devices") bindDevices();
  if(view==="lifemap") bindLifeMap();
  if(view==="knowledge") bindKnowledge();
