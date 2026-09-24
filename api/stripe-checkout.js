@@ -11,7 +11,7 @@ async function hudhudUser(req){
 }
 function stripeKey(){return process.env.STRIPE_SECRET_KEY||process.env.HUDHUD_STRIPE_SECRET_KEY||"";}
 function priceFor(plan){
- const map={pro:process.env.HUDHUD_STRIPE_PRO_PRICE_ID,premium:process.env.HUDHUD_STRIPE_PREMIUM_PRICE_ID,test:process.env.HUDHUD_STRIPE_TEST_PRICE_ID};
+ const map={pro:process.env.HUDHUD_STRIPE_PRO_PRICE_ID||"price_1UJ1tnKDZ06Dc8d4dhUyrkDC",premium:process.env.HUDHUD_STRIPE_PREMIUM_PRICE_ID,test:process.env.HUDHUD_STRIPE_TEST_PRICE_ID};
  return map[plan]||"";
 }
 export default async function handler(req,res){
