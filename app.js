@@ -289,12 +289,12 @@ let opportunityFilter="active";
 function workspacePlanForm(kind,item){
  const steps=ensureSteps(item);
  const count=steps.length||3;
- return '<div class="section-head"><div><span class="eyebrow">EDIT WORKFLOW</span><h2>Manage '+(kind==="project"?"project":"opportunity")+'</h2><span class="muted">Update the description, choose the number of steps, and rename the workflow.</span></div></div>'+
+ return '<div class="section-head"><div><span class="eyebrow">EDIT WORKFLOW</span><h2>Manage '+(kind==="project"?"project":"opportunity")+'</h2><span class="muted">Update the description, choose the number of steps, and give HudHud a prompt for each step.</span></div></div>'+
  '<form class="card form workspace-form" id="planForm" data-plan-kind="'+kind+'" data-plan-id="'+esc(item.id)+'">'+
  '<label>Name *</label><input name="name" required maxlength="100" value="'+esc(item.name)+'">'+
  '<label>Description *</label><textarea name="description" required maxlength="1000">'+esc(item.description||item.notes||"")+'</textarea>'+
  '<label>Number of steps *</label><select id="planStepCount" name="stepCount">'+Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'" '+((i+1)===count?"selected":"")+'>'+(i+1)+(i===0?" step":" steps")+'</option>').join("")+'</select>'+
- '<div class="step-builder"><div class="step-builder-head"><span>WORKFLOW STEPS</span><small>Completed steps stay done when their names are retained.</small></div><div id="planStepFields" class="step-builder-fields"></div></div>'+
+ '<div class="step-builder"><div class="step-builder-head"><span>WORKFLOW STEPS</span><small>Name the step, then tell HudHud what completing it means.</small></div><div id="planStepFields" class="step-builder-fields"></div></div>'+
  '<div class="form-actions"><button type="submit" class="primary">Save workflow</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';
 }
 function bindPlanBuilder(item){
@@ -304,7 +304,7 @@ function bindPlanBuilder(item){
    const count=Number(select.value)||1,steps=ensureSteps(item);
    fields.innerHTML=Array.from({length:count},(_,i)=>{
      const existing=steps[i];
-     return '<div class="step-name-field"><span>'+String(i+1).padStart(2,"0")+'</span><input name="step_'+i+'" maxlength="120" placeholder="Step '+(i+1)+' name" value="'+esc(existing?.name||"")+'" required></div>';
+     return '<div class="step-builder-item"><div class="step-name-field"><span>'+String(i+1).padStart(2,"0")+'</span><input name="step_'+i+'" maxlength="120" placeholder="Step '+(i+1)+' name" value="'+esc(existing?.name||"")+'" required></div><input class="step-prompt-field" name="step_prompt_'+i+'" maxlength="500" placeholder="HudHud prompt for this step (optional)" value="'+esc(existing?.prompt||existing?.name||"")+'"></div>';
    }).join("");
  };
  select.onchange=renderFields;
@@ -365,7 +365,7 @@ function stepOptions(){
 }
 function stepBuilderFields(prefix,count){
  let html="";
- for(let i=0;i<count;i++)html+='<div class="step-name-field"><span>'+String(i+1).padStart(2,"0")+'</span><input name="step_'+i+'" maxlength="120" placeholder="Step '+(i+1)+' name" required></div>';
+ for(let i=0;i<count;i++)html+='<div class="step-builder-item"><div class="step-name-field"><span>'+String(i+1).padStart(2,"0")+'</span><input name="step_'+i+'" maxlength="120" placeholder="Step '+(i+1)+' name" required></div><input class="step-prompt-field" name="step_prompt_'+i+'" maxlength="500" placeholder="HudHud prompt for this step (optional)"></div>';
  return html;
 }
 function bindStepBuilder(prefix){
@@ -437,7 +437,7 @@ function bind(view){
    const f=new FormData(pf),name=String(f.get("name")).trim(),description=String(f.get("description")).trim();
    if(!name||!description)return;
    const count=Number(f.get("stepCount"))||1;
-   const steps=Array.from({length:count},(_,i)=>({id:"step_"+Date.now()+"_"+i,name:String(f.get("step_"+i)||"").trim(),done:false}));
+   const steps=Array.from({length:count},(_,i)=>({id:"step_"+Date.now()+"_"+i,name:String(f.get("step_"+i)||"").trim(),prompt:String(f.get("step_prompt_"+i)||f.get("step_"+i)||"").trim(),done:false}));
    if(steps.some(s=>!s.name)){toast("Name every project step");return;}
    const item={id:"project_"+Date.now(),name,description,status:String(f.get("status")),steps,createdAt:new Date().toISOString()};
    state.projects.unshift(item);
@@ -470,7 +470,7 @@ function bind(view){
    if(!item)return;
    const f=new FormData(planForm),name=String(f.get("name")).trim(),description=String(f.get("description")).trim(),count=Number(f.get("stepCount"))||1;
    const oldSteps=ensureSteps(item);
-   const steps=Array.from({length:count},(_,i)=>({id:oldSteps[i]?.id||("step_"+Date.now()+"_"+i),name:String(f.get("step_"+i)||"").trim(),done:!!oldSteps[i]?.done}));
+   const steps=Array.from({length:count},(_,i)=>({id:oldSteps[i]?.id||("step_"+Date.now()+"_"+i),name:String(f.get("step_"+i)||"").trim(),prompt:String(f.get("step_prompt_"+i)||oldSteps[i]?.prompt||f.get("step_"+i)||"").trim(),done:!!oldSteps[i]?.done}));
    if(!name||!description||steps.some(s=>!s.name)){toast("Complete the workflow fields");return;}
    item.name=name;item.description=description;item.steps=steps;item.updatedAt=new Date().toISOString();
    const allDone=steps.length>0&&steps.every(s=>s.done);
