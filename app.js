@@ -393,6 +393,15 @@ function connections(){
  '</div><div id="connectionModalHost"></div><div id="providerAccountsHost"></div>';
 }
 
+function premium(){
+ const plans=[
+  {key:"free",name:"Free",price:"$0.00",period:"forever",tag:"Start here",desc:"The core HudHud workspace for getting organized.",features:["Command Center","Projects & opportunities","Core connections","HudHud Core"],button:"Current plan"},
+  {key:"pro",name:"Pro",price:"$5.99",period:"/ month",tag:"For builders",desc:"More power for active projects, automations and connected work.",features:["Everything in Free","Expanded project workflows","Priority HudHud actions","Advanced connections"],button:"Upgrade to Pro"},
+  {key:"premium",name:"Premium",price:"$9.99",period:"/ month",tag:"Full power",desc:"The complete HudHud operating layer for serious execution.",features:["Everything in Pro","Premium HudHud capabilities","Higher workflow limits","Priority access"],button:"Go Premium"},
+  {key:"test",name:"Test Checkout",price:"$0.50",period:"one-time test",tag:"TEMPORARY",desc:"Temporary checkout verification. Stripe USD charges cannot be $0.01, so this uses the $0.50 minimum.",features:["Live Checkout verification","Safe temporary test option","Remove when testing is complete"],button:"Run $0.50 test"}
+ ];
+ return '<div class="premium-page"><div class="premium-hero"><span class="eyebrow">HUDHUD PREMIUM</span><h2>Choose your HudHud plan.</h2><p class="muted">Upgrade the operating system as your work grows. Free stays free; Pro and Premium unlock additional capabilities.</p></div><div class="premium-grid">'+plans.map(p=>'<div class="card premium-plan '+(p.key==="premium"?"premium-featured":"")+' '+(p.key==="test"?"premium-test":"")+'"><div class="premium-plan-head"><div><span class="premium-tag">'+esc(p.tag)+'</span><h3>'+esc(p.name)+'</h3></div><div class="premium-price"><strong>'+esc(p.price)+'</strong><span>'+esc(p.period)+'</span></div></div><p>'+esc(p.desc)+'</p><ul>'+p.features.map(f=>'<li>✓ '+esc(f)+'</li>').join("")+'</ul><button class="'+(p.key==="free"?"secondary":"primary")+' premium-button" data-premium-plan="'+p.key+'" '+(p.key==="free"?"disabled":"")+'>'+esc(p.button)+'</button></div>').join("")+'</div><div class="card premium-note"><div><div class="muted">BILLING</div><h3>Stripe-powered subscriptions</h3><p>Checkout is hosted by Stripe. HudHud never stores your card details. You can manage an active subscription from your billing account.</p></div><span class="stripe-badge">STRIPE</span></div><div id="premiumStatus" class="premium-status"></div></div>';
+}
 function documents(){return '<div class="section-head"><div><h2>Documents</h2><span class="muted">Fresh workspace — no documents loaded.</span></div></div><div class="empty"><strong>No documents.</strong>The file layer comes later.</div>';}
 function activity(){return '<div class="section-head"><div><h2>Activity</h2><span class="muted">Real actions from this browser.</span></div><button class="danger" data-action="clear-activity">Clear activity</button></div>'+list(state.activity,"No activity yet.","Your real actions will appear here.");}
 function core(){
@@ -452,7 +461,7 @@ function opportunityForm(){
 function connectionForm(){return '<div class="section-head"><h2>Add connection</h2></div><form class="card form" id="connForm"><label>System *</label><input name="name" required maxlength="80" placeholder="GitHub, Vercel, Supabase..."><label>Details</label><input name="details" maxlength="150"><div class="form-actions"><button class="primary">Save connection</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';}
 
 function render(view){
- if(["projects","opportunities","connections","documents","activity"].includes(view)&&!requireAuth(view))return;
+ if(["projects","opportunities","connections","documents","activity","premium"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
@@ -464,8 +473,30 @@ function render(view){
  if(view==="studio") bindStudio();
  if(view==="system") bindSystem();
  if(view==="connections") bindConnections();
+ if(view==="premium") bindPremium();
 }
 
+async function bindPremium(){
+ document.querySelectorAll("[data-premium-plan]").forEach(b=>b.onclick=async()=>{
+   const plan=b.dataset.premiumPlan;
+   if(plan==="free")return;
+   if(!currentUser){showAuthModal("signin");return;}
+   const status=document.getElementById("premiumStatus");
+   b.disabled=true;b.textContent="Opening Stripe…";
+   if(status)status.textContent="";
+   try{
+     const token=await authAccessToken();
+     const r=await fetch("/api/stripe-checkout",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({plan})});
+     const d=await r.json().catch(()=>({}));
+     if(!r.ok)throw new Error(d.error||"Could not start Stripe Checkout.");
+     if(d.url)window.location.href=d.url; else throw new Error("Stripe did not return a Checkout URL.");
+   }catch(e){
+     if(status)status.textContent=e.message||"Checkout failed.";
+     b.disabled=false;
+     b.textContent=plan==="test"?"Run $0.50 test":plan==="pro"?"Upgrade to Pro":"Go Premium";
+   }
+ });
+}
 function bind(view){
  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>render(b.dataset.go));
  document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>{
