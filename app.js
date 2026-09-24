@@ -396,7 +396,7 @@ async function removeProviderAccount(id){
  toast("Provider account removed");openProviderAccounts();
 }
 function connections(){
- return '<div class="section-head"><div><span class="eyebrow">CONTROL / SETTINGS</span><h2>Connections</h2><span class="muted">Open a connection to configure its focus, resources and project scope.</span></div><div class="connection-head-actions"><button class="secondary" data-connection-reconnect-all>↻ Attempt reconnect</button><button class="primary" data-connection-refresh>↻ Check all connections</button></div></div>'+
+ return '<div class="section-head"><div><span class="eyebrow">CONTROL / SETTINGS</span><h2>Connections</h2><span class="muted">Open a connection to configure its focus, resources and project scope.</span></div><div class="connection-head-actions"><button class="secondary" data-connection-reset>↻ Reset settings</button><button class="secondary" data-connection-reconnect-all>👤 Manage accounts</button><button class="primary" data-connection-refresh>↻ Check all connections</button></div></div>'+
  '<div class="connection-summary card"><div><div class="muted">ACTIVE CONNECTIONS</div><strong id="activeConnectionCount">—</strong><span> live tool connections</span></div><div id="activeConnectionNames" class="active-connection-names">Checking…</div></div>'+
  '<div class="connection-control-grid">'+
  '<button type="button" class="card connection-control-card connection-clickable" data-open-connection="github"><span class="status-light status-unknown" data-conn-light="github"></span><div class="connection-logo">🐙</div><h3>GitHub</h3><p>Repositories, files, issues and commits.</p><div class="connection-status-line"><strong data-conn-status="github">Checking…</strong><span data-conn-detail="github">—</span></div><span class="connection-open-hint">Open connection →</span></button>'+
@@ -870,7 +870,6 @@ async function openConnectionModal(provider){
  if(!currentUser){showAuthModal("signin");return;}
  const host=document.getElementById("connectionModalHost");if(!host)return;
  host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-resource-modal></div><div class="resource-dialog"><div class="resource-loading"><span class="thinking-feather">🪶</span>Loading '+esc(provider)+' resources…</div></div></div>';
- const token=await authAccessToken();
  try{
    const existing=state.connections.find(x=>x.provider===provider)||null;
    const settings=existing?.settings||{};
@@ -903,8 +902,10 @@ async function openConnectionModal(provider){
    host.querySelectorAll("[data-close-resource-modal]").forEach(b=>b.onclick=closeResourceModal);
    host.querySelector("[data-save-connection]").onclick=()=>saveConnectionModal(provider);
  }catch(e){
-   host.querySelector(".resource-dialog").innerHTML='<button class="resource-close" data-close-resource-modal>×</button><div class="eyebrow">CONNECTION ERROR</div><h2>Could not load '+esc(provider)+'</h2><p class="resource-subtitle">'+esc(e.message||String(e))+'</p><div class="form-actions"><button class="secondary" data-close-resource-modal>Close</button></div>';
+   const message=e.message||String(e);
+   host.querySelector(".resource-dialog").innerHTML='<button class="resource-close" data-close-resource-modal>×</button><div class="eyebrow">CONNECTION ERROR</div><h2>Could not load '+esc(provider)+'</h2><p class="resource-subtitle">'+esc(message)+'</p><div class="form-actions"><button class="secondary" data-close-resource-modal>Close</button><button class="primary" data-resource-reauth>↻ Reauthorize '+esc(provider)+'</button></div>';
    host.querySelector("[data-close-resource-modal]").onclick=closeResourceModal;
+   host.querySelector("[data-resource-reauth]").onclick=()=>connectProviderAccount(provider);
  }
 }
 function projectConnectionRowsForProvider(provider){
