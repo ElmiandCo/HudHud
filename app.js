@@ -700,7 +700,7 @@ async function refreshConnections(){try{const r=await fetch("/api/connection-sta
 async function reconnectConnection(name,button){
  if(button){button.disabled=true;button.textContent="↻ Reconnecting…";}
  try{
-   const r=await fetch("/api/connection-action",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({connection:name})});
+   const r=await fetch("/api/connection-status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({connection:name})});
    const data=await r.json();
    if(!r.ok)throw new Error(data.error||"Reconnect failed");
    const result=data.result||{};
