@@ -110,6 +110,20 @@ async function cloudUpdateProject(item){
  const {error}=await supabaseClient.from("hudhud_projects").update({name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,updated_at:item.updatedAt||new Date().toISOString()}).eq("id",item.id).eq("user_id",currentUser.id);
  if(error){toast("Project update failed");console.error(error);return false;} return true;
 }
+async function cloudDeleteProject(item){
+ if(!hasCloudUser())return true;
+ const {error:pcError}=await supabaseClient.from("hudhud_project_connections").delete().eq("project_id",item.id).eq("user_id",currentUser.id);
+ if(pcError){console.error(pcError);toast("Project connection delete failed");return false;}
+ const {error}=await supabaseClient.from("hudhud_projects").delete().eq("id",item.id).eq("user_id",currentUser.id);
+ if(error){console.error(error);toast("Project delete failed");return false;}
+ return true;
+}
+async function cloudDeleteOpportunity(item){
+ if(!hasCloudUser())return true;
+ const {error}=await supabaseClient.from("hudhud_opportunities").delete().eq("id",item.id).eq("user_id",currentUser.id);
+ if(error){console.error(error);toast("Opportunity delete failed");return false;}
+ return true;
+}
 async function cloudInsertOpportunity(item){
  if(!hasCloudUser())return true;
  const {data,error}=await supabaseClient.from("hudhud_opportunities").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
@@ -280,7 +294,7 @@ function workspaceCards(items,kind,filter){
      connectionHtml+
      '<div class="workspace-progress"><div><span>PROGRESS</span><strong>'+p.done+'/'+p.total+' steps</strong></div><div class="progress-track"><i style="width:'+percent+'%"></i></div></div>'+
      stepsHtml+
-     '<div class="workspace-card-actions"><button type="button" class="secondary" data-plan-item="'+kind+'" data-item-id="'+esc(item.id)+'">✎ Manage steps</button></div>'+
+     '<div class="workspace-card-actions"><button type="button" class="secondary" data-plan-item="'+kind+'" data-item-id="'+esc(item.id)+'">✎ Manage steps</button><button type="button" class="secondary danger-button" data-delete-workspace="'+kind+'" data-item-id="'+esc(item.id)+'">Delete</button></div>'+
    '</article>';
  }).join("")+'</div>';
 }
@@ -526,6 +540,7 @@ function bind(view){
  });
  document.querySelectorAll("[data-step-toggle]").forEach(b=>b.onclick=()=>toggleWorkspaceStep(b.dataset.stepToggle,b.dataset.itemId,Number(b.dataset.stepIndex)));
  document.querySelectorAll("[data-plan-item]").forEach(b=>b.onclick=()=>editWorkspacePlan(b.dataset.planItem,b.dataset.itemId));
+ document.querySelectorAll("[data-delete-workspace]").forEach(b=>b.onclick=()=>deleteWorkspaceItem(b.dataset.deleteWorkspace,b.dataset.itemId));
 
  const pf=document.getElementById("projectForm");
  if(pf)pf.onsubmit=async e=>{
@@ -605,6 +620,22 @@ async function toggleWorkspaceStep(kind,itemId,index){
  render(kind==="project"?"projects":"opportunities");
 }
 
+async function deleteWorkspaceItem(kind,itemId){
+ const collection=kind==="project"?state.projects:state.opportunities;
+ const item=collection.find(x=>x.id===itemId);
+ if(!item)return;
+ if(!confirm("Delete "+(kind==="project"?"project":"opportunity")+" “"+item.name+"”? This cannot be undone."))return;
+ const ok=kind==="project"?await cloudDeleteProject(item):await cloudDeleteOpportunity(item);
+ if(!ok)return;
+ const index=collection.indexOf(item);
+ collection.splice(index,1);
+ delete projectConnections[itemId];
+ save();
+ log("Deleted "+(kind==="project"?"project":"opportunity")+": "+item.name);
+ toast((kind==="project"?"Project":"Opportunity")+" deleted");
+ render(kind==="project"?"projects":"opportunities");
+}
+
 function addMessage(who,text,kind){
  const box=document.getElementById("messages");if(!box)return;
  const d=document.createElement("div");d.className="message "+kind;
@@ -615,32 +646,74 @@ function addMessage(who,text,kind){
 async function handleWorkspaceCommand(message){
  const text=String(message||"").trim();
 
- const statusUpdate=text.match(/\b(?:update|change|set)\s+(?:project\s*\\?:\s*|project\s+)([“"']?)([^”"']+?)\1(?:'s)?\s+status\s+(?:to|=)\s*[“"']?(planning|active|on hold)[”"']?/i);
+ const ordinal=n=>{
+   const m=String(n||"").toLowerCase().match(/^(\\d+)(?:st|nd|rd|th)?$/);
+   return m?Number(m[1]):null;
+ };
+ const findItem=(kind,name)=>{
+   const collection=kind==="project"?state.projects:state.opportunities;
+   const requested=String(name||"").trim().replace(/^[“"' ]+|[”"' ]+$/g,"").replace(/[.?!]+$/,"");
+   if(/^(?:last|latest)$/i.test(requested))return collection[0]||null;
+   return collection.find(x=>String(x.name||"").trim().toLowerCase()===requested.toLowerCase())||null;
+ };
+ const stepCommand=text.match(/\\b(?:mark|set|make|change|update)\\s+(?:step\\s+)?(\\d+)(?:st|nd|rd|th)?\\s+(?:of|from|in)\\s+(?:project\\s+)?[“"' ]*([^”"']+?)[”"' ]*\\s+(?:to\\s+)?(?:done|complete|completed)\\b/i);
+ if(stepCommand){
+   const index=ordinal(stepCommand[1])-1;
+   const project=findItem("project",stepCommand[2]);
+   if(!project)return {reply:"I couldn't find that project."};
+   const step=ensureSteps(project)[index];
+   if(!step)return {reply:"Project “"+project.name+"” doesn't have step "+(index+1)+"."};
+   if(step.done)return {reply:"Step "+(index+1)+" (“"+step.name+"”) is already done."};
+   step.done=true;
+   if(project.steps.every(x=>x.done)){project.preDoneStatus=project.preDoneStatus||project.status||"Active";project.status="Done";}
+   project.updatedAt=new Date().toISOString();
+   save();
+   if(!(await cloudUpdateProject(project))){await loadCloudState();return {reply:"I couldn't save that step change."};}
+   log("Completed project step: "+project.name+" • "+step.name);
+   return {reply:"Done. Step "+(index+1)+" (“"+step.name+"”) in project “"+project.name+"” is marked done."+((project.status==="Done")?" The project is now Done.":"")};
+ }
+
+ const deleteMatch=text.match(/\\bdelete\\s+(?:the\\s+)?(?:(last|latest)\\s+)?(project|opportunity)(?:\\s+[“"' ]*([^”"']+?)[”"' ]*)?\\s*$/i);
+ if(deleteMatch){
+   const kind=deleteMatch[2].toLowerCase(),requested=deleteMatch[3]||deleteMatch[1]||"last";
+   const item=findItem(kind,requested);
+   if(!item)return {reply:"I couldn't find that "+kind+"."};
+   const ok=kind==="project"?await cloudDeleteProject(item):await cloudDeleteOpportunity(item);
+   if(!ok)return {reply:"I couldn't delete “"+item.name+"” because the cloud save failed."};
+   const collection=kind==="project"?state.projects:state.opportunities;
+   collection.splice(collection.indexOf(item),1);
+   if(kind==="project")delete projectConnections[item.id];
+   save();
+   log("Deleted "+kind+": "+item.name);
+   return {reply:"Done. I deleted the "+kind+" “"+item.name+"”."};
+ }
+
+ const statusUpdate=text.match(/\\b(?:update|change|set)\\s+(?:project\\s*\\?:\\s*|project\\s+)([“"' ]?)([^”"']+?)\\1(?:'s)?\\s+status\\s+(?:to|=)\\s*[“"' ]?(planning|active|on hold)[”"']?/i);
  if(statusUpdate){
-   const requestedName=String(statusUpdate[2]).trim().replace(/[.?!]+$/,"");
+   const requestedName=String(statusUpdate[2]).trim().replace(/[.?!]+/,"");
    const nextRaw=statusUpdate[3].toLowerCase();
    const nextStatus=nextRaw==="active"?"Active":nextRaw==="on hold"?"On hold":"Planning";
    const project=state.projects.find(p=>String(p.name||"").trim().toLowerCase()===requestedName.toLowerCase());
    if(!project)return {reply:"I couldn't find a project named “"+requestedName+"” in Projects."};
    const previous=project.status||"Recorded";
-   project.status=nextStatus;
-   project.updatedAt=new Date().toISOString();
+   project.status=nextStatus;project.updatedAt=new Date().toISOString();save();
+   if(!(await cloudUpdateProject(project))){await loadCloudState();return {reply:"I couldn't save that status change."};}
    log("Updated project status: "+project.name+" → "+nextStatus);
-   save();
    return {reply:"Done. Project “"+project.name+"” is now “"+nextStatus+"”. (Previously “"+previous+"”.)"};
  }
 
- const createMatch=text.match(/\b(?:create|add)\s+(?:a\s+)?(?:new\s+)?project\s+(?:called|named|titled)\s+[“"']([^”"']+)[”"']/i);
- const looseMatch=text.match(/\b(?:create|add)\s+(?:a\s+)?(?:new\s+)?project\s+(?:called|named|titled)\s+(.+?)(?:\s+(?:here|on this site|to this site))?$/i);
+ const createMatch=text.match(/\\b(?:create|add)\\s+(?:a\\s+)?(?:new\\s+)?project\\s+(?:called|named|titled)\\s+[“"']([^”"']+)[”"']/i);
+ const looseMatch=text.match(/\\b(?:create|add)\\s+(?:a\\s+)?(?:new\\s+)?project\\s+(?:called|named|titled)\\s+(.+?)(?:\\s+(?:here|on this site|to this site))?$/i);
  const match=createMatch||looseMatch;
  if(!match)return null;
  let name=String(match[1]).trim().replace(/[.?!]+$/,"");
  if(!name)return null;
- const statusMatch=text.match(/\bstatus\s*[:=]?\s*(planning|active|on hold)\b/i);
+ const statusMatch=text.match(/\\bstatus\\s*[:=]?\\s*(planning|active|on hold)\\b/i);
  const rawStatus=statusMatch?statusMatch[1].toLowerCase():"planning";
  const status=rawStatus==="active"?"Active":rawStatus==="on hold"?"On hold":"Planning";
- const project={id:"project_"+Date.now(),name:name,description:"Created from the HudHud command center.",status:status,createdAt:new Date().toISOString()};
- state.projects.unshift(project);
+ const project={id:"project_"+Date.now(),name:name,description:"Created from the HudHud command center.",status:status,createdAt:new Date().toISOString(),steps:[]};
+ state.projects.unshift(project);save();
+ if(!(await cloudInsertProject(project))){state.projects.shift();save();return {reply:"I couldn't save that project."};}
  log("Created project from HudHud chat: "+name);
  return {reply:"Done. I created the project “"+name+"” with status “"+status+"”. It is now in Projects."};
 }
