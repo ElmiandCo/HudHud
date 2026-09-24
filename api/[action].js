@@ -411,7 +411,7 @@ function validTwilioSignature(req){
  const params=req.body&&typeof req.body==="object"?req.body:{};
  const data=url+Object.keys(params).sort().map(k=>k+String(params[k])).join("");
  const expected=crypto.createHmac("sha1",token).update(data).digest("base64");
- return !!signature&&crypto.timingSafeEqual(Buffer.from(signature),Buffer.from(expected));
+ return !!signature&&Buffer.byteLength(signature)===Buffer.byteLength(expected)&&crypto.timingSafeEqual(Buffer.from(signature),Buffer.from(expected));
 }
 async function smsSendHandler(req,res){
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed."});
@@ -454,7 +454,7 @@ async function smsWebhookHandler(req,res){
 function bridgeAuthorized(req){
  const secret=String(process.env.HUDHUD_DEVICE_BRIDGE_SECRET||"");
  const supplied=String(req.headers["x-hudhud-bridge-secret"]||"").trim();
- return !!secret&&!!supplied&&crypto.timingSafeEqual(Buffer.from(secret),Buffer.from(supplied));
+ return !!secret&&!!supplied&&Buffer.byteLength(secret)===Buffer.byteLength(supplied)&&crypto.timingSafeEqual(Buffer.from(secret),Buffer.from(supplied));
 }
 async function deviceIngestHandler(req,res){
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed."});
