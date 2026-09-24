@@ -869,6 +869,12 @@ function connectionIcon(provider){return provider==="github"?"🐙":provider==="
 async function openConnectionModal(provider){
  if(!currentUser){showAuthModal("signin");return;}
  const host=document.getElementById("connectionModalHost");if(!host)return;
+ host.onclick=e=>{
+   const close=e.target.closest("[data-close-resource-modal]");
+   if(close){e.preventDefault();e.stopPropagation();closeResourceModal();return;}
+   const reauth=e.target.closest("[data-resource-reauth]");
+   if(reauth){e.preventDefault();e.stopPropagation();connectProviderAccount(provider);}
+ };
  host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-resource-modal></div><div class="resource-dialog"><div class="resource-loading"><span class="thinking-feather">🪶</span>Loading '+esc(provider)+' resources…</div></div></div>';
  try{
    const existing=state.connections.find(x=>x.provider===provider)||null;
@@ -885,7 +891,7 @@ async function openConnectionModal(provider){
    const selected=new Set(Array.isArray(settings.resources)?settings.resources:[]);
    const selectedProjects=new Set(projectConnectionRowsForProvider(provider).map(x=>x.project_id));
    host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-resource-modal></div><div class="resource-dialog">'+
-     '<button class="resource-close" data-close-resource-modal>×</button>'+
+     '<button type="button" class="resource-close" data-close-resource-modal aria-label="Close">×</button>'+
      '<div class="eyebrow">CONNECTION SETTINGS</div><h2>'+connectionIcon(provider)+' '+esc(provider.charAt(0).toUpperCase()+provider.slice(1))+'</h2>'+
      '<p class="resource-subtitle">Choose the resources HudHud should focus on. These settings belong to your account; secrets remain server-side.</p>'+
      '<div class="resource-setting"><label><span>ACCOUNT</span><select id="connectionProviderAccount"><option value="">Use current server connection</option>'+accounts.map(a=>'<option value="'+esc(a.id)+'" '+(String(a.id)===accountId?"selected":"")+'>'+esc(a.account_name)+(a.account_email?" • "+esc(a.account_email):"")+'</option>').join("")+'</select></label></div>'+
@@ -903,7 +909,7 @@ async function openConnectionModal(provider){
    host.querySelector("[data-save-connection]").onclick=()=>saveConnectionModal(provider);
  }catch(e){
    const message=e.message||String(e);
-   host.querySelector(".resource-dialog").innerHTML='<button class="resource-close" data-close-resource-modal>×</button><div class="eyebrow">CONNECTION ERROR</div><h2>Could not load '+esc(provider)+'</h2><p class="resource-subtitle">'+esc(message)+'</p><div class="form-actions"><button class="secondary" data-close-resource-modal>Close</button><button class="primary" data-resource-reauth>↻ Reauthorize '+esc(provider)+'</button></div>';
+   host.querySelector(".resource-dialog").innerHTML='<button class="resource-close" data-close-resource-modal>×</button><div class="eyebrow">CONNECTION ERROR</div><h2>Could not load '+esc(provider)+'</h2><p class="resource-subtitle">'+esc(message)+'</p><div class="form-actions"><button type="button" class="secondary" data-close-resource-modal>Close</button><button type="button" class="primary" data-resource-reauth>↻ Reauthorize '+esc(provider)+'</button></div>';
    host.querySelector("[data-close-resource-modal]").onclick=closeResourceModal;
    host.querySelector("[data-resource-reauth]").onclick=()=>connectProviderAccount(provider);
  }
