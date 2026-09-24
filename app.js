@@ -725,9 +725,16 @@ async function reconnectConnection(name,button){
  finally{if(button){button.disabled=false;button.textContent="↻ Attempt reconnect";}}
 }
 async function authAccessToken(){
- if(!supabaseClient)return "";
- const {data}=await supabaseClient.auth.getSession();
- return data.session?.access_token||"";
+ try{
+   await initSupabase();
+   if(!supabaseClient)return "";
+   let {data}=await supabaseClient.auth.getSession();
+   if(data.session?.access_token)return data.session.access_token;
+   const refreshed=await supabaseClient.auth.refreshSession();
+   return refreshed.data.session?.access_token||"";
+ }catch(e){
+   return "";
+ }
 }
 function connectionIcon(provider){return provider==="github"?"🐙":provider==="vercel"?"▲":"⚡";}
 async function openConnectionModal(provider){
