@@ -486,3 +486,4 @@ canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,
 .member-chip{display:inline-flex;align-items:center;gap:6px}
 .conversation-avatar.tiny{width:22px;height:22px;font-size:.7rem}
 @media (max-width:700px){.contact-form-grid{grid-template-columns:1fr}.contact-picker-dialog,.contact-dialog{width:calc(100vw - 24px);max-width:none}}
+\n.legal-footer{display:flex;gap:18px;justify-content:center;align-items:center;flex-wrap:wrap;padding:18px 20px;color:var(--muted,#94a3b8);font-size:12px;border-top:1px solid var(--border,#273449);background:rgba(7,11,20,.72)}.legal-footer a{color:#67e8f9;text-decoration:none}.legal-footer a:hover{text-decoration:underline}\n
