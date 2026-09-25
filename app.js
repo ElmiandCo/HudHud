@@ -934,7 +934,7 @@ async function disconnectSocial(provider){
   const name={instagram:"Instagram",x:"X",tiktok:"TikTok",linkedin:"LinkedIn"}[provider]||provider;
   if(!confirm("Disconnect "+name+" from HudHud?"))return;
   try{
-    const response=await authorizedFetch("/api/social-disconnect?provider="+encodeURIComponent(provider),{method:"DELETE"});
+    const response=await authorizedFetch("/api/social-disconnect",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({provider})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.error||"Could not disconnect "+name+".");
     toast(name+" disconnected");
