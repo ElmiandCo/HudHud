@@ -1076,7 +1076,7 @@ function social(){
   ["tiktok","TikTok","🎵","Connect your TikTok account for authorized profile access."],
   ["linkedin","LinkedIn","in","Connect your LinkedIn profile through LinkedIn OpenID Connect."]
  ];
- return '<section class="social-page"><div class="section-head"><div><span class="eyebrow">SOCIAL</span><h2>Your social presence</h2><span class="muted">Real OAuth connections. HudHud only receives the permissions you approve.</span></div><div class="social-summary"><strong id="socialConnectedCount">—</strong><span>connected</span></div></div><div class="social-permission-banner card"><div><strong>🔐 You stay in control</strong><p>Access tokens stay server-side. HudHud’s brain receives connection metadata and scopes, not provider credentials.</p></div></div><div id="socialGrid" class="social-grid">'+providers.map(p=>'<article class="card social-card" data-social-provider="'+p[0]+'"><div class="social-card-top"><div class="social-logo">'+p[2]+'</div><span class="pill social-status">Not connected</span></div><h3>'+p[1]+'</h3><p>'+p[3]+'</p><div class="social-account" data-social-account="'+p[0]+'">—</div><div class="social-actions"><button class="secondary" data-social-connect="'+p[0]+'">Connect</button><button class="secondary" data-social-view="'+p[0]+'" disabled>View</button><button class="secondary" data-social-remove="'+p[0]+'" disabled>Disconnect</button></div></article>').join('')+'</div></section>';
+ return '<section class="social-page"><div class="section-head"><div><span class="eyebrow">SOCIAL</span><h2>Your social presence</h2><span class="muted">Real OAuth connections. HudHud only receives the permissions you approve.</span></div><div class="social-summary"><strong id="socialConnectedCount">—</strong><span>connected</span></div></div><div class="social-permission-banner card"><div><strong>🔐 You stay in control</strong><p>Access tokens stay server-side. HudHud’s brain receives connection metadata and scopes, not provider credentials.</p></div></div><div id="socialGrid" class="social-grid">'+providers.map(p=>'<article class="card social-card" data-social-provider="'+p[0]+'"><div class="social-card-top"><div class="social-logo">'+p[2]+'</div><span class="pill social-status">Not connected</span></div><h3>'+p[1]+'</h3><p>'+p[3]+'</p><div class="social-account" data-social-account="'+p[0]+'">—</div><div class="social-details" data-social-details="'+p[0]+'"></div><div class="social-actions"><button class="secondary" data-social-connect="'+p[0]+'">Connect</button><button class="secondary" data-social-view="'+p[0]+'" disabled>View</button><button class="secondary" data-social-remove="'+p[0]+'" disabled>Disconnect</button></div></article>').join('')+'</div></section>';
 }
 async function bindSocial(){
  if(!hasCloudUser())return;
@@ -1096,6 +1096,16 @@ async function bindSocial(){
      const status=card.querySelector(".social-status"),acct=card.querySelector('[data-social-account="'+row.provider+'"]');
      if(status){status.textContent=row.status==="connected"?"Connected":(row.status||"Not connected");status.classList.toggle("connected",row.status==="connected");}
      if(acct)acct.textContent=row.account_handle?("@"+row.account_handle):row.display_name||"Connected account";
+     const details=card.querySelector("[data-social-details=\""+row.provider+"\"]");
+     if(details){
+       if(row.provider==="tiktok" && row.status==="connected"){
+         const m=row.metadata||{}, s=m.stats||{};
+         const fmt=n=>Number(n||0).toLocaleString();
+         details.innerHTML=(m.bio?("<div>"+String(m.bio).replace(/[&<>]/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[x]))+"</div>"):"")+
+           "<div class=\"social-tiktok-stats\"><span>"+fmt(s.followers)+" followers</span><span>"+fmt(s.following)+" following</span><span>"+fmt(s.likes)+" likes</span><span>"+fmt(s.videos)+" videos</span></div>"+
+           (m.is_verified?"<div class=\"social-verified\">✓ Verified</div>":"");
+       }else details.innerHTML="";
+     }
      const view=card.querySelector('[data-social-view="'+row.provider+'"]');
      const profileUrl=row.metadata?.profile_url||null;
      if(view){view.disabled=!profileUrl;view.onclick=()=>profileUrl&&window.open(profileUrl,"_blank","noopener,noreferrer");}
