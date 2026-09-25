@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="HudHud hummingbird logo">
+<defs>
+ <linearGradient id="p" x1="10" y1="100" x2="112" y2="18" gradientUnits="userSpaceOnUse"><stop stop-color="#ff25e6"/><stop offset=".45" stop-color="#713cff"/><stop offset="1" stop-color="#18e8ff"/></linearGradient>
+ <linearGradient id="c" x1="35" y1="95" x2="103" y2="45" gradientUnits="userSpaceOnUse"><stop stop-color="#8b2cff"/><stop offset=".55" stop-color="#1659ff"/><stop offset="1" stop-color="#16eaff"/></linearGradient>
+ <filter id="g"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<g fill="none" stroke="url(#p)" stroke-linecap="round" stroke-linejoin="round" filter="url(#g)">
+ <path stroke-width="7" d="M18 93C40 79 51 59 64 32C75 10 94 15 104 34C112 49 105 66 90 74"/>
+ <path stroke-width="6" d="M48 70C63 44 78 39 96 44C82 51 72 64 67 82"/>
+ <path stroke-width="5" d="M26 89C49 98 73 97 105 82"/>
+ <path stroke-width="5" d="M92 76C104 77 111 84 112 93"/>
+ <path stroke-width="4" d="M42 51C29 44 24 36 28 28C39 33 49 40 55 47"/>
+</g>
+<path fill="url(#c)" d="M45 72c13-19 27-27 45-27-12 7-20 18-24 31-5 15-12 25-25 34 4-15 6-26 4-38Z"/>
+<path fill="#0b0a0f" stroke="#24eaff" stroke-width="2" d="M76 48c8-3 17-2 24 1l-18 5Z"/>
+<circle cx="86" cy="50" r="2.7" fill="#fff"/>
+<path d="M99 50l20 5-20 2" fill="none" stroke="#24eaff" stroke-width="2.5" stroke-linecap="round"/>
+<circle cx="105" cy="92" r="5" fill="url(#p)" stroke="#fff" stroke-opacity=".7"/>
+</svg>
