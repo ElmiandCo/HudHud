@@ -360,7 +360,7 @@ function ensureHudHudWidget(){
  host=document.createElement("div");host.id="hudhudFloatingHost";document.body.appendChild(host);
  const x=Number(hudhudSettings.bird_x),y=Number(hudhudSettings.bird_y);
  const left=Number.isFinite(x)?x:(window.innerWidth-82),top=Number.isFinite(y)?y:(window.innerHeight-170);
- host.innerHTML='<button id="hudhudBird" class="hudhud-bird" aria-label="Open HudHud">🦉</button><div id="hudhudBirdMenu" class="hudhud-bird-menu" hidden><div class="hudhud-bird-title">HUDHUD</div><button data-bird-chat>💬 HudHud Chat</button><button data-bird-theme>☼ Day / Night</button><button data-bird-signout>⇥ Sign out</button></div>';
+ host.innerHTML='<button id="hudhudBird" class="hudhud-bird" aria-label="Open HudHud"><img src="/assets/hudhud-logo.svg" alt="HudHud"></button><div id="hudhudBirdMenu" class="hudhud-bird-menu" hidden><div class="hudhud-bird-title">HUDHUD</div><button data-bird-chat>💬 HudHud Chat</button><button data-bird-theme>☼ Day / Night</button><button data-bird-signout>⇥ Sign out</button></div>';
  host.style.left=Math.max(12,Math.min(window.innerWidth-70,left))+"px";host.style.top=Math.max(70,Math.min(window.innerHeight-70,top))+"px";
  const bird=host.querySelector("#hudhudBird"),menu=host.querySelector("#hudhudBirdMenu");
  bird.onclick=()=>menu.hidden=!menu.hidden;
