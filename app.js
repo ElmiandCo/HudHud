@@ -1092,6 +1092,14 @@ function social(){
 }
 async function bindSocial(){
  if(!hasCloudUser())return;
+
+ // Bind the Connect buttons FIRST. If the integrations registry is unavailable,
+ // users must still be able to start OAuth instead of getting dead buttons.
+ document.querySelectorAll("[data-social-connect]").forEach(btn=>{
+   btn.disabled=false;
+   btn.onclick=()=>startSocialOAuth(btn.dataset.socialConnect);
+ });
+
  try{
    const response=await authorizedFetch("/api/social-integrations",{cache:"no-store"});
    const data=await response.json().catch(()=>({}));
@@ -1099,14 +1107,15 @@ async function bindSocial(){
    const rows=data.integrations||[];
    const count=document.getElementById("socialConnectedCount");
    if(count)count.textContent=rows.filter(x=>x.status==="connected").length;
-   document.querySelectorAll("[data-social-connect]").forEach(btn=>{
-     btn.onclick=()=>startSocialOAuth(btn.dataset.socialConnect);
-   });
+
    rows.forEach(row=>{
      const card=document.querySelector('[data-social-provider="'+row.provider+'"]');
      if(!card)return;
      const status=card.querySelector(".social-status"),acct=card.querySelector('[data-social-account="'+row.provider+'"]');
-     if(status){status.textContent=row.status==="connected"?"Connected":(row.status||"Not connected");status.classList.toggle("connected",row.status==="connected");}
+     if(status){
+       status.textContent=row.status==="connected"?"Connected":(row.status||"Not connected");
+       status.classList.toggle("connected",row.status==="connected");
+     }
      if(acct)acct.textContent=row.account_handle?("@"+row.account_handle):row.display_name||"Connected account";
      const details=card.querySelector("[data-social-details=\""+row.provider+"\"]");
      if(details){
@@ -1125,8 +1134,12 @@ async function bindSocial(){
      const remove=card.querySelector('[data-social-remove="'+row.provider+'"]');
      if(remove){remove.disabled=row.status!=="connected";remove.onclick=()=>disconnectSocial(row.provider);}
      const connect=card.querySelector('[data-social-connect="'+row.provider+'"]');
-     if(connect)connect.textContent=row.status==="connected"?"Reconnect":"Connect & authorize";
+     if(connect){
+       connect.disabled=false;
+       connect.textContent=row.status==="connected"?"Reconnect":"Connect & authorize";
+     }
    });
+
    const params=new URLSearchParams(window.location.search);
    if(params.get("social")){
      const provider=params.get("provider")||"social";
@@ -1135,7 +1148,15 @@ async function bindSocial(){
      else if(message)toast(message);
      history.replaceState({},document.title,window.location.pathname);
    }
- }catch(e){console.error(e);toast(e.message||"Could not load Social");}
+ }catch(e){
+   console.error(e);
+   // Keep OAuth controls live even when the integration status endpoint fails.
+   document.querySelectorAll("[data-social-connect]").forEach(btn=>{
+     btn.disabled=false;
+     if(!btn.textContent.trim()||btn.textContent.includes("Opening"))btn.textContent="Connect & authorize";
+   });
+   toast(e.message||"Could not load Social");
+ }
 }
 function lifemap(){
  return '<section><div class="section-head"><div><span class="eyebrow">HUDHUD LIFEMAP</span><h2>Your LifeMap</h2><span class="muted">The map you define about your life — goals, routines, people, projects and priorities. This is separate from what HudHud infers or learns.</span></div><button class="primary" data-lifemap-add>Add item</button></div><div class="knowledge-separation"><div><strong>🗺️ LifeMap</strong><span>User-defined structure, plans and context.</span></div><div><strong>🧠 What HudHud Knows</strong><span>Observed or learned information with its own metadata.</span></div></div><div id="lifemapList" class="knowledge-list"><div class="card muted">Loading your LifeMap…</div></div></section>';
