@@ -588,7 +588,7 @@ canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,
   .mobile-drawer-content .nav-group{
     border:1px solid #27212f;border-radius:14px;background:#111019;overflow:hidden
   }
-  .mobile-drawer-content .nav-group summary{padding:12px 13px;font-size:9px}
+  .mobile-drawer-content .nav-group summary{padding:12px 13px;font-size:9px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
   .mobile-drawer-content .nav-subgroup{padding:4px 8px 8px}
   .mobile-drawer-content .nav-group button{
     width:100%;display:flex;align-items:center;gap:10px;
