@@ -1011,7 +1011,8 @@ function render(view){
  if(view==="system") bindSystem();
  if(view==="connections") bindConnections();
  if(view==="social") bindSocial();
- if(view==="messages") bindMessages();\n if(view==="projects"||view==="opportunities") bindWorkspaceMembers();
+ if(view==="messages") bindMessages();
+ if(view==="projects"||view==="opportunities") bindWorkspaceMembers();
  if(view==="devices") bindDevices();
  if(view==="lifemap") bindLifeMap();
  if(view==="knowledge") bindKnowledge();
