@@ -636,3 +636,27 @@ canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,
 .social-connect-btn{min-width:150px}
 
 .social-scope-note{font-size:.78rem;opacity:.72;margin-top:6px}
+
+
+/* HudHud Home banner bird — entrance + landing pose. Scoped to the Home banner only. */
+.hudhud-home-banner{position:relative;overflow:hidden;isolation:isolate;min-height:340px}
+.hudhud-home-banner>*:not(.home-banner-bird){position:relative;z-index:2}
+.home-banner-bird{position:absolute;z-index:1;right:9%;top:6px;width:clamp(120px,18vw,210px);height:clamp(110px,17vw,195px);pointer-events:none;opacity:0;transform:translate3d(180px,-150px,0) rotate(18deg) scale(.78);animation:hudhud-home-flight 1.9s cubic-bezier(.2,.8,.2,1) .15s forwards}
+.home-banner-bird img{width:100%;height:100%;display:block;object-fit:contain;filter:drop-shadow(0 12px 24px rgba(95,45,180,.28))}
+@keyframes hudhud-home-flight{
+  0%{opacity:0;transform:translate3d(180px,-150px,0) rotate(18deg) scale(.78)}
+  14%{opacity:1}
+  38%{transform:translate3d(55px,-38px,0) rotate(-7deg) scale(.92)}
+  58%{transform:translate3d(-12px,10px,0) rotate(4deg) scale(1.03)}
+  73%{transform:translate3d(7px,-5px,0) rotate(-2deg) scale(.99)}
+  86%{transform:translate3d(0,0,0) rotate(1deg) scale(1)}
+  100%{opacity:.92;transform:translate3d(0,0,0) rotate(0deg) scale(1)}
+}
+@media (max-width:700px){
+ .hudhud-home-banner{min-height:380px}
+ .home-banner-bird{right:4%;top:8px;width:118px;height:108px;opacity:.86}
+ .hudhud-home-banner h1{max-width:75%;position:relative}
+}
+@media (prefers-reduced-motion:reduce){
+ .home-banner-bird{animation:none;opacity:.92;transform:none}
+}
