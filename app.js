@@ -1280,7 +1280,7 @@ async function sendToHudHud(message){
      toast("Project created");
      return;
    }
-   const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:message})});
+   const r=await authorizedFetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:message})});
    const raw=await r.text();
    let data={};try{data=JSON.parse(raw)}catch(e){}
    if(!r.ok)throw new Error(data.error||("HudHud API HTTP "+r.status));
