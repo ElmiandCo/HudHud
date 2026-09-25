@@ -914,44 +914,77 @@ async function bindMessages(){
  }
 }
 
+async function startSocialOAuth(provider){
+  if(!currentUser){showAuthModal("signin");return;}
+  const button=document.querySelector('[data-social-connect="'+provider+'"]');
+  if(button){button.disabled=true;button.textContent="Opening…";}
+  try{
+    const response=await authorizedFetch("/api/social-connect?provider="+encodeURIComponent(provider),{cache:"no-store"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||"Could not start "+provider+" authorization.");
+    if(!data.url)throw new Error("Authorization URL was not returned.");
+    window.location.assign(data.url);
+  }catch(e){
+    toast(e.message||"Social authorization failed");
+    if(button){button.disabled=false;button.textContent="Connect";}
+  }
+}
+async function disconnectSocial(provider){
+  if(!currentUser)return;
+  const name={instagram:"Instagram",x:"X",tiktok:"TikTok",linkedin:"LinkedIn"}[provider]||provider;
+  if(!confirm("Disconnect "+name+" from HudHud?"))return;
+  try{
+    const response=await authorizedFetch("/api/social-disconnect?provider="+encodeURIComponent(provider),{method:"DELETE"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||"Could not disconnect "+name+".");
+    toast(name+" disconnected");
+    render("social");
+  }catch(e){toast(e.message||"Disconnect failed");}
+}
 function social(){
  const providers=[
-  ["tiktok","TikTok","🎵","Short-form video, profile and public content.","https://www.tiktok.com/@"],
-  ["instagram","Instagram","📸","Profile, posts and public creator presence.","https://www.instagram.com/"],
-  ["facebook","Facebook","f","Profile and public page presence.","https://www.facebook.com/"],
-  ["x","X","𝕏","Profile and public posts.","https://x.com/"],
-  ["youtube","YouTube","▶","Channel and public video presence.","https://www.youtube.com/@"],
-  ["linkedin","LinkedIn","in","Professional profile and public activity.","https://www.linkedin.com/in/"]
+  ["instagram","Instagram","📸","Connect your Instagram account and authorize the profile data HudHud may use."],
+  ["x","X","𝕏","Connect your X account for authorized profile and public-post access."],
+  ["tiktok","TikTok","🎵","Connect your TikTok account for authorized profile access."],
+  ["linkedin","LinkedIn","in","Connect your LinkedIn profile through LinkedIn OpenID Connect."]
  ];
- return '<section class="social-page"><div class="section-head"><div><span class="eyebrow">SOCIAL</span><h2>Your social presence</h2><span class="muted">Connect services so HudHud can learn from the social information you authorize.</span></div><div class="social-summary"><strong id="socialConnectedCount">—</strong><span>connected</span></div></div><div class="social-permission-banner card"><div><strong>🔐 You stay in control</strong><p>Connecting a service does not give HudHud permission to publish, message or use private data. Those capabilities can be authorized separately.</p></div></div><div id="socialGrid" class="social-grid">'+providers.map(p=>'<article class="card social-card" data-social-provider="'+p[0]+'"><div class="social-card-top"><div class="social-logo">'+p[2]+'</div><span class="pill social-status">Not connected</span></div><h3>'+p[1]+'</h3><p>'+p[3]+'</p><div class="social-account" data-social-account="'+p[0]+'">—</div><div class="social-actions"><button class="secondary" data-social-connect="'+p[0]+'">Connect</button><button class="secondary" data-social-view="'+p[0]+'" disabled>View</button><button class="secondary" data-social-remove="'+p[0]+'" disabled>Remove</button></div></article>').join('')+'</div></section>';
+ return '<section class="social-page"><div class="section-head"><div><span class="eyebrow">SOCIAL</span><h2>Your social presence</h2><span class="muted">Real OAuth connections. HudHud only receives the permissions you approve.</span></div><div class="social-summary"><strong id="socialConnectedCount">—</strong><span>connected</span></div></div><div class="social-permission-banner card"><div><strong>🔐 You stay in control</strong><p>Access tokens stay server-side. HudHud’s brain receives connection metadata and scopes, not provider credentials.</p></div></div><div id="socialGrid" class="social-grid">'+providers.map(p=>'<article class="card social-card" data-social-provider="'+p[0]+'"><div class="social-card-top"><div class="social-logo">'+p[2]+'</div><span class="pill social-status">Not connected</span></div><h3>'+p[1]+'</h3><p>'+p[3]+'</p><div class="social-account" data-social-account="'+p[0]+'">—</div><div class="social-actions"><button class="secondary" data-social-connect="'+p[0]+'">Connect</button><button class="secondary" data-social-view="'+p[0]+'" disabled>View</button><button class="secondary" data-social-remove="'+p[0]+'" disabled>Disconnect</button></div></article>').join('')+'</div></section>';
 }
 async function bindSocial(){
  if(!hasCloudUser())return;
- const {data,error}=await supabaseClient.from("hudhud_social_accounts").select("*").eq("user_id",currentUser.id).order("updated_at",{ascending:false});
- if(error){console.error(error);toast("Could not load Social");return;}
- const rows=data||[];
- const count=document.getElementById("socialConnectedCount"); if(count)count.textContent=rows.length;
- rows.forEach(row=>{
-   const card=document.querySelector('[data-social-provider="'+row.provider+'"]'); if(!card)return;
-   const status=card.querySelector(".social-status"),acct=card.querySelector('[data-social-account="'+row.provider+'"]');
-   if(status){status.textContent=row.status||"Connected";status.classList.add("connected");}
-   if(acct)acct.textContent=row.username?("@"+row.username):"Connected account";
-   const view=card.querySelector('[data-social-view="'+row.provider+'"]'),remove=card.querySelector('[data-social-remove="'+row.provider+'"]');
-   if(view){view.disabled=!row.profile_url;view.onclick=()=>window.open(row.profile_url,"_blank","noopener,noreferrer");}
-   if(remove){remove.disabled=false;remove.onclick=async()=>{if(!confirm("Remove this social connection?"))return;const {error:e}=await supabaseClient.from("hudhud_social_accounts").delete().eq("id",row.id).eq("user_id",currentUser.id);if(e){toast("Could not remove connection");return;}toast("Social connection removed");render("social");};}
-   const btn=card.querySelector('[data-social-connect="'+row.provider+'"]'); if(btn){btn.textContent="Update";btn.onclick=()=>editSocial(row.provider,row);}
- });
- document.querySelectorAll("[data-social-connect]").forEach(btn=>{if(btn.textContent==="Update")return;btn.onclick=()=>editSocial(btn.dataset.socialConnect,null);});
-}
-async function editSocial(provider,row){
- const names={tiktok:"TikTok",instagram:"Instagram",facebook:"Facebook",x:"X",youtube:"YouTube",linkedin:"LinkedIn"};
- const name=names[provider]||provider;
- const username=prompt(name+" username/handle:",row?.username||""); if(username===null)return;
- const url=prompt("Public profile URL (optional):",row?.profile_url||""); if(url===null)return;
- const payload={user_id:currentUser.id,provider,username:username.trim().replace(/^@/,""),profile_url:url.trim()||null,status:"Connected",permissions:row?.permissions||{profile:true,public_content:true},metadata:row?.metadata||{},updated_at:new Date().toISOString()};
- const {error}=await supabaseClient.from("hudhud_social_accounts").upsert(payload,{onConflict:"user_id,provider"});
- if(error){console.error(error);toast("Could not save social connection");return;}
- toast(name+" connected");render("social");
+ try{
+   const response=await authorizedFetch("/api/social-integrations",{cache:"no-store"});
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok)throw new Error(data.error||"Could not load Social connections.");
+   const rows=data.integrations||[];
+   const count=document.getElementById("socialConnectedCount");
+   if(count)count.textContent=rows.filter(x=>x.status==="connected").length;
+   document.querySelectorAll("[data-social-connect]").forEach(btn=>{
+     btn.onclick=()=>startSocialOAuth(btn.dataset.socialConnect);
+   });
+   rows.forEach(row=>{
+     const card=document.querySelector('[data-social-provider="'+row.provider+'"]');
+     if(!card)return;
+     const status=card.querySelector(".social-status"),acct=card.querySelector('[data-social-account="'+row.provider+'"]');
+     if(status){status.textContent=row.status==="connected"?"Connected":(row.status||"Not connected");status.classList.toggle("connected",row.status==="connected");}
+     if(acct)acct.textContent=row.account_handle?("@"+row.account_handle):row.display_name||"Connected account";
+     const view=card.querySelector('[data-social-view="'+row.provider+'"]');
+     const profileUrl=row.metadata?.profile_url||null;
+     if(view){view.disabled=!profileUrl;view.onclick=()=>profileUrl&&window.open(profileUrl,"_blank","noopener,noreferrer");}
+     const remove=card.querySelector('[data-social-remove="'+row.provider+'"]');
+     if(remove){remove.disabled=row.status!=="connected";remove.onclick=()=>disconnectSocial(row.provider);}
+     const connect=card.querySelector('[data-social-connect="'+row.provider+'"]');
+     if(connect)connect.textContent=row.status==="connected"?"Reconnect":"Connect";
+   });
+   const params=new URLSearchParams(window.location.search);
+   if(params.get("social")){
+     const provider=params.get("provider")||"social";
+     const message=params.get("message");
+     if(params.get("social")==="connected")toast((provider.charAt(0).toUpperCase()+provider.slice(1))+" connected");
+     else if(message)toast(message);
+     history.replaceState({},document.title,window.location.pathname);
+   }
+ }catch(e){console.error(e);toast(e.message||"Could not load Social");}
 }
 function lifemap(){
  return '<section><div class="section-head"><div><span class="eyebrow">HUDHUD LIFEMAP</span><h2>Your LifeMap</h2><span class="muted">The map you define about your life — goals, routines, people, projects and priorities. This is separate from what HudHud infers or learns.</span></div><button class="primary" data-lifemap-add>Add item</button></div><div class="knowledge-separation"><div><strong>🗺️ LifeMap</strong><span>User-defined structure, plans and context.</span></div><div><strong>🧠 What HudHud Knows</strong><span>Observed or learned information with its own metadata.</span></div></div><div id="lifemapList" class="knowledge-list"><div class="card muted">Loading your LifeMap…</div></div></section>';
