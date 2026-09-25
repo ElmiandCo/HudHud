@@ -504,7 +504,7 @@ canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,
 .home-option span{font-size:9px;color:#8d8394;text-transform:uppercase;letter-spacing:1.3px}
 .home-option strong{font-size:13px}.home-option small{font-size:9px;color:#817a87;line-height:1.45}
 #hudhudFloatingHost{position:fixed;z-index:9998;width:58px;height:58px;touch-action:none}
-.hudhud-bird{width:58px;height:58px;border-radius:50%;border:1px solid #71558a;background:radial-gradient(circle at 35% 30%,#d9c6e6,#73568b 58%,#21182a 100%);box-shadow:0 10px 32px rgba(30,15,42,.35),0 0 0 5px rgba(128,92,156,.1);font-size:27px;cursor:grab;display:grid;place-items:center}
+.hudhud-bird{width:58px;height:58px;padding:7px;border-radius:50%;border:1px solid #71558a;background:radial-gradient(circle at 35% 30%,#d9c6e6,#73568b 58%,#21182a 100%);box-shadow:0 10px 32px rgba(30,15,42,.35),0 0 0 5px rgba(128,92,156,.1);cursor:grab;display:grid;place-items:center;overflow:hidden}.hudhud-bird img{width:100%;height:100%;display:block;object-fit:contain;pointer-events:none}
 .hudhud-bird:active{cursor:grabbing}
 .hudhud-bird-menu{position:absolute;right:0;bottom:68px;width:190px;padding:9px;border:1px solid #3a2d46;border-radius:15px;background:rgba(14,12,19,.96);box-shadow:0 18px 50px rgba(0,0,0,.35);backdrop-filter:blur(14px)}
 .hudhud-bird-title{font-size:9px;letter-spacing:1.6px;color:#9b8da4;padding:7px 9px}
