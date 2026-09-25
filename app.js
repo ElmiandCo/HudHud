@@ -1236,6 +1236,16 @@ function setupMobileNav(){
   wrap.querySelector("[data-mobile-more]").onclick=open;
   backdrop.onclick=close;
   drawer.querySelector("[data-mobile-close]").onclick=close;
+  // Mobile drawer uses explicit accordion behavior so category options always open on touch.
+  drawer.querySelectorAll("details.nav-group > summary").forEach(summary=>{
+    summary.addEventListener("click",e=>{
+      e.preventDefault();
+      const group=summary.parentElement;
+      const willOpen=!group.open;
+      drawer.querySelectorAll("details.nav-group").forEach(other=>{ if(other!==group) other.open=false; });
+      group.open=willOpen;
+    });
+  });
   drawer.querySelectorAll("button[data-view]").forEach(b=>b.addEventListener("click",()=>{close();render(b.dataset.view);}));
   wrap.querySelectorAll("[data-mobile-view]").forEach(b=>b.addEventListener("click",()=>render(b.dataset.mobileView)));
 }
