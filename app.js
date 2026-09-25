@@ -1081,7 +1081,7 @@ function bind(view){
  });
  document.querySelectorAll("[data-step-toggle]").forEach(b=>b.onclick=()=>toggleWorkspaceStep(b.dataset.stepToggle,b.dataset.itemId,Number(b.dataset.stepIndex)));
  document.querySelectorAll("[data-plan-item]").forEach(b=>b.onclick=()=>editWorkspacePlan(b.dataset.planItem,b.dataset.itemId));
- document.querySelectorAll("[data-delete-workspace]")forEach(b=>b.onclick=()=>deleteWorkspaceItem(b.dataset.deleteWorkspace,b.dataset.itemId));
+ document.querySelectorAll("[data-delete-workspace]").forEach(b=>b.onclick=()=>deleteWorkspaceItem(b.dataset.deleteWorkspace,b.dataset.itemId));
 
  const pf=document.getElementById("projectForm");
  if(pf)pf.onsubmit=async e=>{
