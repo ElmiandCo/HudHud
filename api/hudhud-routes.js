@@ -1,10 +1,10 @@
 import { getAuthenticatedUser } from "../lib/hudhud-context.js";
 import { buildAuthorizeUrl, setStateCookie } from "../lib/social-oauth.js";
 
-function bearer(req){ return String(req.headers.authorization || "").replace(/^Bearer\\s+/i, "").trim(); }
-function base(){return String(process.env.HUDHUD_SUPABASE_URL||"").trim().replace(/\\/+$/,"");}
+function bearer(req){ return String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim(); }
+function base(){return String(process.env.HUDHUD_SUPABASE_URL||"").trim().replace(/\/+$/,"");}
 function admin(){
-  const url=String(process.env.HUDHUD_SUPABASE_URL||"").replace(/\\/$/,"");
+  const url=String(process.env.HUDHUD_SUPABASE_URL||"").replace(/\/$/,"");
   const key=String(process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY||"");
   if(!url||!key)throw new Error("Supabase server credentials are not configured.");
   return {url,key,headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"}};
@@ -85,7 +85,7 @@ async function providerAccounts(req,res){
 async function supabaseConfig(req,res){
   if(req.method!=="GET"){res.setHeader("Allow","GET");return res.status(405).json({error:"Method not allowed."});}
   const rawUrl=process.env.HUDHUD_SUPABASE_URL||"";
-  const url=String(rawUrl).trim().replace(/\\/+$/,"").replace(/\\/(?:rest\\/v1|auth\\/v1)$/i,"");
+  const url=String(rawUrl).trim().replace(/\/+$/,"").replace(/\/(?:rest\/v1|auth\/v1)$/i,"");
   const key=process.env.HUDHUD_SUPABASE_KEY||"";
   if(!url||!key)return res.status(503).json({error:"Supabase is not configured."});
   if(key.startsWith("sb_secret_")||key.startsWith("service_role"))return res.status(503).json({error:"HUDHUD_SUPABASE_KEY is a server-only key. Add a Supabase publishable key for browser authentication."});
@@ -139,7 +139,7 @@ const handlers={
 };
 
 export default async function handler(req,res){
- const path=String(req.url||"").split("?")[0].replace(/\\/+$/,"");
+ const path=String(req.url||"").split("?")[0].replace(/\/+$/,"");
  const action=path.split("/").pop().toLowerCase();
  const fn=handlers[action];
  if(!fn)return res.status(404).json({error:"Unknown consolidated HudHud API endpoint."});
