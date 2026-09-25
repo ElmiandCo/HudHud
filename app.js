@@ -1564,6 +1564,8 @@ async function init(){
  const today=document.getElementById("today");if(today)today.textContent=nowLabel();
  document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>render(b.dataset.view)));
  render("home");
+ const socialResult=new URLSearchParams(window.location.search).get("social");
+ if(socialResult)pendingView="social";
  initSupabase().catch(err=>console.warn("Supabase auth not initialized yet:",err.message));
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
