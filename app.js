@@ -1240,16 +1240,32 @@ function setupMobileNav(){
   wrap.querySelector("[data-mobile-more]").onclick=open;
   backdrop.onclick=close;
   drawer.querySelector("[data-mobile-close]").onclick=close;
-  // Mobile drawer uses explicit accordion behavior so category options always open on touch.
-  drawer.querySelectorAll("details.nav-group > summary").forEach(summary=>{
-    summary.addEventListener("click",e=>{
-      e.preventDefault();
-      const group=summary.parentElement;
-      const willOpen=!group.open;
-      drawer.querySelectorAll("details.nav-group").forEach(other=>{ if(other!==group) other.open=false; });
-      group.open=willOpen;
+  // Mobile drawer accordion: delegate from the drawer so touch/click events
+  // work reliably on iOS Safari and cloned <details> elements.
+  const drawerContent=drawer.querySelector(".mobile-drawer-content");
+  drawerContent.addEventListener("click",e=>{
+    const summary=e.target.closest("details.nav-group > summary");
+    if(!summary || !drawerContent.contains(summary))return;
+    e.preventDefault();
+    e.stopPropagation();
+    const group=summary.parentElement;
+    const willOpen=!group.hasAttribute("open");
+    drawerContent.querySelectorAll("details.nav-group").forEach(other=>{
+      if(other!==group)other.removeAttribute("open");
     });
+    if(willOpen)group.setAttribute("open","");
   });
+  drawerContent.addEventListener("touchend",e=>{
+    const summary=e.target.closest("details.nav-group > summary");
+    if(!summary || !drawerContent.contains(summary))return;
+    e.preventDefault();
+    const group=summary.parentElement;
+    const willOpen=!group.hasAttribute("open");
+    drawerContent.querySelectorAll("details.nav-group").forEach(other=>{
+      if(other!==group)other.removeAttribute("open");
+    });
+    if(willOpen)group.setAttribute("open","");
+  },{passive:false});
   drawer.querySelectorAll("button[data-view]").forEach(b=>b.addEventListener("click",()=>{close();render(b.dataset.view);}));
   wrap.querySelectorAll("[data-mobile-view]").forEach(b=>b.addEventListener("click",()=>render(b.dataset.mobileView)));
 }
