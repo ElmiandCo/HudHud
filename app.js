@@ -1082,10 +1082,10 @@ function social(){
   ["linkedin","LinkedIn","Connect your LinkedIn profile through LinkedIn OpenID Connect."]
  ];
  const socialLogos={
-  instagram:"https://cdn.simpleicons.org/instagram/E4405F",
-  x:"https://cdn.simpleicons.org/x/FFFFFF",
-  tiktok:"https://cdn.simpleicons.org/tiktok/FFFFFF",
-  linkedin:"https://upload.wikimedia.org/wikipedia/commons/8/81/LinkedIn_icon.svg"
+  instagram:"/assets/social/instagram.svg",
+  x:"/assets/social/x.svg",
+  tiktok:"/assets/social/tiktok.svg",
+  linkedin:"/assets/social/linkedin.svg"
  };
  const socialLogo=(provider,label)=>'<img src="'+socialLogos[provider]+'" alt="'+label+' logo" loading="eager" referrerpolicy="no-referrer">';
  return '<section class="social-page"><div class="section-head"><div><span class="eyebrow">SOCIAL</span><h2>Your social presence</h2><span class="muted">Real OAuth connections. HudHud only receives the permissions you approve.</span></div><div class="social-summary"><strong id="socialConnectedCount">—</strong><span>connected</span></div></div><div class="social-permission-banner card"><div><strong>🔐 You stay in control</strong><p>Access tokens stay server-side. HudHud’s brain receives connection metadata and scopes, not provider credentials.</p></div></div><div id="socialGrid" class="social-grid">'+providers.map(p=>'<article class="card social-card" data-social-provider="'+p[0]+'"><div class="social-card-top"><div class="social-logo">'+socialLogo(p[0],p[1])+'</div><span class="pill social-status">Not connected</span></div><h3>'+p[1]+'</h3><p>'+p[3]+'</p><div class="social-account" data-social-account="'+p[0]+'">—</div><div class="social-details" data-social-details="'+p[0]+'"></div><div class="social-actions"><button class="secondary social-connect-btn" data-social-connect="'+p[0]+'">Connect &amp; authorize</button><button class="secondary" data-social-view="'+p[0]+'" disabled>View</button><button class="secondary" data-social-remove="'+p[0]+'" disabled>Disconnect</button></div></article>').join('')+'</div></section>';
