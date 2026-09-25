@@ -624,3 +624,13 @@ canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,
 .bird img{width:100%;height:100%;display:block;object-fit:contain}
 .hudhud-nav-mark{height:22px;display:grid;place-items:center;overflow:hidden}
 .hudhud-nav-mark img{width:22px;height:22px;display:block;object-fit:contain}
+
+
+/* Real social brand assets */
+.social-logo{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;overflow:hidden;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10)}
+.social-logo img{width:30px;height:30px;display:block;object-fit:contain}
+.social-card[data-social-provider="instagram"] .social-logo{background:linear-gradient(135deg,rgba(131,58,180,.20),rgba(225,48,108,.18),rgba(252,175,69,.16))}
+.social-card[data-social-provider="x"] .social-logo{background:#050505}
+.social-card[data-social-provider="tiktok"] .social-logo{background:#050505}
+.social-card[data-social-provider="linkedin"] .social-logo{background:rgba(10,102,194,.16)}
+.social-connect-btn{min-width:150px}
