@@ -1115,7 +1115,8 @@ async function bindSocial(){
          const fmt=n=>Number(n||0).toLocaleString();
          details.innerHTML=(m.bio?("<div>"+String(m.bio).replace(/[&<>]/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[x]))+"</div>"):"")+
            "<div class=\"social-tiktok-stats\"><span>"+fmt(s.followers)+" followers</span><span>"+fmt(s.following)+" following</span><span>"+fmt(s.likes)+" likes</span><span>"+fmt(s.videos)+" videos</span></div>"+
-           (m.is_verified?"<div class=\"social-verified\">✓ Verified</div>":"");
+           (m.is_verified?"<div class=\"social-verified\">✓ Verified</div>":"")+
+           (Array.isArray(row.scopes)&&row.scopes.includes("video.publish")?"<div class=\"social-verified\">✓ TikTok direct posting authorized</div>":Array.isArray(row.scopes)&&row.scopes.includes("video.upload")?"<div class=\"social-verified\">✓ TikTok draft upload authorized</div>":"<div class=\"social-scope-note\">Profile connected • TikTok posting permission not granted</div>");
        }else details.innerHTML="";
      }
      const view=card.querySelector('[data-social-view="'+row.provider+'"]');
