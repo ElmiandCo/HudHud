@@ -487,3 +487,32 @@ canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,
 .conversation-avatar.tiny{width:22px;height:22px;font-size:.7rem}
 @media (max-width:700px){.contact-form-grid{grid-template-columns:1fr}.contact-picker-dialog,.contact-dialog{width:calc(100vw - 24px);max-width:none}}
 \n.legal-footer{display:flex;gap:18px;justify-content:center;align-items:center;flex-wrap:wrap;padding:18px 20px;color:var(--muted,#94a3b8);font-size:12px;border-top:1px solid var(--border,#273449);background:rgba(7,11,20,.72)}.legal-footer a{color:#67e8f9;text-decoration:none}.legal-footer a:hover{text-decoration:underline}\n
+/* Personalized HudHud Home + floating bird */
+.home-component-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.home-component-card{min-height:170px;cursor:grab;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.home-component-card:hover{transform:translateY(-2px);border-color:#4c3b5e}
+.home-component-card.dragging{opacity:.5;transform:scale(.98)}
+.home-component-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.home-component-edit{border:0;background:transparent;color:#6e6674;font-size:18px;cursor:pointer;line-height:1}
+.home-component-edit:hover{color:#e8dff0}
+.home-component-detail{margin-top:4px}
+.home-component-picker{max-width:760px}
+.home-component-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+.home-option{display:grid;gap:5px;text-align:left;padding:15px;border:1px solid #30263a;border-radius:14px;background:#111019;color:#eee;cursor:pointer}
+.home-option:hover:not(:disabled){border-color:#6d5482;transform:translateY(-1px)}
+.home-option:disabled{opacity:.48;cursor:not-allowed}
+.home-option span{font-size:9px;color:#8d8394;text-transform:uppercase;letter-spacing:1.3px}
+.home-option strong{font-size:13px}.home-option small{font-size:9px;color:#817a87;line-height:1.45}
+#hudhudFloatingHost{position:fixed;z-index:9998;width:58px;height:58px;touch-action:none}
+.hudhud-bird{width:58px;height:58px;border-radius:50%;border:1px solid #71558a;background:radial-gradient(circle at 35% 30%,#d9c6e6,#73568b 58%,#21182a 100%);box-shadow:0 10px 32px rgba(30,15,42,.35),0 0 0 5px rgba(128,92,156,.1);font-size:27px;cursor:grab;display:grid;place-items:center}
+.hudhud-bird:active{cursor:grabbing}
+.hudhud-bird-menu{position:absolute;right:0;bottom:68px;width:190px;padding:9px;border:1px solid #3a2d46;border-radius:15px;background:rgba(14,12,19,.96);box-shadow:0 18px 50px rgba(0,0,0,.35);backdrop-filter:blur(14px)}
+.hudhud-bird-title{font-size:9px;letter-spacing:1.6px;color:#9b8da4;padding:7px 9px}
+.hudhud-bird-menu button{display:block;width:100%;border:0;background:transparent;color:#e8e0eb;text-align:left;padding:10px;border-radius:9px;cursor:pointer;font-size:10px}
+.hudhud-bird-menu button:hover{background:#211a29}
+:root[data-theme="day"] .home-option{background:#fff;border-color:#ddd6e5;color:#27212c}
+:root[data-theme="day"] .hudhud-bird-menu{background:rgba(255,255,255,.97);border-color:#ddd6e5}
+:root[data-theme="day"] .hudhud-bird-menu button{color:#302936}
+:root[data-theme="day"] .home-component-card:hover{border-color:#bda9c9}
+@media(max-width:900px){.home-component-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.home-component-grid{grid-template-columns:1fr}.home-component-options{grid-template-columns:1fr}#hudhudFloatingHost{transform:scale(.92);transform-origin:bottom right}}
