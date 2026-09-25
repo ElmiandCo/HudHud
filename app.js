@@ -283,6 +283,7 @@ function workspaceCards(items,kind,filter){
    const p=stepProgress(item),percent=p.total?Math.round((p.done/p.total)*100):0;
    const linked=selectedProjectConnections(item.id);
    const connectionHtml=kind==="project"?'<div class="project-connections"><div class="project-connections-head"><span>CONNECTIONS</span><button type="button" class="secondary mini-button" data-project-connections="'+esc(item.id)+'">⚙ Configure</button></div><div class="project-connection-chips">'+(linked.length?linked.map(c=>'<span class="project-chip">'+(c.provider==="github"?"🐙":c.provider==="vercel"?"▲":"⚡")+' '+esc(c.name)+'</span>').join(""):'<span class="muted">No connections selected.</span>')+'</div></div>':'';
+   const memberHtml='<div class="project-members"><div class="project-members-head"><span>MEMBERS</span><button type="button" class="secondary mini-button" data-members-kind="'+kind+'" data-members-id="'+esc(item.id)+'">＋ Manage</button></div><div class="project-member-chips" data-member-chips="'+kind+'" data-member-item="'+esc(item.id)+'"><span class="muted">Loading contacts…</span></div></div>';
    const stepsHtml=p.total?'<div class="workspace-steps">'+item.steps.map((step,index)=>
      '<div class="workspace-step-row"><button type="button" class="workspace-step '+(step.done?"done":"")+'" data-step-toggle="'+kind+'" data-item-id="'+esc(item.id)+'" data-step-index="'+index+'"><span class="step-check">'+(step.done?"✓":"")+'</span><span>'+esc(step.name)+'</span></button>'+
      (kind==="project"?'<button type="button" class="hudhud-step-button" title="Ask HudHud to complete this step" data-hudhud-step="'+esc(item.id)+'" data-step-index="'+index+'">🦉</button>':'')+
@@ -291,13 +292,14 @@ function workspaceCards(items,kind,filter){
    return '<article class="workspace-card '+(item.status==="Done"?"is-done":"")+'">'+
      '<div class="workspace-card-head"><div><div class="muted">'+(kind==="project"?"PROJECT":"OPPORTUNITY")+'</div><h3>'+esc(item.name)+'</h3></div><span class="pill '+(item.status==="Done"?"pill-done":"")+'">'+esc(item.status||"Planning")+'</span></div>'+
      '<p class="workspace-description">'+esc(item.description||item.notes||"No description provided.")+'</p>'+
-     connectionHtml+
+     memberHtml+connectionHtml+
      '<div class="workspace-progress"><div><span>PROGRESS</span><strong>'+p.done+'/'+p.total+' steps</strong></div><div class="progress-track"><i style="width:'+percent+'%"></i></div></div>'+
      stepsHtml+
      '<div class="workspace-card-actions"><button type="button" class="secondary" data-plan-item="'+kind+'" data-item-id="'+esc(item.id)+'">✎ Manage steps</button><button type="button" class="secondary danger-button" data-delete-workspace="'+kind+'" data-item-id="'+esc(item.id)+'">Delete</button></div>'+
    '</article>';
  }).join("")+'</div>';
 }
+
 let projectFilter="active";
 let opportunityFilter="active";
 function workspacePlanForm(kind,item){
@@ -743,20 +745,151 @@ async function editDevice(row){
 }
 
 
+function appModalHost(){
+ return document.getElementById("appModalHost");
+}
+function closeAppModal(){
+ const host=appModalHost();
+ if(host)host.innerHTML="";
+}
+function contactFormHtml(contact){
+ const isEdit=!!contact;
+ return '<div class="resource-modal"><div class="resource-backdrop" data-close-app-modal></div><div class="resource-dialog contact-dialog">'+
+ '<button type="button" class="resource-close" data-close-app-modal aria-label="Close">×</button>'+
+ '<div class="eyebrow">HUDHUD CONTACTS</div><h2>'+(isEdit?"Edit contact":"Create new contact")+'</h2>'+
+ '<p class="resource-subtitle">Save this person once and reuse them across SMS, projects and opportunities.</p>'+
+ '<form id="contactForm" class="form contact-form">'+
+ '<label>Name <span class="required-mark">*</span></label><input name="name" required maxlength="120" value="'+esc(contact?.name||"")+'" placeholder="Jane Doe">'+
+ '<div class="contact-form-grid"><div><label>Phone</label><input name="phone" type="tel" maxlength="40" value="'+esc(contact?.phone||"")+'" placeholder="+1 (612) 555-1234"></div>'+
+ '<div><label>Email</label><input name="email" type="email" maxlength="160" value="'+esc(contact?.email||"")+'" placeholder="jane@example.com"></div></div>'+
+ '<label>Info <span class="muted">(optional)</span></label><textarea name="info" maxlength="1000" placeholder="Company, role, context, notes…">'+esc(contact?.info||"")+'</textarea>'+
+ '<div id="contactFormError" class="auth-error"></div>'+
+ '<div class="form-actions"><button type="button" class="secondary" data-close-app-modal>Cancel</button><button type="submit" class="primary">'+(isEdit?"Save changes":"Create contact")+'</button></div>'+
+ '</form></div></div>';
+}
+function openContactModal(contact=null,onSaved=null){
+ const host=appModalHost();if(!host)return;
+ host.innerHTML=contactFormHtml(contact);
+ host.querySelectorAll("[data-close-app-modal]").forEach(b=>b.onclick=closeAppModal);
+ const form=host.querySelector("#contactForm");
+ form.onsubmit=async e=>{
+  e.preventDefault();
+  const f=new FormData(form),name=String(f.get("name")||"").trim(),phone=String(f.get("phone")||"").trim(),email=String(f.get("email")||"").trim(),info=String(f.get("info")||"").trim();
+  const error=host.querySelector("#contactFormError");
+  if(!name){if(error)error.textContent="Name is required.";return;}
+  if(!phone&&!email){if(error)error.textContent="Add a phone number or email address.";return;}
+  const button=form.querySelector("button[type=submit]");button.disabled=true;button.textContent=contact?"Saving…":"Creating…";
+  try{
+   const payload={user_id:currentUser.id,name,phone:phone||null,email:email||null,info:info||null,updated_at:new Date().toISOString()};
+   const query=contact
+    ?supabaseClient.from("hudhud_contacts").update(payload).eq("id",contact.id).eq("user_id",currentUser.id)
+    :supabaseClient.from("hudhud_contacts").insert(payload);
+   const {data,error:dbError}=await query.select("*").single();
+   if(dbError)throw dbError;
+   closeAppModal();toast(contact?"Contact updated":"Contact created");if(onSaved)await onSaved(data);
+  }catch(err){if(error)error.textContent=err.message||"Could not save contact.";button.disabled=false;button.textContent=contact?"Save changes":"Create contact";}
+ };
+}
+function contactPickerHtml(contacts,selectedIds=new Set(),label="Recipients"){
+ return '<div class="contact-picker"><div class="contact-picker-head"><strong>'+esc(label)+'</strong><span>'+contacts.length+' contact(s)</span></div><div class="contact-picker-search"><input id="contactPickerSearch" class="hudhud-input" placeholder="Search contacts…"></div><div id="contactPickerList" class="contact-picker-list">'+
+ (contacts.length?contacts.map(x=>'<label class="contact-picker-row" data-contact-search="'+esc((x.name+" "+(x.phone||"")+" "+(x.email||"")).toLowerCase())+'"><input type="checkbox" data-picker-contact="'+esc(x.id)+'" '+(selectedIds.has(x.id)?"checked":"")+'><span class="conversation-avatar">'+esc((x.name||"?").slice(0,1).toUpperCase())+'</span><span><strong>'+esc(x.name)+'</strong><small>'+esc(x.phone||x.email||"No phone/email")+'</small></span></label>').join(""):'<div class="empty"><strong>No contacts yet.</strong><span>Create a contact to use them here.</span></div>')+
+ '</div></div>';
+}
+function openContactPickerModal(mode,contextId=null){
+ const host=appModalHost();if(!host)return;
+ const title=mode==="message"?"New SMS message":mode==="project"?"Project members":"Opportunity members";
+ const description=mode==="message"?"Choose one or more saved contacts, then send the same SMS to everyone selected.":mode==="project"?"Choose contacts who should be members of this project.":"Choose contacts who should be members of this opportunity.";
+ host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-picker></div><div class="resource-dialog contact-picker-dialog"><button class="resource-close" data-close-picker>×</button><div class="eyebrow">CONTACTS</div><h2>'+title+'</h2><p class="resource-subtitle">'+description+'</p><div id="contactPickerMount" class="contact-picker-loading">Loading contacts…</div><div class="form-actions"><button type="button" class="secondary" data-close-picker>Cancel</button><button type="button" class="primary" id="contactPickerSave">'+(mode==="message"?"Continue":"Save members")+'</button></div></div></div>';
+ host.querySelectorAll("[data-close-picker]").forEach(b=>b.onclick=closeAppModal);
+ const mount=host.querySelector("#contactPickerMount"),saveButton=host.querySelector("#contactPickerSave");
+ const load=async()=>{
+  const {data,error}=await supabaseClient.from("hudhud_contacts").select("*").eq("user_id",currentUser.id).eq("status","active").order("name");
+  if(error){mount.innerHTML='<div class="empty"><strong>Could not load contacts.</strong><span>'+esc(error.message||"Unknown error")+'</span></div>';saveButton.disabled=true;return;}
+  let existingIds=new Set();
+  if(mode==="project"){
+   const {data:rows}=await supabaseClient.from("hudhud_project_members").select("contact_id").eq("user_id",currentUser.id).eq("project_id",contextId);
+   existingIds=new Set((rows||[]).map(x=>x.contact_id));
+  }else if(mode==="opportunity"){
+   const {data:rows}=await supabaseClient.from("hudhud_opportunity_members").select("contact_id").eq("user_id",currentUser.id).eq("opportunity_id",contextId);
+   existingIds=new Set((rows||[]).map(x=>x.contact_id));
+  }
+  mount.innerHTML=contactPickerHtml(data||[],existingIds,mode==="message"?"Recipients":"Members");
+  const search=mount.querySelector("#contactPickerSearch");
+  const applySearch=()=>{const q=(search?.value||"").trim().toLowerCase();mount.querySelectorAll(".contact-picker-row").forEach(row=>row.hidden=!!q&&!row.dataset.contactSearch.includes(q));};
+  if(search)search.oninput=applySearch;
+  mount.querySelectorAll("[data-picker-contact]").forEach(input=>input.onchange=()=>{});
+  const create=document.createElement("button");create.type="button";create.className="secondary contact-picker-create";create.textContent="＋ New contact";
+  create.onclick=()=>openContactModal(null,async()=>{closeAppModal();openContactPickerModal(mode,contextId);});
+  mount.appendChild(create);
+  saveButton.onclick=async()=>{
+   const selected=Array.from(mount.querySelectorAll("[data-picker-contact]:checked")).map(x=>x.dataset.pickerContact);
+   if(!selected.length){toast(mode==="message"?"Select at least one recipient.":"Select at least one contact.");return;}
+   saveButton.disabled=true;saveButton.textContent=mode==="message"?"Sending…":"Saving…";
+   try{
+    if(mode==="message"){
+      closeAppModal();
+      openSmsComposeModal(data.filter(x=>selected.includes(x.id)));
+      return;
+    }
+    const table=mode==="project"?"hudhud_project_members":"hudhud_opportunity_members";
+    const foreign=mode==="project"?"project_id":"opportunity_id";
+    await supabaseClient.from(table).delete().eq("user_id",currentUser.id).eq(foreign,contextId);
+    const rows=selected.map(contactId=>({user_id:currentUser.id,[foreign]:contextId,contact_id:contactId}));
+    const {error:insertError}=await supabaseClient.from(table).insert(rows);
+    if(insertError)throw insertError;
+    closeAppModal();toast("Members saved");render(mode==="project"?"projects":"opportunities");
+   }catch(err){toast(err.message||"Could not save members.");saveButton.disabled=false;saveButton.textContent=mode==="message"?"Continue":"Save members";}
+  };
+ };
+ load();
+}
+function openSmsComposeModal(contacts){
+ const host=appModalHost();if(!host)return;
+ host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-sms-compose></div><div class="resource-dialog contact-picker-dialog"><button class="resource-close" data-close-sms-compose>×</button><div class="eyebrow">TWILIO SMS</div><h2>Send message</h2><p class="resource-subtitle">Your message will be sent to the selected saved contacts.</p><div class="selected-recipient-list">'+contacts.map(x=>'<span class="selected-recipient"><span class="conversation-avatar">'+esc((x.name||"?").slice(0,1).toUpperCase())+'</span><span><strong>'+esc(x.name)+'</strong><small>'+esc(x.phone||"No phone number")+'</small></span></span>').join("")+'</div><label>Message</label><textarea id="bulkSmsBody" maxlength="1600" rows="6" placeholder="Type your message…"></textarea><div id="bulkSmsError" class="auth-error"></div><div class="form-actions"><button type="button" class="secondary" data-close-sms-compose>Cancel</button><button type="button" class="primary" id="bulkSmsSend">Send SMS</button></div></div></div>';
+ host.querySelectorAll("[data-close-sms-compose]").forEach(b=>b.onclick=closeAppModal);
+ host.querySelector("#bulkSmsSend").onclick=async()=>{
+  const body=host.querySelector("#bulkSmsBody").value.trim(),error=host.querySelector("#bulkSmsError"),button=host.querySelector("#bulkSmsSend");
+  if(!body){if(error)error.textContent="Message is required.";return;}
+  const sendable=contacts.filter(x=>x.phone);
+  const withoutPhone=contacts.filter(x=>!x.phone);
+  if(!sendable.length){if(error)error.textContent="None of the selected contacts has a phone number.";return;}
+  button.disabled=true;button.textContent="Sending…";
+  try{
+   const token=await authAccessToken();if(!token)throw new Error("Sign in again to send.");
+   const results=[];
+   for(const contact of sendable){
+    const {data:conv,error:convError}=await supabaseClient.from("hudhud_conversations").select("*").eq("user_id",currentUser.id).eq("contact_id",contact.id).eq("channel","sms").eq("status","active").limit(1).maybeSingle();
+    if(convError)throw convError;
+    let conversation=conv;
+    if(!conversation){
+      const created=await supabaseClient.from("hudhud_conversations").insert({user_id:currentUser.id,contact_id:contact.id,channel:"sms",status:"active"}).select("*").single();
+      if(created.error)throw created.error;conversation=created.data;
+    }
+    const response=await fetch("/api/sms-send",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({contact_id:contact.id,conversation_id:conversation.id,body})});
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(payload.error||("SMS failed for "+contact.name));
+    results.push(contact.name);
+   }
+   closeAppModal();toast("SMS sent to "+results.length+" contact(s)"+(withoutPhone.length?" • "+withoutPhone.length+" skipped without a phone number":""));selectedConversationId=null;render("messages");
+  }catch(err){if(error)error.textContent=err.message||"SMS send failed.";button.disabled=false;button.textContent="Send SMS";}
+ };
+}
 function messages(){
- return '<section class="messages-page"><div class="section-head"><div><span class="eyebrow">HUDHUD COMMUNICATIONS</span><h2>Messages</h2><span class="muted">Contacts, conversation history and SMS-ready threads. Replies can become context for HudHud when you authorize that use.</span></div><div class="message-head-actions"><button class="secondary" data-sms-number-add>＋ SMS number</button><button class="primary" data-contact-add>＋ New contact</button></div></div><div class="messages-shell card"><aside class="conversation-list"><div class="message-search"><input id="messageSearch" class="hudhud-input" placeholder="Search contacts…"></div><div id="conversationList"><div class="muted">Loading conversations…</div></div></aside><section class="conversation-pane"><div id="conversationHeader" class="conversation-header"><div><strong>Select a conversation</strong><span>Choose a contact to view the thread.</span></div></div><div id="threadMessages" class="thread-messages"><div class="thread-empty"><span>💬</span><strong>Your conversations will live here.</strong><small>HudHud can use authorized replies as structured input — without turning every message into permanent memory.</small></div></div><form id="messageComposer" class="message-composer"><input id="messageInput" class="hudhud-input" maxlength="1600" placeholder="Message…" disabled><button class="primary" disabled>Send</button></form></section></div></section>';
+ return '<section class="messages-page"><div class="section-head"><div><span class="eyebrow">HUDHUD COMMUNICATIONS</span><h2>Messages</h2><span class="muted">Contacts, conversation history and SMS-ready threads. Save a contact once and reuse it anywhere in HudHud.</span></div><div class="message-head-actions"><button class="secondary" data-sms-number-add>＋ SMS number</button><button class="secondary" data-contact-add>＋ New contact</button><button class="primary" data-message-new>＋ New message</button></div></div><div class="messages-shell card"><aside class="conversation-list"><div class="message-search"><input id="messageSearch" class="hudhud-input" placeholder="Search contacts…"></div><div id="conversationList"><div class="muted">Loading conversations…</div></div></aside><section class="conversation-pane"><div id="conversationHeader" class="conversation-header"><div><strong>Select a conversation</strong><span>Choose a contact to view the thread.</span></div></div><div id="threadMessages" class="thread-messages"><div class="thread-empty"><span>💬</span><strong>Your conversations will live here.</strong><small>HudHud can use authorized replies as structured input — without turning every message into permanent memory.</small></div></div><form id="messageComposer" class="message-composer"><input id="messageInput" class="hudhud-input" maxlength="1600" placeholder="Message…" disabled><button class="primary" disabled>Send</button></form></section></div></section>';
 }
 let selectedConversationId=null;
 async function bindMessages(){
  if(!hasCloudUser())return;
  const list=document.getElementById("conversationList"),search=document.getElementById("messageSearch");let contacts=[],conversations=[];
  const load=async()=>{
-  const [c,cv]=await Promise.all([supabaseClient.from("hudhud_contacts").select("*").eq("user_id",currentUser.id).order("name"),supabaseClient.from("hudhud_conversations").select("*").eq("user_id",currentUser.id).order("last_message_at",{ascending:false,nullsLast:true})]);
+  const [c,cv]=await Promise.all([supabaseClient.from("hudhud_contacts").select("*").eq("user_id",currentUser.id).eq("status","active").order("name"),supabaseClient.from("hudhud_conversations").select("*").eq("user_id",currentUser.id).order("last_message_at",{ascending:false,nullsLast:true})]);
   contacts=c.data||[];conversations=cv.data||[];const q=(search?.value||"").trim().toLowerCase();const visible=contacts.filter(x=>!q||String(x.name+" "+(x.phone||"")+" "+(x.email||"")).toLowerCase().includes(q));
   if(list)list.innerHTML=visible.length?visible.map(contact=>{const conv=conversations.find(v=>v.contact_id===contact.id);return '<button class="conversation-row '+(conv?.id===selectedConversationId?"active":"")+'" data-conversation="'+esc(conv?.id||"")+'" data-contact="'+esc(contact.id)+'"><span class="conversation-avatar">'+esc((contact.name||"?").slice(0,1).toUpperCase())+'</span><span class="conversation-row-copy"><b>'+esc(contact.name)+'</b><small>'+(conv?esc(conv.channel.toUpperCase())+" • "+esc(conv.status):"No messages yet")+'</small></span></button>';}).join(""):'<div class="empty message-empty"><strong>No contacts yet.</strong><span>Add someone to start a thread.</span></div>';
   document.querySelectorAll("[data-contact]").forEach(b=>b.onclick=()=>openConversation(b.dataset.contact,b.dataset.conversation,contacts));
  };
  if(search)search.oninput=load;
+ document.querySelector("[data-message-new]")?.addEventListener("click",()=>openContactPickerModal("message"));
+ document.querySelectorAll("[data-contact-add]").forEach(b=>b.onclick=()=>openContactModal(null,()=>load()));
  const smsNumberButton=document.querySelector("[data-sms-number-add]");
  if(smsNumberButton)smsNumberButton.onclick=async()=>{
    const number=prompt("Your Twilio SMS sending number (for inbound replies):","");if(number===null||!number.trim())return;
@@ -765,7 +898,6 @@ async function bindMessages(){
    if(error){toast("Could not register SMS number");return;}toast("SMS number registered");await load();
  };
  await load();
- document.querySelectorAll("[data-contact-add]").forEach(b=>b.onclick=async()=>{const name=prompt("Contact name:");if(name===null||!name.trim())return;const phone=prompt("Phone number (optional):","");if(phone===null)return;const email=prompt("Email (optional):","");if(email===null)return;const relationship=prompt("Relationship (optional):","");if(relationship===null)return;const {error}=await supabaseClient.from("hudhud_contacts").insert({user_id:currentUser.id,name:name.trim(),phone:phone.trim()||null,email:email.trim()||null,relationship:relationship.trim()||null});if(error){toast("Could not add contact");return;}toast("Contact added");await load();});
  async function openConversation(contactId,conversationId,allContacts){
   const contact=allContacts.find(x=>x.id===contactId);if(!contact)return;
   if(!conversationId){const {data,error}=await supabaseClient.from("hudhud_conversations").insert({user_id:currentUser.id,contact_id:contact.id,channel:"sms",status:"active"}).select("*").single();if(error){toast("Could not create conversation");return;}conversationId=data.id;}
@@ -879,7 +1011,7 @@ function render(view){
  if(view==="system") bindSystem();
  if(view==="connections") bindConnections();
  if(view==="social") bindSocial();
- if(view==="messages") bindMessages();
+ if(view==="messages") bindMessages();\n if(view==="projects"||view==="opportunities") bindWorkspaceMembers();
  if(view==="devices") bindDevices();
  if(view==="lifemap") bindLifeMap();
  if(view==="knowledge") bindKnowledge();
@@ -918,6 +1050,19 @@ async function bindPremium(){
    }
  });
 }
+async function loadWorkspaceMembers(kind,id){
+ const table=kind==="project"?"hudhud_project_members":"hudhud_opportunity_members";
+ const foreign=kind==="project"?"project_id":"opportunity_id";
+ const {data,error}=await supabaseClient.from(table).select("contact_id,hudhud_contacts(id,name,phone,email)").eq("user_id",currentUser.id).eq(foreign,id);
+ const host=document.querySelector('[data-member-chips="'+kind+'"][data-member-item="'+id+'"]');
+ if(!host)return;
+ if(error){host.innerHTML='<span class="muted">Could not load members.</span>';return;}
+ host.innerHTML=(data||[]).length?data.map(row=>'<span class="project-chip member-chip"><span class="conversation-avatar tiny">'+esc((row.hudhud_contacts?.name||"?").slice(0,1).toUpperCase())+'</span>'+esc(row.hudhud_contacts?.name||"Contact")+'</span>').join(""):'<span class="muted">No members yet.</span>';
+}
+async function bindWorkspaceMembers(){
+ document.querySelectorAll("[data-members-kind]").forEach(b=>b.onclick=()=>openContactPickerModal(b.dataset.membersKind,b.dataset.membersId));
+ document.querySelectorAll("[data-member-chips]").forEach(el=>loadWorkspaceMembers(el.dataset.memberChips,el.dataset.memberItem));
+}
 function bind(view){
  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>render(b.dataset.go));
  document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>{
@@ -935,7 +1080,7 @@ function bind(view){
  });
  document.querySelectorAll("[data-step-toggle]").forEach(b=>b.onclick=()=>toggleWorkspaceStep(b.dataset.stepToggle,b.dataset.itemId,Number(b.dataset.stepIndex)));
  document.querySelectorAll("[data-plan-item]").forEach(b=>b.onclick=()=>editWorkspacePlan(b.dataset.planItem,b.dataset.itemId));
- document.querySelectorAll("[data-delete-workspace]").forEach(b=>b.onclick=()=>deleteWorkspaceItem(b.dataset.deleteWorkspace,b.dataset.itemId));
+ document.querySelectorAll("[data-delete-workspace]")forEach(b=>b.onclick=()=>deleteWorkspaceItem(b.dataset.deleteWorkspace,b.dataset.itemId));
 
  const pf=document.getElementById("projectForm");
  if(pf)pf.onsubmit=async e=>{
