@@ -1059,7 +1059,7 @@ async function startSocialOAuth(provider){
     window.location.assign(data.url);
   }catch(e){
     toast(e.message||"Social authorization failed");
-    if(button){button.disabled=false;button.textContent="Connect";}
+    if(button){button.disabled=false;button.textContent="Connect & authorize";}
   }
 }
 async function disconnectSocial(provider){
@@ -1076,11 +1076,18 @@ async function disconnectSocial(provider){
 }
 function social(){
  const providers=[
-  ["instagram","Instagram","📸","Connect your Instagram account and authorize the profile data HudHud may use."],
-  ["x","X","𝕏","Connect your X account for authorized profile and public-post access."],
-  ["tiktok","TikTok","🎵","Connect your TikTok account for authorized profile access."],
-  ["linkedin","LinkedIn","in","Connect your LinkedIn profile through LinkedIn OpenID Connect."]
+  ["instagram","Instagram","Connect your Instagram account and authorize the profile data HudHud may use."],
+  ["x","X","Connect your X account for authorized profile and public-post access."],
+  ["tiktok","TikTok","Connect TikTok for profile data and, when your TikTok app is approved, content posting/upload permissions."],
+  ["linkedin","LinkedIn","Connect your LinkedIn profile through LinkedIn OpenID Connect."]
  ];
+ const socialLogos={
+  instagram:"https://cdn.simpleicons.org/instagram/E4405F",
+  x:"https://cdn.simpleicons.org/x/FFFFFF",
+  tiktok:"https://cdn.simpleicons.org/tiktok/FFFFFF",
+  linkedin:"https://upload.wikimedia.org/wikipedia/commons/8/81/LinkedIn_icon.svg"
+ };
+ const socialLogo=(provider,label)=>'<img src="'+socialLogos[provider]+'" alt="'+label+' logo" loading="eager" referrerpolicy="no-referrer">';
  return '<section class="social-page"><div class="section-head"><div><span class="eyebrow">SOCIAL</span><h2>Your social presence</h2><span class="muted">Real OAuth connections. HudHud only receives the permissions you approve.</span></div><div class="social-summary"><strong id="socialConnectedCount">—</strong><span>connected</span></div></div><div class="social-permission-banner card"><div><strong>🔐 You stay in control</strong><p>Access tokens stay server-side. HudHud’s brain receives connection metadata and scopes, not provider credentials.</p></div></div><div id="socialGrid" class="social-grid">'+providers.map(p=>'<article class="card social-card" data-social-provider="'+p[0]+'"><div class="social-card-top"><div class="social-logo">'+p[2]+'</div><span class="pill social-status">Not connected</span></div><h3>'+p[1]+'</h3><p>'+p[3]+'</p><div class="social-account" data-social-account="'+p[0]+'">—</div><div class="social-details" data-social-details="'+p[0]+'"></div><div class="social-actions"><button class="secondary" data-social-connect="'+p[0]+'">Connect</button><button class="secondary" data-social-view="'+p[0]+'" disabled>View</button><button class="secondary" data-social-remove="'+p[0]+'" disabled>Disconnect</button></div></article>').join('')+'</div></section>';
 }
 async function bindSocial(){
@@ -1117,13 +1124,13 @@ async function bindSocial(){
      const remove=card.querySelector('[data-social-remove="'+row.provider+'"]');
      if(remove){remove.disabled=row.status!=="connected";remove.onclick=()=>disconnectSocial(row.provider);}
      const connect=card.querySelector('[data-social-connect="'+row.provider+'"]');
-     if(connect)connect.textContent=row.status==="connected"?"Reconnect":"Connect";
+     if(connect)connect.textContent=row.status==="connected"?"Reconnect":"Connect & authorize";
    });
    const params=new URLSearchParams(window.location.search);
    if(params.get("social")){
      const provider=params.get("provider")||"social";
      const message=params.get("message");
-     if(params.get("social")==="connected")toast((provider.charAt(0).toUpperCase()+provider.slice(1))+" connected");
+     if(params.get("social")==="connected")toast((provider==="x"?"X":provider.charAt(0).toUpperCase()+provider.slice(1))+" connected");
      else if(message)toast(message);
      history.replaceState({},document.title,window.location.pathname);
    }
