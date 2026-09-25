@@ -634,3 +634,5 @@ canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,
 .social-card[data-social-provider="tiktok"] .social-logo{background:#050505}
 .social-card[data-social-provider="linkedin"] .social-logo{background:rgba(10,102,194,.16)}
 .social-connect-btn{min-width:150px}
+
+.social-scope-note{font-size:.78rem;opacity:.72;margin-top:6px}
