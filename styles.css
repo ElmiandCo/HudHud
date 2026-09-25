@@ -638,6 +638,8 @@ canvas.hudhud-canvas{display:block;width:100%;background:linear-gradient(145deg,
 .social-scope-note{font-size:.78rem;opacity:.72;margin-top:6px}
 
 
+.home-legal-links{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin:16px 0 2px;font-size:10px;letter-spacing:.2px;position:relative;z-index:3}.home-legal-links a,.home-legal-links button{color:#a99bb4;text-decoration:none;background:transparent;border:0;padding:0;font:inherit;cursor:pointer}.home-legal-links a:hover,.home-legal-links button:hover{color:#e7d9ef;text-decoration:underline}.home-legal-links span{color:#5f5668}@media(max-width:600px){.home-legal-links{justify-content:flex-start;font-size:9px;gap:7px}}
+
 /* HudHud Home banner bird — entrance + landing pose. Scoped to the Home banner only. */
 .hudhud-home-banner{position:relative;overflow:hidden;isolation:isolate;min-height:340px}
 .hudhud-home-banner>*:not(.home-banner-bird){position:relative;z-index:2}
