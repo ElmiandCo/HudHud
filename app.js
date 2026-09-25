@@ -57,6 +57,8 @@ async function handleAuthSession(session){
  if(changed){
    const legacy=load();
    await loadCloudState();
+   await loadHomePersonalization();
+   ensureHudHudWidget();
    if(!state.projects.length&&!state.opportunities.length&&!state.connections.length&&(legacy.projects?.length||legacy.opportunities?.length||legacy.connections?.length)){
      legacyWorkspace=legacy;
      showImportPrompt();
@@ -244,6 +246,132 @@ async function signOut(){
  localStorage.removeItem(KEY);
  toast("Signed out");
  render("home");
+}
+
+
+let homeComponents=[];
+let hudhudSettings={theme:"night",bird_enabled:true,bird_x:null,bird_y:null};
+
+function defaultHomeComponents(){
+ return [
+  {component_key:"projects",title:"Projects",source:"hudhud",metric:"projects",position:0,enabled:true},
+  {component_key:"opportunities",title:"Opportunities",source:"hudhud",metric:"opportunities",position:1,enabled:true},
+  {component_key:"activity",title:"Activity",source:"hudhud",metric:"activity",position:2,enabled:true}
+ ];
+}
+async function loadHomePersonalization(){
+ if(!hasCloudUser())return;
+ try{
+  const [settings,components]=await Promise.all([
+   supabaseClient.from("hudhud_user_settings").select("*").eq("user_id",currentUser.id).maybeSingle(),
+   supabaseClient.from("hudhud_home_components").select("*").eq("user_id",currentUser.id).eq("enabled",true).order("position")
+  ]);
+  if(settings.data) hudhudSettings={...hudhudSettings,...settings.data};
+  if(components.data?.length) homeComponents=components.data;
+  else{
+   homeComponents=defaultHomeComponents();
+   await supabaseClient.from("hudhud_home_components").upsert(homeComponents.map(x=>({...x,user_id:currentUser.id})),{onConflict:"user_id,component_key"});
+  }
+  applyTheme(hudhudSettings.theme||"night",false);
+ }catch(e){console.warn("Home personalization load failed",e);}
+}
+async function saveHudHudSettings(patch){
+ if(!hasCloudUser())return;
+ hudhudSettings={...hudhudSettings,...patch};
+ await supabaseClient.from("hudhud_user_settings").upsert({user_id:currentUser.id,...hudhudSettings,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+}
+async function saveHomeComponents(){
+ if(!hasCloudUser())return;
+ const rows=homeComponents.map((x,i)=>({...x,user_id:currentUser.id,position:i,updated_at:new Date().toISOString()}));
+ await supabaseClient.from("hudhud_home_components").upsert(rows,{onConflict:"user_id,component_key"});
+}
+function homeComponentValue(c){
+ if(c.metric==="projects")return {value:state.projects.length,detail:"Created in this workspace"};
+ if(c.metric==="opportunities")return {value:state.opportunities.length,detail:"Added by you"};
+ if(c.metric==="activity")return {value:state.activity.length,detail:"Real workspace events"};
+ return {value:"—",detail:c.provider?c.provider+" connection":"Connect a source"};
+}
+async function refreshConnectionHomeMetric(c,host){
+ if(!c.provider||!host)return;
+ try{
+  const token=await authAccessToken();
+  const r=await fetch("/api/connection-resources?provider="+encodeURIComponent(c.provider),{headers:token?{Authorization:"Bearer "+token}:{}});
+  const d=await r.json();
+  if(r.ok){
+   const count=(d.resources||[]).length;
+   const value=host.querySelector(".metric"); const detail=host.querySelector(".home-component-detail");
+   if(value)value.textContent=count;
+   if(detail)detail.textContent=(c.provider.charAt(0).toUpperCase()+c.provider.slice(1))+" resources discovered";
+  }
+ }catch(e){}
+}
+function homeComponentCard(c){
+ const v=homeComponentValue(c), icon=c.provider==="github"?"🐙":c.provider==="vercel"?"▲":c.provider==="supabase"?"⚡":"";
+ return '<article class="card home-component-card" draggable="true" data-home-component="'+esc(c.component_key)+'">'+
+   '<div class="home-component-head"><span class="muted">'+esc(c.title.toUpperCase())+'</span><button type="button" class="home-component-edit" title="Remove component" data-home-remove="'+esc(c.component_key)+'">×</button></div>'+
+   '<div class="metric">'+(icon?icon+" ":"")+esc(v.value)+'</div><div class="muted home-component-detail">'+esc(v.detail)+'</div></article>';
+}
+function home(){
+ const components=(homeComponents.length?homeComponents:defaultHomeComponents()).filter(x=>x.enabled!==false).sort((a,b)=>(a.position||0)-(b.position||0));
+ return '<section class="hero"><span class="eyebrow">HUDHUD CONVERSATION</span><h1>Welcome home.</h1><p>Talk to HudHud here. Your Home page is personal to this workspace and can grow with the connections you authorize.</p><div class="actions"><button class="primary" data-auth-start>Get Started</button><button class="secondary" data-home-add-component>＋ Add Component</button></div><div class="chat card"><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div></section><section id="homeComponentGrid" class="grid home-component-grid" style="margin-top:45px">'+components.map(homeComponentCard).join("")+'</section><div id="homeComponentModal"></div>';
+}
+function openHomeComponentModal(){
+ const host=document.getElementById("homeComponentModal");if(!host)return;
+ const existing=new Set(homeComponents.map(x=>x.component_key));
+ const connected=new Set((state.connections||[]).map(x=>x.provider));
+ const options=[
+  ["projects","Projects","HudHud","projects","Workspace project count"],
+  ["opportunities","Opportunities","HudHud","opportunities","Workspace opportunity count"],
+  ["activity","Activity","HudHud","activity","Recent workspace events"],
+  ["github-resources","GitHub Resources","GitHub","resources","Authorized GitHub resources"],
+  ["vercel-resources","Vercel Resources","Vercel","resources","Authorized Vercel resources"],
+  ["supabase-resources","Supabase Resources","Supabase","resources","Authorized Supabase resources"]
+ ];
+ host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-home-components></div><div class="resource-dialog home-component-picker"><button class="resource-close" data-close-home-components>×</button><div class="eyebrow">HOME COMPONENTS</div><h2>Customize your Home</h2><p class="resource-subtitle">Add metric cards from HudHud or from connections you have authorized.</p><div class="home-component-options">'+options.map(o=>{const provider=o[2].toLowerCase();const locked=!["HudHud"].includes(o[2])&&!connected.has(provider);return '<button class="home-option" '+((existing.has(o[0])||locked)?"disabled":"")+' data-add-home="'+esc(o[0])+'" data-home-provider="'+esc(provider)+'"><span>'+esc(o[2])+'</span><strong>'+esc(o[1])+'</strong><small>'+esc(locked?"Connect "+o[2]+" first":o[4])+'</small></button>';}).join("")+'</div></div></div>';
+ host.querySelectorAll("[data-close-home-components]").forEach(b=>b.onclick=()=>host.innerHTML="");
+ host.querySelectorAll("[data-add-home]").forEach(b=>b.onclick=async()=>{
+   const key=b.dataset.addHome, provider=b.dataset.homeProvider;
+   const opt=options.find(x=>x[0]===key);if(!opt)return;
+   homeComponents.push({component_key:key,title:opt[1],source:opt[2],provider:provider==="hudhud"?null:provider,metric:opt[3],position:homeComponents.length,enabled:true,config:{}});
+   await saveHomeComponents();host.innerHTML="";render("home");toast(opt[1]+" added to Home");
+ });
+}
+function removeHomeComponent(key){
+ if(["projects","opportunities","activity"].includes(key)){toast("Your default Home cards stay available.");return;}
+ homeComponents=homeComponents.filter(x=>x.component_key!==key);
+ saveHomeComponents();render("home");toast("Component removed");
+}
+function bindHomeComponents(){
+ document.querySelector("[data-home-add-component]")?.addEventListener("click",openHomeComponentModal);
+ document.querySelectorAll("[data-home-remove]").forEach(b=>b.onclick=()=>removeHomeComponent(b.dataset.homeRemove));
+ const grid=document.getElementById("homeComponentGrid");let dragKey=null;
+ grid?.querySelectorAll("[data-home-component]").forEach(card=>{
+  card.ondragstart=()=>{dragKey=card.dataset.homeComponent;card.classList.add("dragging");};
+  card.ondragend=()=>{dragKey=null;card.classList.remove("dragging");};
+  card.ondragover=e=>e.preventDefault();
+  card.ondrop=async e=>{e.preventDefault();const target=card.dataset.homeComponent;if(!dragKey||dragKey===target)return;const a=homeComponents.findIndex(x=>x.component_key===dragKey),b=homeComponents.findIndex(x=>x.component_key===target);if(a<0||b<0)return;const [m]=homeComponents.splice(a,1);homeComponents.splice(b,0,m);await saveHomeComponents();render("home");};
+  const c=homeComponents.find(x=>x.component_key===card.dataset.homeComponent);if(c&&c.provider)refreshConnectionHomeMetric(c,card);
+ });
+}
+function ensureHudHudWidget(){
+ if(!currentUser||!hudhudSettings.bird_enabled)return;
+ let host=document.getElementById("hudhudFloatingHost");
+ if(host)return;
+ host=document.createElement("div");host.id="hudhudFloatingHost";document.body.appendChild(host);
+ const x=Number(hudhudSettings.bird_x),y=Number(hudhudSettings.bird_y);
+ const left=Number.isFinite(x)?x:(window.innerWidth-82),top=Number.isFinite(y)?y:(window.innerHeight-170);
+ host.innerHTML='<button id="hudhudBird" class="hudhud-bird" aria-label="Open HudHud">🦉</button><div id="hudhudBirdMenu" class="hudhud-bird-menu" hidden><div class="hudhud-bird-title">HUDHUD</div><button data-bird-chat>💬 HudHud Chat</button><button data-bird-theme>☼ Day / Night</button><button data-bird-signout>⇥ Sign out</button></div>';
+ host.style.left=Math.max(12,Math.min(window.innerWidth-70,left))+"px";host.style.top=Math.max(70,Math.min(window.innerHeight-70,top))+"px";
+ const bird=host.querySelector("#hudhudBird"),menu=host.querySelector("#hudhudBirdMenu");
+ bird.onclick=()=>menu.hidden=!menu.hidden;
+ host.querySelector("[data-bird-chat]").onclick=()=>{menu.hidden=true;render("home");setTimeout(()=>document.getElementById("chatInput")?.focus(),80);};
+ host.querySelector("[data-bird-theme]").onclick=async()=>{const next=(hudhudSettings.theme||"night")==="night"?"day":"night";applyTheme(next);await saveHudHudSettings({theme:next});};
+ host.querySelector("[data-bird-signout]").onclick=()=>signOut();
+ let dragging=false,dx=0,dy=0;
+ const move=e=>{if(!dragging)return;const p=e.touches?e.touches[0]:e;host.style.left=Math.max(8,Math.min(window.innerWidth-68,p.clientX-dx))+"px";host.style.top=Math.max(62,Math.min(window.innerHeight-68,p.clientY-dy))+"px";};
+ const end=async()=>{if(!dragging)return;dragging=false;await saveHudHudSettings({bird_x:parseFloat(host.style.left),bird_y:parseFloat(host.style.top)});};
+ bird.addEventListener("pointerdown",e=>{dragging=true;dx=e.clientX-host.offsetLeft;dy=e.clientY-host.offsetTop;bird.setPointerCapture?.(e.pointerId);});
+ bird.addEventListener("pointermove",move);bird.addEventListener("pointerup",end);bird.addEventListener("pointercancel",end);
 }
 
 function home(){
@@ -1038,7 +1166,7 @@ function render(view){
  m.innerHTML=(pages[view]||home)();
  hudhudFlyby(view==="home"?1:2);
  bind(view);
- if(view==="home") { bindChat(); bindHomeAuth(); }
+ if(view==="home") { bindChat(); bindHomeAuth(); bindHomeComponents(); ensureHudHudWidget(); }
  if(view==="core") bindThemeToggle();
  if(view==="studio") bindStudio();
  if(view==="system") bindSystem();
@@ -1557,7 +1685,7 @@ function bindStudio(){
  if(vb)vb.onclick=async()=>{const prompt=vp.value.trim();if(!prompt){vs.textContent="Enter a video prompt first.";return;}vs.textContent="Video generation connection is not configured yet.";};
 }
 
-function applyTheme(theme){document.documentElement.dataset.theme=theme;localStorage.setItem("hudhud_theme",theme);}
+function applyTheme(theme,persist=true){document.documentElement.dataset.theme=theme;if(persist)localStorage.setItem("hudhud_theme",theme);}
 function getTheme(){return localStorage.getItem("hudhud_theme")||"night";}
 function bindThemeToggle(){const b=document.getElementById("themeToggle");if(!b)return;const current=getTheme();document.documentElement.dataset.theme=current;const label=document.getElementById("themeLabel"),icon=document.getElementById("themeIcon");if(label)label.textContent=current==="day"?"Day":"Night";if(icon)icon.textContent=current==="day"?"☀":"☾";b.onclick=()=>{const next=getTheme()==="night"?"day":"night";applyTheme(next);if(label)label.textContent=next==="day"?"Day":"Night";if(icon)icon.textContent=next==="day"?"☀":"☾";};}
 async function init(){
