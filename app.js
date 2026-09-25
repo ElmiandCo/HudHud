@@ -1172,9 +1172,49 @@ async function editKnowledge(row){
  const {error}=await q;if(error){toast("Could not save knowledge");return;}toast("HudHud knowledge updated");render("knowledge");
 }
 
+function setupMobileNav(){
+  if(document.getElementById("mobileNav"))return;
+  const nav=document.getElementById("nav");
+  if(!nav)return;
+  const wrap=document.createElement("div");
+  wrap.id="mobileNav";
+  wrap.className="mobile-nav";
+  wrap.innerHTML=`
+    <button data-mobile-view="home"><span>⌂</span><small>Home</small></button>
+    <button data-mobile-view="projects"><span>▣</span><small>Work</small></button>
+    <button data-mobile-view="social"><span>◎</span><small>Social</small></button>
+    <button data-mobile-view="gamelab"><span>🎮</span><small>Build</small></button>
+    <button data-mobile-more><span>☰</span><small>More</small></button>`;
+  document.body.appendChild(wrap);
+
+  const backdrop=document.createElement("div");
+  backdrop.id="mobileNavBackdrop";
+  backdrop.className="mobile-nav-backdrop";
+  document.body.appendChild(backdrop);
+
+  const drawer=document.createElement("section");
+  drawer.id="mobileNavDrawer";
+  drawer.className="mobile-nav-drawer";
+  drawer.setAttribute("aria-label","HudHud navigation");
+  drawer.innerHTML=`
+    <div class="mobile-drawer-head"><div><strong>HUDHUD</strong><span>Navigate</span></div><button data-mobile-close aria-label="Close navigation">×</button></div>
+    <div class="mobile-drawer-content"></div>`;
+  drawer.querySelector(".mobile-drawer-content").appendChild(nav.cloneNode(true));
+  document.body.appendChild(drawer);
+
+  const close=()=>{drawer.classList.remove("open");backdrop.classList.remove("open");};
+  const open=()=>{drawer.classList.add("open");backdrop.classList.add("open");};
+  wrap.querySelector("[data-mobile-more]").onclick=open;
+  backdrop.onclick=close;
+  drawer.querySelector("[data-mobile-close]").onclick=close;
+  drawer.querySelectorAll("button[data-view]").forEach(b=>b.addEventListener("click",()=>{close();render(b.dataset.view);}));
+  wrap.querySelectorAll("[data-mobile-view]").forEach(b=>b.addEventListener("click",()=>render(b.dataset.mobileView)));
+}
 function render(view){
  if(["projects","opportunities","connections","documents","activity","premium","social","messages","devices","lifemap","knowledge"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+ document.querySelectorAll("#mobileNav [data-mobile-view]").forEach(b=>b.classList.toggle("active",b.dataset.mobileView===view));
+ document.querySelectorAll("#mobileNavDrawer button[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
  const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,social:social,messages:messages,devices:devices,lifemap:lifemap,knowledge:knowledge,tools:tools,studio:studio,gamelab:gameLab,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
@@ -1719,6 +1759,7 @@ function getTheme(){return localStorage.getItem("hudhud_theme")||"night";}
 function bindThemeToggle(){const b=document.getElementById("themeToggle");if(!b)return;const current=getTheme();document.documentElement.dataset.theme=current;const label=document.getElementById("themeLabel"),icon=document.getElementById("themeIcon");if(label)label.textContent=current==="day"?"Day":"Night";if(icon)icon.textContent=current==="day"?"☀":"☾";b.onclick=()=>{const next=getTheme()==="night"?"day":"night";applyTheme(next);if(label)label.textContent=next==="day"?"Day":"Night";if(icon)icon.textContent=next==="day"?"☀":"☾";};}
 async function init(){
  const today=document.getElementById("today");if(today)today.textContent=nowLabel();
+ setupMobileNav();
  document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>render(b.dataset.view)));
  render("home");
  const socialResult=new URLSearchParams(window.location.search).get("social");
