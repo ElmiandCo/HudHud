@@ -15,7 +15,9 @@ export default async function handler(req,res){
     clearStateCookie(res);
     return res.redirect(302,callbackRedirect(req,provider,"connected",account.accountHandle ? "Connected @"+account.accountHandle : "Connected"));
   }catch(e){
+    const safeMessage = String(e?.message || "TikTok connection failed.").replace(/[\r\n]+/g, " ").slice(0, 300);
+    console.error("[TikTok OAuth] callback failed:", safeMessage);
     clearStateCookie(res);
-    return res.redirect(302,callbackRedirect(req,"tiktok","error",e.message));
+    return res.redirect(302,callbackRedirect(req,"tiktok","error",safeMessage));
   }
 }
