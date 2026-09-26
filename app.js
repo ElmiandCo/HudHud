@@ -1818,6 +1818,7 @@ function getTheme(){return localStorage.getItem("hudhud_theme")||"night";}
 function updateThemeControls(theme=getTheme()){const day=theme==="day";const label=document.getElementById("themeLabel"),icon=document.getElementById("themeIcon"),globalLabel=document.getElementById("globalThemeLabel"),globalIcon=document.getElementById("globalThemeIcon");if(label)label.textContent=day?"Day":"Night";if(icon)icon.textContent=day?"☀":"☾";if(globalLabel)globalLabel.textContent=day?"Day":"Night";if(globalIcon)globalIcon.textContent=day?"☀":"☾";const b=document.getElementById("themeToggle"),g=document.getElementById("globalThemeToggle");[b,g].filter(Boolean).forEach(x=>x.setAttribute("aria-pressed",day?"true":"false"));}
 function bindThemeToggle(){const current=getTheme();applyTheme(current,false);const b=document.getElementById("themeToggle"),g=document.getElementById("globalThemeToggle");[b,g].filter(Boolean).forEach(btn=>{btn.onclick=()=>{const next=getTheme()==="night"?"day":"night";applyTheme(next);saveHudHudSettings({theme:next});};});updateThemeControls(current);}
 async function init(){
+ applyTheme(getTheme(),false);
  const today=document.getElementById("today");if(today)today.textContent=nowLabel();
  setupMobileNav();
  document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>render(b.dataset.view)));
