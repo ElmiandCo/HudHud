@@ -2,22 +2,22 @@ import { getAuthenticatedUser } from "../lib/hudhud-context.js";
 import { buildAuthorizeUrl, setStateCookie } from "../lib/social-oauth.js";
 
 function bearer(req){ return String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim(); }
-function base(){return String(process.env.HUDHUD_SUPABASE_URL||"").trim().replace(/\/+$/,"");}
+function base(){return String(process.env.HUDHUD_SUPABASE_URL||process.env.SUPABASE_URL||"").trim().replace(/\/+$/,"");}
 function admin(){
-  const url=String(process.env.HUDHUD_SUPABASE_URL||"").replace(/\/$/,"");
-  const key=String(process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY||"");
+  const url=String(process.env.HUDHUD_SUPABASE_URL||process.env.SUPABASE_URL||"").replace(/\/$/,"");
+  const key=String(process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||"");
   if(!url||!key)throw new Error("Supabase server credentials are not configured.");
   return {url,key,headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"}};
 }
 async function userFromRequest(req){
-  const token=bearer(req), b=base(), key=process.env.HUDHUD_SUPABASE_KEY;
+  const token=bearer(req), b=base(), key=process.env.HUDHUD_SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
   if(!token||!b||!key)throw new Error("Authentication required.");
   const r=await fetch(b+"/auth/v1/user",{headers:{apikey:key,Authorization:"Bearer "+token}});
   if(!r.ok)throw new Error("Authentication expired. Please sign in again.");
   return r.json();
 }
 function adminHeaders(){
-  const key=process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY;
+  const key=process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(!key)throw new Error("Provider account storage is not configured. Add HUDHUD_SUPABASE_SERVICE_ROLE_KEY.");
   return {apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"};
 }
@@ -55,8 +55,13 @@ async function socialIntegrations(req,res){
     const user=await getAuthenticatedUser(bearer(req));
     const {url,headers}=admin();
     const r=await fetch(url+"/rest/v1/hudhud_integrations?select=id,provider,category,status,provider_account_id,display_name,account_handle,scopes,capabilities,metadata,connected_at,last_synced_at,expires_at,last_error&user_id=eq."+encodeURIComponent(user.id)+"&category=eq.social&order=updated_at.desc",{headers});
-    const data=await r.json().catch(()=>[]);
-    if(!r.ok)throw new Error(data.message||"Could not load social integrations.");
+    const raw=await r.text();
+    let data=[];
+    try{data=raw?JSON.parse(raw):[];}catch{data=[];}
+    if(!r.ok){
+      const detail=data?.message||data?.hint||data?.details||raw||"Unknown Supabase error.";
+      throw new Error("Supabase integrations query failed ("+r.status+"): "+String(detail).slice(0,300));
+    }
     return res.status(200).json({integrations:data});
   }catch(e){return res.status(/Authentication/i.test(e.message)?401:503).json({error:e.message||"Could not load social integrations."});}
 }
