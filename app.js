@@ -313,7 +313,26 @@ function homeComponentCard(c){
 }
 function home(){
  const components=(homeComponents.length?homeComponents:defaultHomeComponents()).filter(x=>x.enabled!==false).sort((a,b)=>(a.position||0)-(b.position||0));
- return '<section class="hero hudhud-home-banner"><div class="home-banner-art" aria-hidden="true"><img src="/assets/hudhud-hq-banner.svg" alt=""></div><div class="home-banner-content"><span class="eyebrow">HEADQUARTERS</span><h1>Welcome home.</h1><p>Talk to HudHud here. Your Home page is personal to this workspace and can grow with the connections you authorize.</p><div class="home-legal-links" aria-label="Legal and account links"><a href="/privacy">Privacy Policy</a><span aria-hidden="true">•</span><a href="/terms">Terms of Service</a><span aria-hidden="true">•</span><button type="button" data-go="core">Settings</button></div><div class="actions"><button class="primary" data-auth-start>Get Started</button><button class="secondary" data-home-add-component>＋ Add Component</button></div><div class="chat card"><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div></div></section><section id="homeComponentGrid" class="grid home-component-grid" style="margin-top:45px">'+components.map(homeComponentCard).join("")+'</section><div id="homeComponentModal"></div>';
+ return '<section class="hero hudhud-home-banner"><div class="hudhud-parallax" aria-hidden="true">'+
+   '<img class="hudhud-layer hudhud-atmosphere hudhud-day-layer" src="/assets/hudhud-hq/atmosphere-day.svg" alt="">'+
+   '<img class="hudhud-layer hudhud-atmosphere hudhud-night-layer" src="/assets/hudhud-hq/atmosphere-night.svg" alt="">'+
+   '<img class="hudhud-layer hudhud-particles hudhud-day-layer" src="/assets/hudhud-hq/particles-day.svg" alt="">'+
+   '<img class="hudhud-layer hudhud-particles hudhud-night-layer" src="/assets/hudhud-hq/particles-night.svg" alt="">'+
+   '<img class="hudhud-layer hudhud-glow" src="/assets/hudhud-hq/bird-glow.svg" alt="">'+
+   '<div class="hudhud-layer hudhud-bird-layer"><img src="/assets/hudhud-logo.svg" alt=""></div>'+
+   '<div class="hudhud-perch" aria-hidden="true"></div>'+
+   '<div class="hudhud-foreground" aria-hidden="true"></div>'+
+   '</div>'+
+   '<div class="home-banner-content">'+
+   '<div class="home-banner-glass">'+
+   '<span class="eyebrow">HEADQUARTERS</span><h1>Welcome home.</h1>'+
+   '<p>Talk to HudHud here. Your Home page is personal to this workspace and can grow with the connections you authorize.</p>'+
+   '<div class="home-legal-links" aria-label="Legal and account links"><a href="/privacy">Privacy Policy</a><span aria-hidden="true">•</span><a href="/terms">Terms of Service</a><span aria-hidden="true">•</span><button type="button" data-go="core">Settings</button></div>'+
+   '<div class="actions"><button class="primary" data-auth-start>Get Started</button><button class="secondary" data-home-add-component>＋ Add Component</button></div>'+
+   '<div class="home-chat"><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div>'+
+   '</div></div></section>'+
+   '<section class="home-feature-rail" aria-label="HudHud capabilities"><div class="home-feature"><b>⚡</b><span>AI Agents</span><small>Automate. Amplify.</small></div><div class="home-feature"><b>◈</b><span>Social Media</span><small>Connect. Publish.</small></div><div class="home-feature"><b>▥</b><span>Analytics</span><small>Track. Grow.</small></div><div class="home-feature"><b>◇</b><span>Build</span><small>Create. Scale.</small></div></section>'+
+   '<section id="homeComponentGrid" class="grid home-component-grid" style="margin-top:34px">'+components.map(homeComponentCard).join("")+'</section><div id="homeComponentModal"></div>';
 }
 function openHomeComponentModal(){
  const host=document.getElementById("homeComponentModal");if(!host)return;
