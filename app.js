@@ -1813,9 +1813,10 @@ function bindStudio(){
  if(vb)vb.onclick=async()=>{const prompt=vp.value.trim();if(!prompt){vs.textContent="Enter a video prompt first.";return;}vs.textContent="Video generation connection is not configured yet.";};
 }
 
-function applyTheme(theme,persist=true){document.documentElement.dataset.theme=theme;if(persist)localStorage.setItem("hudhud_theme",theme);}
+function applyTheme(theme,persist=true){const next=theme==="day"?"day":"night";document.documentElement.dataset.theme=next;if(persist)localStorage.setItem("hudhud_theme",next);updateThemeControls(next);}
 function getTheme(){return localStorage.getItem("hudhud_theme")||"night";}
-function bindThemeToggle(){const b=document.getElementById("themeToggle");if(!b)return;const current=getTheme();document.documentElement.dataset.theme=current;const label=document.getElementById("themeLabel"),icon=document.getElementById("themeIcon");if(label)label.textContent=current==="day"?"Day":"Night";if(icon)icon.textContent=current==="day"?"☀":"☾";b.onclick=()=>{const next=getTheme()==="night"?"day":"night";applyTheme(next);if(label)label.textContent=next==="day"?"Day":"Night";if(icon)icon.textContent=next==="day"?"☀":"☾";};}
+function updateThemeControls(theme=getTheme()){const day=theme==="day";const label=document.getElementById("themeLabel"),icon=document.getElementById("themeIcon"),globalLabel=document.getElementById("globalThemeLabel"),globalIcon=document.getElementById("globalThemeIcon");if(label)label.textContent=day?"Day":"Night";if(icon)icon.textContent=day?"☀":"☾";if(globalLabel)globalLabel.textContent=day?"Day":"Night";if(globalIcon)globalIcon.textContent=day?"☀":"☾";const b=document.getElementById("themeToggle"),g=document.getElementById("globalThemeToggle");[b,g].filter(Boolean).forEach(x=>x.setAttribute("aria-pressed",day?"true":"false"));}
+function bindThemeToggle(){const current=getTheme();applyTheme(current,false);const b=document.getElementById("themeToggle"),g=document.getElementById("globalThemeToggle");[b,g].filter(Boolean).forEach(btn=>{btn.onclick=()=>{const next=getTheme()==="night"?"day":"night";applyTheme(next);saveHudHudSettings({theme:next});};});updateThemeControls(current);}
 async function init(){
  const today=document.getElementById("today");if(today)today.textContent=nowLabel();
  setupMobileNav();
