@@ -709,3 +709,76 @@ body{transition:background-color .2s ease,color .2s ease}
 :root[data-theme="day"] .primary{background:#271d30;color:#fff}
 :root[data-theme="day"] .danger{background:#fff0f2;color:#8f3040;border-color:#e2b6bf}
 @media(max-width:800px){.global-theme-toggle{min-width:0;width:42px;padding:7px}.global-theme-toggle span:last-child{display:none}}
+
+/* HQ layered parallax hero + frosted glass canvas */
+.hudhud-home-banner{
+  position:relative;overflow:hidden;isolation:isolate;min-height:760px;
+  border-color:var(--line);background:var(--page-bg);
+}
+.hudhud-home-banner:before{
+  content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+  background:radial-gradient(circle at 76% 52%,rgba(177,120,255,.10),transparent 31%),
+             linear-gradient(90deg,rgba(6,6,11,.18),transparent 52%,rgba(6,6,11,.06));
+}
+.hudhud-parallax{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.hudhud-layer{position:absolute;display:block;will-change:transform}
+.hudhud-atmosphere{inset:-2%;width:104%;height:104%;object-fit:cover;z-index:0}
+.hudhud-particles{inset:-3%;width:106%;height:106%;object-fit:cover;z-index:2}
+.hudhud-glow{left:46%;top:15%;width:46%;height:65%;object-fit:contain;z-index:3;mix-blend-mode:screen;opacity:.86}
+.hudhud-bird-layer{right:5%;bottom:7%;width:min(43vw,650px);height:min(62vw,650px);z-index:5;display:grid;place-items:end center;filter:drop-shadow(0 18px 28px rgba(0,0,0,.35))}
+.hudhud-bird-layer img{width:100%;height:100%;object-fit:contain;display:block}
+.hudhud-perch{position:absolute;z-index:6;right:1%;bottom:1%;width:49%;height:17%;border-radius:50% 48% 12% 12%;transform:rotate(-2deg);background:linear-gradient(170deg,rgba(28,24,34,.92),rgba(7,7,10,.98));box-shadow:0 -12px 35px rgba(16,9,22,.4),inset 0 1px 0 rgba(255,255,255,.08);filter:blur(.1px)}
+.hudhud-perch:after{content:"";position:absolute;left:4%;right:4%;top:6%;height:24%;border-radius:50%;background:linear-gradient(90deg,rgba(177,120,255,.18),rgba(83,215,255,.10),transparent 75%);filter:blur(7px)}
+.hudhud-foreground{position:absolute;z-index:8;left:-4%;right:-4%;bottom:-7%;height:25%;background:radial-gradient(ellipse at 20% 40%,rgba(177,120,255,.15),transparent 22%),linear-gradient(0deg,rgba(4,4,7,.72),transparent 72%);filter:blur(1px)}
+.hudhud-day-layer{display:none}
+:root[data-theme="day"] .hudhud-day-layer{display:block}
+:root[data-theme="day"] .hudhud-night-layer{display:none}
+.hudhud-home-banner .home-banner-content{position:relative;z-index:10;min-height:760px;padding:110px 5.5% 120px;display:flex;align-items:flex-start;justify-content:center;pointer-events:none}
+.home-banner-glass{
+  width:min(590px,46vw);min-height:410px;padding:36px 38px 30px;border-radius:28px;
+  border:1px solid rgba(255,255,255,.20);
+  background:linear-gradient(135deg,rgba(13,15,28,.66),rgba(34,24,53,.40));
+  box-shadow:0 28px 80px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.12),0 0 70px rgba(126,76,176,.10);
+  backdrop-filter:blur(24px) saturate(125%);-webkit-backdrop-filter:blur(24px) saturate(125%);
+  margin-right:auto;pointer-events:auto;
+}
+.home-banner-glass:after{content:"";position:absolute;inset:1px;border-radius:27px;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.10),transparent 35%,rgba(120,210,255,.05));mix-blend-mode:screen}
+.home-banner-glass h1{font-size:clamp(48px,5vw,76px);line-height:.96;letter-spacing:-2.4px;margin:10px 0 18px;color:#fff;text-shadow:0 4px 26px rgba(0,0,0,.40)}
+.home-banner-glass p{max-width:500px;font-size:15px;line-height:1.7;color:rgba(247,243,251,.86);text-shadow:0 2px 12px rgba(0,0,0,.32)}
+.home-banner-glass .home-legal-links{justify-content:flex-start;margin-top:18px}
+.home-banner-glass .actions{margin-top:20px}
+.home-chat{margin-top:22px;padding:11px;border-radius:17px;border:1px solid rgba(255,255,255,.12);background:rgba(7,7,12,.27);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.home-chat .messages{max-height:86px;overflow:auto;background:transparent}
+.home-chat .chat-form{margin-top:8px}
+.home-feature-rail{
+  position:relative;z-index:12;width:min(1060px,calc(100% - 70px));margin:-82px auto 0;padding:18px 22px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border:1px solid rgba(255,255,255,.15);border-radius:22px;
+  background:rgba(13,14,23,.62);backdrop-filter:blur(22px) saturate(125%);-webkit-backdrop-filter:blur(22px) saturate(125%);
+  box-shadow:0 22px 55px rgba(0,0,0,.25)
+}
+.home-feature{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;padding:8px 16px;border-right:1px solid rgba(255,255,255,.10)}
+.home-feature:last-child{border-right:0}.home-feature b{grid-row:1/3;font-size:22px;color:#a978ff;text-shadow:0 0 18px rgba(169,120,255,.45)}
+.home-feature span{font-size:12px;font-weight:700;color:#f6f2fa}.home-feature small{font-size:9px;color:#aaa1b1}
+:root[data-theme="day"] .home-banner-glass{background:linear-gradient(135deg,rgba(255,255,255,.72),rgba(231,241,255,.46));border-color:rgba(73,57,91,.18);box-shadow:0 25px 70px rgba(54,38,70,.16),inset 0 1px 0 rgba(255,255,255,.85)}
+:root[data-theme="day"] .home-banner-glass h1{color:#201a29;text-shadow:0 2px 16px rgba(255,255,255,.72)}
+:root[data-theme="day"] .home-banner-glass p{color:#403849;text-shadow:0 1px 8px rgba(255,255,255,.72)}
+:root[data-theme="day"] .home-chat{background:rgba(255,255,255,.30);border-color:rgba(73,57,91,.12)}
+:root[data-theme="day"] .home-feature-rail{background:rgba(255,255,255,.58);border-color:rgba(73,57,91,.14);box-shadow:0 22px 55px rgba(54,38,70,.14)}
+:root[data-theme="day"] .home-feature{border-color:rgba(73,57,91,.12)}
+:root[data-theme="day"] .home-feature span{color:#292230}
+:root[data-theme="day"] .home-feature small{color:#665c6c}
+@media(max-width:1000px){
+ .hudhud-home-banner{min-height:720px}.hudhud-home-banner .home-banner-content{min-height:720px;padding:90px 28px 110px}
+ .home-banner-glass{width:min(560px,55vw)}.hudhud-bird-layer{right:-2%;width:48vw;height:58vw}
+}
+@media(max-width:700px){
+ .hudhud-home-banner{min-height:760px}.hudhud-home-banner .home-banner-content{min-height:760px;padding:70px 16px 170px;justify-content:flex-start}
+ .home-banner-glass{width:100%;min-height:0;padding:26px 23px 24px;border-radius:23px}
+ .home-banner-glass h1{font-size:clamp(42px,12vw,58px);letter-spacing:-1.5px}
+ .home-banner-glass p{font-size:13px;line-height:1.55}.home-banner-glass .actions{flex-wrap:wrap}
+ .hudhud-bird-layer{right:-19%;bottom:7%;width:72vw;height:72vw;opacity:.96}
+ .hudhud-glow{left:26%;top:30%;width:78%;height:55%}.hudhud-perch{right:-12%;bottom:1%;width:75%;height:13%}
+ .home-feature-rail{width:calc(100% - 24px);margin:-105px auto 0;padding:11px 8px;grid-template-columns:repeat(2,1fr);border-radius:18px}
+ .home-feature{padding:10px 11px;border-right:0}.home-feature:nth-child(-n+2){border-bottom:1px solid rgba(255,255,255,.10)}
+}
+@media(prefers-reduced-motion:reduce){.hudhud-layer{will-change:auto}.hudhud-home-banner{scroll-behavior:auto}}
