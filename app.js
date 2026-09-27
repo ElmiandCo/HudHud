@@ -313,17 +313,7 @@ function homeComponentCard(c){
 }
 function home(){
  const components=(homeComponents.length?homeComponents:defaultHomeComponents()).filter(x=>x.enabled!==false).sort((a,b)=>(a.position||0)-(b.position||0));
- return '<section class="hero hudhud-home-banner"><div class="hudhud-parallax" aria-hidden="true">'+
-   '<img class="hudhud-layer hudhud-atmosphere hudhud-day-layer" src="/assets/hudhud-hq/atmosphere-day.svg" alt="">'+
-   '<img class="hudhud-layer hudhud-atmosphere hudhud-night-layer" src="/assets/hudhud-hq/atmosphere-night.svg" alt="">'+
-   '<img class="hudhud-layer hudhud-particles hudhud-day-layer" src="/assets/hudhud-hq/particles-day.svg" alt="">'+
-   '<img class="hudhud-layer hudhud-particles hudhud-night-layer" src="/assets/hudhud-hq/particles-night.svg" alt="">'+
-   '<img class="hudhud-layer hudhud-glow" src="/assets/hudhud-hq/bird-glow.svg" alt="">'+
-   '<div class="hudhud-layer hudhud-bird-layer"><img src="/assets/hudhud-logo.svg" alt=""></div>'+
-   '<div class="hudhud-perch" aria-hidden="true"></div>'+
-   '<div class="hudhud-foreground" aria-hidden="true"></div>'+
-   '</div>'+
-   '<div class="home-banner-content">'+
+ return '<section class="hero hudhud-home-banner"><div class="hudhud-banner-art" aria-hidden="true"><img src="/assets/hudhud-home-banner.png" alt=""></div><div class="home-banner-content">'+
    '<div class="home-banner-glass">'+
    '<span class="eyebrow">HEADQUARTERS</span><h1>Welcome home.</h1>'+
    '<p>Talk to HudHud here. Your Home page is personal to this workspace and can grow with the connections you authorize.</p>'+
