@@ -11,7 +11,9 @@ function admin(){
   }
   if(!url||!key)throw new Error("Supabase server credentials are not configured.");
   if(/^(sb_publishable_|sb_anon_)/i.test(key))throw new Error("Supabase server credential is a publishable/anon key. Configure a server secret key instead.");
-  return {url,key,headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"}};
+  const headers={apikey:key,"Content-Type":"application/json"};
+  if(!/^sb_secret_/i.test(key)) headers.Authorization="Bearer "+key;
+  return {url,key,headers};
 }
 async function userFromRequest(req){
   const token=bearer(req), b=base(), key=process.env.HUDHUD_SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -22,7 +24,9 @@ async function userFromRequest(req){
 }
 function adminHeaders(){
   const key=admin().key;
-  return {apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"};
+  const headers={apikey:key,"Content-Type":"application/json"};
+  if(!/^sb_secret_/i.test(key)) headers.Authorization="Bearer "+key;
+  return headers;
 }
 
 async function socialConnect(req,res){
