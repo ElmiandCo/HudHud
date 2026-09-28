@@ -1211,7 +1211,7 @@ async function editLifeMap(row){
  const {error}=await q;if(error){toast("Could not save LifeMap item");return;}toast("LifeMap updated");render("lifemap");
 }
 function knowledge(){
- return '<section><div class="section-head"><div><span class="eyebrow">HUDHUD MEMORY / OBSERVATIONS</span><h2>What HudHud Knows</h2><span class="muted">A living report of information HudHud has learned or observed. Each item carries its own source, confidence, timestamps and usage metadata.</span></div><div class="knowledge-head-actions"><button class="secondary" data-knowledge-refresh>↻ Refresh &amp; synthesize</button><button class="primary" data-knowledge-add>Add observation</button></div></div><div class="knowledge-notice card"><strong>🧠 Separate from LifeMap</strong><p>LifeMap describes the user-defined life structure. This page describes HudHud’s evolving knowledge. <strong>Refresh &amp; synthesize</strong> asks HudHud to consider your current observations, projects, opportunities, connections, activity and authorized social data and create a new combined observation at your request.</p></div><div id="knowledgeRefreshStatus" class="muted knowledge-refresh-status" aria-live="polite"></div><div id="knowledgeList" class="knowledge-list"><div class="card muted">Loading what HudHud knows…</div></div></section>';
+ return '<section><div class="section-head"><div><span class="eyebrow">HUDHUD MEMORY / OBSERVATIONS</span><h2>What HudHud Knows</h2><span class="muted">A living report of information HudHud has learned or observed. Each item carries its own source, confidence, timestamps and usage metadata.</span></div><div class="knowledge-head-actions"><button class="secondary" data-knowledge-disclaimer>ⓘ About observations</button><button class="secondary" data-knowledge-refresh>↻ Refresh &amp; synthesize</button><button class="primary" data-knowledge-add>Add observation</button></div></div><div class="knowledge-notice card"><strong>🧠 Separate from LifeMap</strong><p>LifeMap describes the user-defined life structure. This page describes HudHud’s evolving knowledge. <strong>Refresh &amp; synthesize</strong> asks HudHud to consider your current observations, projects, opportunities, connections, activity and authorized social data and create a new combined observation at your request.</p></div><div id="knowledgeRefreshStatus" class="muted knowledge-refresh-status" aria-live="polite"></div><div id="knowledgeList" class="knowledge-list"><div class="card muted">Loading what HudHud knows…</div></div></section>';
 }
 function synthesizeObservationTitle({projects,activeProjects,completedProjects,completedSteps,totalSteps,opportunities,openOpportunities,connections,connectedSocials,recentActivity,activeKnowledge}){
  const projectCount=projects.length;
@@ -1242,6 +1242,15 @@ function synthesizeObservationTitle({projects,activeProjects,completedProjects,c
    return first.length>88?first.slice(0,85)+"…":first;
  }
  return "Current HudHud workspace snapshot";
+}
+
+function showKnowledgeDisclaimer(){
+ const host=document.getElementById("appModalHost"); if(!host)return;
+ host.innerHTML='<div class="knowledge-disclaimer-backdrop" data-knowledge-disclaimer-close></div><section class="knowledge-disclaimer-modal" role="dialog" aria-modal="true" aria-labelledby="knowledgeDisclaimerTitle"><button class="knowledge-disclaimer-close" data-knowledge-disclaimer-close aria-label="Close">×</button><span class="eyebrow">HUDHUD / OBSERVATIONS</span><h3 id="knowledgeDisclaimerTitle">How to read HudHud observations</h3><p>HudHud observations are generated from information it is authorized to access through your connected sources and workspace data.</p><p><strong>Observation</strong> describes what the available evidence shows. <strong>Assumption</strong>, <strong>Conclusion</strong>, and <strong>Recommendation</strong> are AI-generated inferences built from that evidence.</p><p>These may be incomplete, outdated, or incorrect. They are provided for informational purposes only and should not be treated as authoritative professional, financial, legal, medical, or other expert advice.</p><button class="primary" data-knowledge-disclaimer-close>Got it</button></section>';
+ const close=()=>{host.innerHTML="";document.removeEventListener("keydown",onKey);};
+ const onKey=e=>{if(e.key==="Escape")close();};
+ host.querySelectorAll("[data-knowledge-disclaimer-close]").forEach(b=>b.onclick=close);
+ document.addEventListener("keydown",onKey);
 }
 
 async function refreshHudHudKnowledge(){
@@ -1341,6 +1350,7 @@ async function bindKnowledge(){
  const host=document.getElementById("knowledgeList"); if(error){if(host)host.innerHTML='<div class="card">Could not load HudHud knowledge.</div>';return;}
  if(host)host.innerHTML=data?.length?data.map(x=>'<article class="card knowledge-card"><div><div class="knowledge-top"><span class="eyebrow">'+esc(x.category)+'</span><span class="pill">'+esc(x.status)+'</span></div><h3>'+esc(x.title)+'</h3><p>'+esc(x.value)+'</p><div class="knowledge-meta"><span>Source: '+esc(x.source||"HudHud")+'</span><span>Confidence: '+(x.confidence==null?"—":esc(x.confidence)+"%")+'</span><span>Last observed: '+new Date(x.last_observed_at).toLocaleString()+'</span><span>AI use: '+(x.ai_usable?"Allowed":"Off")+'</span></div></div><div class="knowledge-actions"><button class="secondary" data-knowledge-edit="'+x.id+'">Edit</button><button class="secondary" data-knowledge-delete="'+x.id+'">Remove</button></div></article>').join(""):'<div class="empty"><strong>HudHud has not recorded any visible knowledge yet.</strong><span>Once authorized sources and agent workflows are connected, this becomes the living report HudHud maintains about you.</span></div>';
  document.querySelectorAll("[data-knowledge-add]").forEach(b=>b.onclick=()=>editKnowledge(null));
+ document.querySelectorAll("[data-knowledge-disclaimer]").forEach(b=>b.onclick=showKnowledgeDisclaimer);
  document.querySelectorAll("[data-knowledge-refresh]").forEach(b=>b.onclick=refreshHudHudKnowledge);
  document.querySelectorAll("[data-knowledge-edit]").forEach(b=>b.onclick=()=>editKnowledge(data.find(x=>x.id===b.dataset.knowledgeEdit)));
  document.querySelectorAll("[data-knowledge-delete]").forEach(b=>b.onclick=async()=>{if(!confirm("Remove this knowledge item?"))return;await supabaseClient.from("hudhud_knowledge").delete().eq("id",b.dataset.knowledgeDelete).eq("user_id",currentUser.id);render("knowledge");});
