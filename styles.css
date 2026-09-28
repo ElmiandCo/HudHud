@@ -812,3 +812,14 @@ body{transition:background-color .2s ease,color .2s ease}
 @media(max-width:700px){
   .hudhud-home-banner .hudhud-banner-art img{object-position:58% center}
 }
+
+
+/* Observation disclaimer popup */
+
+.knowledge-disclaimer-backdrop{position:fixed;inset:0;background:rgba(4,3,8,.72);backdrop-filter:blur(10px);z-index:1200}
+.knowledge-disclaimer-modal{position:fixed;z-index:1201;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 32px));padding:26px;border:1px solid #4a3b59;border-radius:22px;background:linear-gradient(180deg,#15121c,#0b0a0f);box-shadow:0 24px 80px rgba(0,0,0,.55);color:#eee}
+.knowledge-disclaimer-modal h3{margin:8px 0 14px;font-size:22px}
+.knowledge-disclaimer-modal p{margin:10px 0;color:#a9a1b0;font-size:12px;line-height:1.7}
+.knowledge-disclaimer-modal p strong{color:#e7dff0}
+.knowledge-disclaimer-close{position:absolute;right:14px;top:12px;width:34px;height:34px;border:1px solid #342b3d;border-radius:50%;background:#111016;color:#bdb3c7;font-size:20px;cursor:pointer}
+.knowledge-disclaimer-modal>.primary{margin-top:12px}
