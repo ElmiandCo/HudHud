@@ -5,9 +5,9 @@ function bearer(req){ return String(req.headers.authorization || "").replace(/^B
 function base(){return String(process.env.HUDHUD_SUPABASE_URL||process.env.SUPABASE_URL||"").trim().replace(/\/+$/,"");}
 function admin(){
   const url=String(process.env.HUDHUD_SUPABASE_URL||process.env.SUPABASE_URL||"").replace(/\/$/,"");
-  let key=String(process.env.HUDHUD_SUPABASE_SECRET_KEY||process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||"").replace(/[\\r\\n]/g,"").trim();
+  let key=String(process.env.HUDHUD_SUPABASE_SECRET_KEY||process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim().replace(/^["']|["']$/g,"").replace(/[\s\u0000-\u001F\u007F]/g,"");
   if(!key && process.env.SUPABASE_SECRET_KEYS){
-    try{const parsed=JSON.parse(String(process.env.SUPABASE_SECRET_KEYS));key=String(parsed?.default||Object.values(parsed||{})[0]||"").replace(/[\\r\\n]/g,"").trim();}catch{}
+    try{const parsed=JSON.parse(String(process.env.SUPABASE_SECRET_KEYS));key=String(parsed?.default||Object.values(parsed||{})[0]||"").trim().replace(/^["']|["']$/g,"").replace(/[\s\u0000-\u001F\u007F]/g,"");}catch{}
   }
   if(!url||!key)throw new Error("Supabase server credentials are not configured.");
   if(/^(sb_publishable_|sb_anon_)/i.test(key))throw new Error("Supabase server credential is a publishable/anon key. Configure a server secret key instead.");
