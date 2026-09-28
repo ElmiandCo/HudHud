@@ -1184,7 +1184,97 @@ async function editLifeMap(row){
  const {error}=await q;if(error){toast("Could not save LifeMap item");return;}toast("LifeMap updated");render("lifemap");
 }
 function knowledge(){
- return '<section><div class="section-head"><div><span class="eyebrow">HUDHUD MEMORY / OBSERVATIONS</span><h2>What HudHud Knows</h2><span class="muted">A living report of information HudHud has learned or observed. Each item carries its own source, confidence, timestamps and usage metadata.</span></div><button class="primary" data-knowledge-add>Add observation</button></div><div class="knowledge-notice card"><strong>🧠 Separate from LifeMap</strong><p>LifeMap describes the user-defined life structure. This page describes HudHud’s evolving knowledge. HudHud can update, retire or remove knowledge as new authorized evidence appears.</p></div><div id="knowledgeList" class="knowledge-list"><div class="card muted">Loading what HudHud knows…</div></div></section>';
+ return '<section><div class="section-head"><div><span class="eyebrow">HUDHUD MEMORY / OBSERVATIONS</span><h2>What HudHud Knows</h2><span class="muted">A living report of information HudHud has learned or observed. Each item carries its own source, confidence, timestamps and usage metadata.</span></div><div class="knowledge-head-actions"><button class="secondary" data-knowledge-refresh>↻ Refresh &amp; synthesize</button><button class="primary" data-knowledge-add>Add observation</button></div></div><div class="knowledge-notice card"><strong>🧠 Separate from LifeMap</strong><p>LifeMap describes the user-defined life structure. This page describes HudHud’s evolving knowledge. <strong>Refresh &amp; synthesize</strong> asks HudHud to consider your current observations, projects, opportunities, connections, activity and authorized social data and create a new combined observation at your request.</p></div><div id="knowledgeRefreshStatus" class="muted knowledge-refresh-status" aria-live="polite"></div><div id="knowledgeList" class="knowledge-list"><div class="card muted">Loading what HudHud knows…</div></div></section>';
+}
+async function refreshHudHudKnowledge(){
+ if(!hasCloudUser())return;
+ const button=document.querySelector("[data-knowledge-refresh]");
+ const status=document.getElementById("knowledgeRefreshStatus");
+ if(button){button.disabled=true;button.textContent="🪶 Synthesizing…";}
+ if(status)status.textContent="HudHud is combining your current evidence…";
+ try{
+   const uid=currentUser.id;
+   const [k,p,o,c,a,l,s]=await Promise.all([
+     supabaseClient.from("hudhud_knowledge").select("*").eq("user_id",uid).eq("user_visible",true).order("updated_at",{ascending:false}).limit(40),
+     supabaseClient.from("hudhud_projects").select("id,name,description,status,steps,updated_at").eq("user_id",uid).order("updated_at",{ascending:false}).limit(50),
+     supabaseClient.from("hudhud_opportunities").select("id,name,description,status,steps,updated_at").eq("user_id",uid).order("updated_at",{ascending:false}).limit(50),
+     supabaseClient.from("hudhud_connections").select("id,name,provider,status,details,updated_at").eq("user_id",uid).order("updated_at",{ascending:false}).limit(50),
+     supabaseClient.from("hudhud_activity").select("id,text,created_at").eq("user_id",uid).order("created_at",{ascending:false}).limit(50),
+     supabaseClient.from("hudhud_lifemap").select("id,category,title,value,status,updated_at").eq("user_id",uid).order("updated_at",{ascending:false}).limit(40),
+     supabaseClient.from("hudhud_integrations").select("provider,status,display_name,account_handle,scopes,metadata,last_synced_at,updated_at").eq("user_id",uid).eq("category","social").order("updated_at",{ascending:false}).limit(20)
+   ]);
+   const results=[k,p,o,c,a,l,s], queryError=results.find(x=>x.error)?.error;
+   if(queryError)throw queryError;
+   const knowledgeRows=k.data||[], projects=p.data||[], opportunities=o.data||[], connections=c.data||[], activity=a.data||[], lifemapRows=l.data||[], socials=s.data||[];
+   const activeKnowledge=knowledgeRows.filter(x=>x.status!=="Superseded");
+   const activeProjects=projects.filter(x=>x.status!=="Done");
+   const completedProjects=projects.filter(x=>x.status==="Done");
+   const openOpportunities=opportunities.filter(x=>x.status!=="Done");
+   const connectedSocials=socials.filter(x=>x.status==="connected");
+   const completedSteps=projects.reduce((n,x)=>n+(Array.isArray(x.steps)?x.steps.filter(step=>step?.done).length:0),0);
+   const totalSteps=projects.reduce((n,x)=>n+(Array.isArray(x.steps)?x.steps.length:0),0);
+   const recentActivity=activity.slice(0,8).map(x=>String(x.text||"").slice(0,180)).filter(Boolean);
+   const currentProjects=activeProjects.slice(0,8).map(x=>x.name+" ("+(x.status||"Active")+")").join(", ");
+   const currentOpportunities=openOpportunities.slice(0,8).map(x=>x.name+" ("+(x.status||"Open")+")").join(", ");
+   const currentConnections=connections.slice(0,8).map(x=>x.name+" ["+(x.status||"Recorded")+"]").join(", ");
+   const currentSocials=connectedSocials.map(x=>x.display_name||x.account_handle||x.provider).join(", ");
+   const lifeMap=lifemapRows.slice(0,8).map(x=>(x.title||x.category)+": "+String(x.value||"").slice(0,160)).join(" | ");
+   const prior=activeKnowledge.slice(0,8).map(x=>(x.title||"Observation")+": "+String(x.value||"").slice(0,180)).join(" | ");
+   const value=[
+     "HudHud refreshed its understanding at the user's request using the current workspace and authorized evidence.",
+     "Knowledge: "+activeKnowledge.length+" active observations.",
+     "Workspace: "+projects.length+" projects ("+completedProjects.length+" completed, "+activeProjects.length+" active), "+opportunities.length+" opportunities ("+openOpportunities.length+" open), "+connections.length+" connections.",
+     "Project progress: "+completedSteps+" of "+totalSteps+" tracked steps completed.",
+     connectedSocials.length?"Authorized social sources: "+currentSocials+".":"No connected social sources were available for this synthesis.",
+     currentProjects?"Active projects: "+currentProjects+".":"",
+     currentOpportunities?"Open opportunities: "+currentOpportunities+".":"",
+     currentConnections?"Connections: "+currentConnections+".":"",
+     lifeMap?"LifeMap context: "+lifeMap+".":"",
+     recentActivity.length?"Recent activity signals: "+recentActivity.join(" | ")+".":"",
+     prior?"Existing observations considered: "+prior+".":"",
+     "This is a synthesized evidence snapshot, not a definitive judgment about the user. It should be updated when new authorized evidence or meaningful workspace changes occur."
+   ].filter(Boolean).join(" ");
+   const evidenceIds=activeKnowledge.slice(0,20).map(x=>x.id).filter(Boolean);
+   const metadata={
+     kind:"user_requested_combined_workspace_observation",
+     generated_at:new Date().toISOString(),
+     source_counts:{knowledge:activeKnowledge.length,projects:projects.length,opportunities:opportunities.length,connections:connections.length,activity:activity.length,lifemap:lifemapRows.length,social:connectedSocials.length},
+     evidence_observation_ids:evidenceIds,
+     connected_social_providers:connectedSocials.map(x=>x.provider),
+     project_ids:projects.map(x=>x.id).slice(0,50),
+     opportunity_ids:opportunities.map(x=>x.id).slice(0,50)
+   };
+   // Supersede only the previous user-requested synthesis; preserve the history.
+   const previous=knowledgeRows.filter(x=>x?.metadata?.kind==="user_requested_combined_workspace_observation"&&x.status==="Active");
+   for(const row of previous){
+     await supabaseClient.from("hudhud_knowledge").update({status:"Superseded",updated_at:new Date().toISOString()}).eq("id",row.id).eq("user_id",uid);
+   }
+   const {error}=await supabaseClient.from("hudhud_knowledge").insert({
+     user_id:uid,
+     category:"HudHud / Synthesis",
+     title:"Current combined observation",
+     value,
+     source:"HudHud · user-requested refresh",
+     confidence:Math.min(95,70+(connectedSocials.length?10:0)+(projects.length?5:0)+(activeKnowledge.length?10:0)),
+     status:"Active",
+     last_observed_at:new Date().toISOString(),
+     user_visible:true,
+     ai_usable:true,
+     metadata,
+     updated_at:new Date().toISOString()
+   });
+   if(error)throw error;
+   toast("HudHud created a new combined observation");
+   if(status)status.textContent="Updated just now from your current workspace and authorized sources.";
+   await bindKnowledge();
+ }catch(e){
+   console.error("HudHud knowledge refresh failed",e);
+   if(status)status.textContent="Refresh failed: "+(e.message||String(e));
+   toast("HudHud could not refresh observations");
+ }finally{
+   const b=document.querySelector("[data-knowledge-refresh]");
+   if(b){b.disabled=false;b.textContent="↻ Refresh & synthesize";}
+ }
 }
 async function bindKnowledge(){
  if(!hasCloudUser())return;
@@ -1192,6 +1282,7 @@ async function bindKnowledge(){
  const host=document.getElementById("knowledgeList"); if(error){if(host)host.innerHTML='<div class="card">Could not load HudHud knowledge.</div>';return;}
  if(host)host.innerHTML=data?.length?data.map(x=>'<article class="card knowledge-card"><div><div class="knowledge-top"><span class="eyebrow">'+esc(x.category)+'</span><span class="pill">'+esc(x.status)+'</span></div><h3>'+esc(x.title)+'</h3><p>'+esc(x.value)+'</p><div class="knowledge-meta"><span>Source: '+esc(x.source||"HudHud")+'</span><span>Confidence: '+(x.confidence==null?"—":esc(x.confidence)+"%")+'</span><span>Last observed: '+new Date(x.last_observed_at).toLocaleString()+'</span><span>AI use: '+(x.ai_usable?"Allowed":"Off")+'</span></div></div><div class="knowledge-actions"><button class="secondary" data-knowledge-edit="'+x.id+'">Edit</button><button class="secondary" data-knowledge-delete="'+x.id+'">Remove</button></div></article>').join(""):'<div class="empty"><strong>HudHud has not recorded any visible knowledge yet.</strong><span>Once authorized sources and agent workflows are connected, this becomes the living report HudHud maintains about you.</span></div>';
  document.querySelectorAll("[data-knowledge-add]").forEach(b=>b.onclick=()=>editKnowledge(null));
+ document.querySelectorAll("[data-knowledge-refresh]").forEach(b=>b.onclick=refreshHudHudKnowledge);
  document.querySelectorAll("[data-knowledge-edit]").forEach(b=>b.onclick=()=>editKnowledge(data.find(x=>x.id===b.dataset.knowledgeEdit)));
  document.querySelectorAll("[data-knowledge-delete]").forEach(b=>b.onclick=async()=>{if(!confirm("Remove this knowledge item?"))return;await supabaseClient.from("hudhud_knowledge").delete().eq("id",b.dataset.knowledgeDelete).eq("user_id",currentUser.id);render("knowledge");});
 }
