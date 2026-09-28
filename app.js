@@ -1153,14 +1153,6 @@ async function bindSocial(){
      }
    });
 
-   const params=new URLSearchParams(window.location.search);
-   if(params.get("social")){
-     const provider=params.get("provider")||"social";
-     const message=params.get("message");
-     if(params.get("social")==="connected")toast((provider==="x"?"X":provider.charAt(0).toUpperCase()+provider.slice(1))+" connected");
-     else if(message)toast(message);
-     history.replaceState({},document.title,window.location.pathname);
-   }
  }catch(e){
    console.error(e);
    // Keep OAuth controls live even when the integration status endpoint fails.
@@ -1278,6 +1270,19 @@ function setupMobileNav(){
   drawer.querySelectorAll("button[data-view]").forEach(b=>b.addEventListener("click",()=>{close();render(b.dataset.view);}));
   wrap.querySelectorAll("[data-mobile-view]").forEach(b=>b.addEventListener("click",()=>render(b.dataset.mobileView)));
 }
+function handleSocialCallbackResult(){
+ const params=new URLSearchParams(window.location.search);
+ const socialStatus=params.get("social");
+ if(!socialStatus)return;
+ const provider=params.get("provider")||"social";
+ const message=params.get("message");
+ const label=provider==="x"?"X":provider.charAt(0).toUpperCase()+provider.slice(1);
+ if(socialStatus==="connected")toast(label+" connected");
+ else if(message)toast(message);
+ else toast(label+" connection failed. Check the Social page for details.");
+ history.replaceState({},document.title,window.location.pathname);
+}
+
 function render(view){
  if(["projects","opportunities","connections","documents","activity","premium","social","messages","devices","lifemap","knowledge"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
@@ -1287,6 +1292,7 @@ function render(view){
  if(!m)return;
  const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,social:social,messages:messages,devices:devices,lifemap:lifemap,knowledge:knowledge,tools:tools,studio:studio,gamelab:gameLab,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
  m.innerHTML=(pages[view]||home)();
+ handleSocialCallbackResult();
  hudhudFlyby(view==="home"?1:2);
  bind(view);
  if(view==="home") { bindChat(); bindHomeAuth(); bindHomeComponents(); ensureHudHudWidget(); }
