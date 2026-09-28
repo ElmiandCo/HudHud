@@ -54,18 +54,31 @@ function playHudHudChirp(){
 async function initSupabase(){
  if(supabaseReady)return supabaseReady;
  supabaseReady=(async()=>{
-   const r=await fetch("/api/supabase-config",{cache:"no-store"});
-   const cfg=await r.json();
-   if(!r.ok)throw new Error(cfg.error||"Supabase configuration unavailable.");
+   const r=await fetch("/api/supabase-config",{cache:"no-store",headers:{"Accept":"application/json"}});
+   const contentType=(r.headers.get("content-type")||"").toLowerCase();
+   const raw=await r.text();
+   let cfg=null;
+   try{cfg=raw?JSON.parse(raw):null;}catch(parseError){
+     const preview=raw.replace(/\\s+/g," ").slice(0,160);
+     throw new Error("HudHud configuration API returned an invalid response (HTTP "+r.status+", "+(contentType||"unknown content type")+")."+(preview?" Response starts with: "+preview:""));
+   }
+   if(!r.ok)throw new Error(cfg?.error||"Supabase configuration unavailable (HTTP "+r.status+").");
+   if(!cfg?.url||!cfg?.key)throw new Error("Supabase configuration is incomplete. The HudHud Vercel project needs HUDHUD_SUPABASE_URL and HUDHUD_SUPABASE_KEY.");
+   if(!/^https?:\\/\\//i.test(String(cfg.url)))throw new Error("HudHud received an invalid Supabase URL from its server configuration.");
+   if(/^sb_secret_/i.test(String(cfg.key).trim())||/^service_role/i.test(String(cfg.key).trim()))throw new Error("HudHud received a server-only Supabase key. Use the publishable/anon key for HUDHUD_SUPABASE_KEY.");
    if(!window.supabase?.createClient)throw new Error("Supabase browser client did not load.");
-   supabaseClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+   supabaseClient=window.supabase.createClient(String(cfg.url).trim(),String(cfg.key).trim(),{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
    supabaseClient.auth.onAuthStateChange((event,session)=>{
      setTimeout(()=>handleAuthSession(session),0);
    });
-   const {data}=await supabaseClient.auth.getSession();
+   const {data,error}=await supabaseClient.auth.getSession();
+   if(error)throw error;
    await handleAuthSession(data.session);
    return supabaseClient;
- })();
+ })().catch(error=>{
+   supabaseReady=null;
+   throw error;
+ });
  return supabaseReady;
 }
 function hasCloudUser(){return !!currentUser&&!!supabaseClient;}
