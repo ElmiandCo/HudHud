@@ -134,9 +134,9 @@ async function vercelResources(account){
   throw last||new Error("Vercel connection is unavailable.");
 }
 async function supabaseResources(account){
-  const base=cleanBase(env("HUDHUD_SUPABASE_URL")),key=env("HUDHUD_SUPABASE_KEY");
+  const base=cleanBase(env("HUDHUD_SUPABASE_URL")),key=browserKey();
   if(!base||!key)throw new Error("Supabase connection is not configured.");
-  const headers={apikey:key,Authorization:"Bearer "+key};
+  const headers={apikey:key};
   let resources=[];
   try{
     const data=await jsonFetch(base+"/rest/v1/",{headers});
