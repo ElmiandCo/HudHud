@@ -1213,6 +1213,37 @@ async function editLifeMap(row){
 function knowledge(){
  return '<section><div class="section-head"><div><span class="eyebrow">HUDHUD MEMORY / OBSERVATIONS</span><h2>What HudHud Knows</h2><span class="muted">A living report of information HudHud has learned or observed. Each item carries its own source, confidence, timestamps and usage metadata.</span></div><div class="knowledge-head-actions"><button class="secondary" data-knowledge-refresh>↻ Refresh &amp; synthesize</button><button class="primary" data-knowledge-add>Add observation</button></div></div><div class="knowledge-notice card"><strong>🧠 Separate from LifeMap</strong><p>LifeMap describes the user-defined life structure. This page describes HudHud’s evolving knowledge. <strong>Refresh &amp; synthesize</strong> asks HudHud to consider your current observations, projects, opportunities, connections, activity and authorized social data and create a new combined observation at your request.</p></div><div id="knowledgeRefreshStatus" class="muted knowledge-refresh-status" aria-live="polite"></div><div id="knowledgeList" class="knowledge-list"><div class="card muted">Loading what HudHud knows…</div></div></section>';
 }
+function synthesizeObservationTitle({projects,activeProjects,completedProjects,completedSteps,totalSteps,opportunities,openOpportunities,connections,connectedSocials,recentActivity,activeKnowledge}){
+ const projectCount=projects.length;
+ const progress=totalSteps?Math.round((completedSteps/totalSteps)*100):0;
+ const activeCount=activeProjects.length;
+ const openOpps=openOpportunities.length;
+ const socialCount=connectedSocials.length;
+ const recent=String(recentActivity?.[0]||"").replace(/^Completed project step:\s*/i,"").replace(/^Created project from HudHud chat:\s*/i,"").trim();
+ if(projectCount && totalSteps && completedSteps>0){
+   const focus=activeCount?activeCount+" active ":"";
+   return focus+"project"+(activeCount===1?" is":"s are")+" underway, with "+completedSteps+" of "+totalSteps+" tracked steps completed"+(progress?" ("+progress+"%)":"");
+ }
+ if(projectCount){
+   return projectCount+" project"+(projectCount===1?" is":"s are")+" shaping the current HudHud workspace";
+ }
+ if(openOpps){
+   return openOpps+" open opportunit"+(openOpps===1?"y is":"ies are")+" shaping the current workspace";
+ }
+ if(socialCount){
+   return socialCount+" authorized social source"+(socialCount===1?" is":"s are")+" connected to HudHud";
+ }
+ if(recent){
+   const short=recent.length>72?recent.slice(0,69)+"…":recent;
+   return "Recent workspace focus: "+short;
+ }
+ if(activeKnowledge.length){
+   const first=String(activeKnowledge[0].title||activeKnowledge[0].value||"Current user context").trim();
+   return first.length>88?first.slice(0,85)+"…":first;
+ }
+ return "Current HudHud workspace snapshot";
+}
+
 async function refreshHudHudKnowledge(){
  if(!hasCloudUser())return;
  const button=document.querySelector("[data-knowledge-refresh]");
@@ -1247,6 +1278,7 @@ async function refreshHudHudKnowledge(){
    const currentSocials=connectedSocials.map(x=>x.display_name||x.account_handle||x.provider).join(", ");
    const lifeMap=lifemapRows.slice(0,8).map(x=>(x.title||x.category)+": "+String(x.value||"").slice(0,160)).join(" | ");
    const prior=activeKnowledge.slice(0,8).map(x=>(x.title||"Observation")+": "+String(x.value||"").slice(0,180)).join(" | ");
+   const title=synthesizeObservationTitle({projects,activeProjects,completedProjects,completedSteps,totalSteps,opportunities,openOpportunities,connections,connectedSocials,recentActivity,activeKnowledge});
    const value=[
      "HudHud refreshed its understanding at the user's request using the current workspace and authorized evidence.",
      "Knowledge: "+activeKnowledge.length+" active observations.",
@@ -1279,7 +1311,7 @@ async function refreshHudHudKnowledge(){
    const {error}=await supabaseClient.from("hudhud_knowledge").insert({
      user_id:uid,
      category:"HudHud / Synthesis",
-     title:"Current combined observation",
+     title,
      value,
      source:"HudHud · user-requested refresh",
      confidence:Math.min(95,70+(connectedSocials.length?10:0)+(projects.length?5:0)+(activeKnowledge.length?10:0)),
