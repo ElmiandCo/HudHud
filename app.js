@@ -23,6 +23,33 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;",
 function toast(s){const t=document.getElementById("toast");if(!t)return;t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200);}
 function log(text){const event={text:text,at:new Date().toISOString()};state.activity.unshift(event);state.activity=state.activity.slice(0,50);save();if(currentUser)cloudInsertActivity(text);}
 function nowLabel(){return new Intl.DateTimeFormat(undefined,{dateStyle:"medium"}).format(new Date());}
+function playHudHudChirp(){
+ try{
+   if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+   const AudioContext=window.AudioContext||window.webkitAudioContext;
+   if(!AudioContext)return;
+   const ctx=new AudioContext();
+   const t=ctx.currentTime;
+   const notes=[
+     {f:1850,start:0,dur:.09},
+     {f:2350,start:.08,dur:.10},
+     {f:2050,start:.17,dur:.12}
+   ];
+   notes.forEach(n=>{
+     const osc=ctx.createOscillator(),gain=ctx.createGain();
+     osc.type="sine";
+     osc.frequency.setValueAtTime(n.f,t+n.start);
+     osc.frequency.exponentialRampToValueAtTime(n.f*1.12,t+n.start+n.dur);
+     gain.gain.setValueAtTime(.0001,t+n.start);
+     gain.gain.exponentialRampToValueAtTime(.055,t+n.start+.012);
+     gain.gain.exponentialRampToValueAtTime(.0001,t+n.start+n.dur);
+     osc.connect(gain);gain.connect(ctx.destination);
+     osc.start(t+n.start);osc.stop(t+n.start+n.dur+.01);
+   });
+   setTimeout(()=>ctx.close().catch(()=>{}),500);
+ }catch(e){}
+}
+
 
 async function initSupabase(){
  if(supabaseReady)return supabaseReady;
@@ -1924,6 +1951,7 @@ function getTheme(){return localStorage.getItem("hudhud_theme")||"night";}
 function updateThemeControls(theme=getTheme()){const day=theme==="day";const label=document.getElementById("themeLabel"),icon=document.getElementById("themeIcon"),globalLabel=document.getElementById("globalThemeLabel"),globalIcon=document.getElementById("globalThemeIcon");if(label)label.textContent=day?"Day":"Night";if(icon)icon.textContent=day?"☀":"☾";if(globalLabel)globalLabel.textContent=day?"Day":"Night";if(globalIcon)globalIcon.textContent=day?"☀":"☾";const b=document.getElementById("themeToggle"),g=document.getElementById("globalThemeToggle");[b,g].filter(Boolean).forEach(x=>x.setAttribute("aria-pressed",day?"true":"false"));}
 function bindThemeToggle(){const current=getTheme();applyTheme(current,false);const b=document.getElementById("themeToggle"),g=document.getElementById("globalThemeToggle");[b,g].filter(Boolean).forEach(btn=>{btn.onclick=()=>{const next=getTheme()==="night"?"day":"night";applyTheme(next);saveHudHudSettings({theme:next});};});updateThemeControls(current);}
 async function init(){
+ playHudHudChirp();
  applyTheme(getTheme(),false);
  const today=document.getElementById("today");if(today)today.textContent=nowLabel();
  setupMobileNav();
