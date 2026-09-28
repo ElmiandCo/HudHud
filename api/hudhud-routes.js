@@ -5,8 +5,12 @@ function bearer(req){ return String(req.headers.authorization || "").replace(/^B
 function base(){return String(process.env.HUDHUD_SUPABASE_URL||process.env.SUPABASE_URL||"").trim().replace(/\/+$/,"");}
 function admin(){
   const url=String(process.env.HUDHUD_SUPABASE_URL||process.env.SUPABASE_URL||"").replace(/\/$/,"");
-  const key=String(process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||"");
+  let key=String(process.env.HUDHUD_SUPABASE_SECRET_KEY||process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
+  if(!key && process.env.SUPABASE_SECRET_KEYS){
+    try{const parsed=JSON.parse(String(process.env.SUPABASE_SECRET_KEYS));key=String(parsed?.default||Object.values(parsed||{})[0]||"").trim();}catch{}
+  }
   if(!url||!key)throw new Error("Supabase server credentials are not configured.");
+  if(/^(sb_publishable_|sb_anon_)/i.test(key))throw new Error("Supabase server credential is a publishable/anon key. Configure a server secret key instead.");
   return {url,key,headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"}};
 }
 async function userFromRequest(req){
@@ -17,8 +21,7 @@ async function userFromRequest(req){
   return r.json();
 }
 function adminHeaders(){
-  const key=process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if(!key)throw new Error("Provider account storage is not configured. Add HUDHUD_SUPABASE_SERVICE_ROLE_KEY.");
+  const key=admin().key;
   return {apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"};
 }
 
