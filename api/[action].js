@@ -63,9 +63,18 @@ async function jsonFetch(url,options={}){
   if(!r.ok)throw new Error(data.message||data.error||`HTTP ${r.status}`);
   return data;
 }
-function env(name){return process.env[name]||"";}
+function env(name){return String(process.env[name]||"").trim().replace(/^["']|["']$/g,"").replace(/[\s\u0000-\u001F\u007F]/g,"");}
+function browserKey(){
+  const key=env("HUDHUD_SUPABASE_KEY");
+  if(!key) return "";
+  if(/^sb_secret_/i.test(key)||/^service_role/i.test(key)) throw new Error("HUDHUD_SUPABASE_KEY must be the publishable/anon key, not a server secret.");
+  return key;
+}
+function serverKey(){
+  return env("HUDHUD_SUPABASE_SERVICE_ROLE_KEY");
+}
 async function requireUser(req){
-  const base=cleanBase(env("HUDHUD_SUPABASE_URL")),key=env("HUDHUD_SUPABASE_KEY");
+  const base=cleanBase(env("HUDHUD_SUPABASE_URL")),key=browserKey();
   // Management OAuth accounts are used for account-level discovery; the configured project remains the default REST resource source.
   const auth=String(req.headers.authorization||"");
   const token=auth.replace(/^Bearer\s+/i,"").trim();
@@ -82,7 +91,7 @@ async function providerAccount(req,provider){
   const url=cleanBase(env("HUDHUD_SUPABASE_URL"));
   const auth=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"").trim();
   if(!auth)throw new Error("Authentication required.");
-  const u=await fetch(url+"/auth/v1/user",{headers:{apikey:env("HUDHUD_SUPABASE_KEY"),Authorization:"Bearer "+auth}});
+  const u=await fetch(url+"/auth/v1/user",{headers:{apikey:browserKey(),Authorization:"Bearer "+auth}});
   if(!u.ok)throw new Error("Authentication expired. Please sign in again.");
   const user=await u.json();
   const r=await fetch(url+"/rest/v1/hudhud_provider_accounts?id=eq."+encodeURIComponent(id)+"&user_id=eq."+encodeURIComponent(user.id)+"&select=provider,access_token,account_name,account_email,provider_account_id",{headers:{apikey:service,Authorization:"Bearer "+service}});
@@ -286,7 +295,7 @@ function base(){return String(process.env.HUDHUD_SUPABASE_URL||"").trim().replac
 function serviceKey(){return serverKey();}
 async function userFromRequest(req){
  const token=String(req.headers.authorization||"").replace(/^Bearer\s+/i,"").trim();
- const b=base(),key=process.env.HUDHUD_SUPABASE_KEY;
+ const b=base(),key=browserKey();
  if(!token||!b||!key)throw new Error("Authentication required.");
  const r=await fetch(b+"/auth/v1/user",{headers:{apikey:key,Authorization:"Bearer "+token}});
  if(!r.ok)throw new Error("Authentication expired. Please sign in again.");
@@ -393,7 +402,7 @@ function normalizePhone(value){
  return "+"+digits;
 }
 async function smsDb(path,{method="GET",body}={}){
- const key=process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY;if(!key)throw new Error("SMS storage is not configured.");
+ const key=serverKey();if(!key)throw new Error("SMS storage is not configured.");
  const r=await fetch(base()+"/rest/v1/"+path,{method,headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json",Prefer:"return=representation"},body:body===undefined?undefined:JSON.stringify(body)});
  const t=await r.text();let data=[];try{data=t?JSON.parse(t):[];}catch{data=[];}if(!r.ok)throw new Error((data&&data.message)||t||"SMS database request failed.");return data;
 }
