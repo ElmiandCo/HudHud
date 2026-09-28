@@ -2,9 +2,14 @@ import { getAuthenticatedUser } from "../lib/hudhud-context.js";
 import { buildAuthorizeUrl, setStateCookie } from "../lib/social-oauth.js";
 
 function bearer(req){ return String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim(); }
-function base(){return String(process.env.HUDHUD_SUPABASE_URL||process.env.SUPABASE_URL||"").trim().replace(/\/+$/,"");}
+function normalizeSupabaseUrl(value){
+  return String(value||"").trim()
+    .replace(/\/+$/,"")
+    .replace(/\/(?:rest\/v1|auth\/v1)$/i,"");
+}
+function base(){return normalizeSupabaseUrl(process.env.HUDHUD_SUPABASE_URL||process.env.SUPABASE_URL);}
 function admin(){
-  const url=String(process.env.HUDHUD_SUPABASE_URL||process.env.SUPABASE_URL||"").replace(/\/$/,"");
+  const url=normalizeSupabaseUrl(process.env.HUDHUD_SUPABASE_URL||process.env.SUPABASE_URL);
   let key=String(process.env.HUDHUD_SUPABASE_SECRET_KEY||process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim().replace(/^["']|["']$/g,"").replace(/[\s\u0000-\u001F\u007F]/g,"");
   if(!key && process.env.SUPABASE_SECRET_KEYS){
     try{const parsed=JSON.parse(String(process.env.SUPABASE_SECRET_KEYS));key=String(parsed?.default||Object.values(parsed||{})[0]||"").trim().replace(/^["']|["']$/g,"").replace(/[\s\u0000-\u001F\u007F]/g,"");}catch{}
