@@ -16,9 +16,9 @@ function html(message,ok=true){
   return `<!doctype html><html><body style="font-family:system-ui;background:#09080d;color:#eee;display:grid;place-items:center;height:100vh"><div style="max-width:520px;padding:32px;text-align:center"><h2>${ok?"🦉 HudHud account connected":"Connection error"}</h2><p>${safe}</p><button type="button" onclick="window.location.href='/?view=connections'" style="margin-top:16px;padding:12px 18px;border-radius:10px;border:1px solid #5b486b;background:#eee8ff;color:#17101f;font-weight:700;cursor:pointer">Return to HudHud</button><p style="color:#817a87;font-size:12px">Returning to Connections automatically…</p></div><script>setTimeout(()=>window.location.href="/?view=connections",1800)</script></body></html>`;
 }
 async function formPost(url,body,headers={}){const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded",Accept:"application/json",...headers},body:new URLSearchParams(body)});const text=await r.text();let data={};try{data=JSON.parse(text)}catch{}if(!r.ok)throw new Error(data.error_description||data.error||"OAuth token exchange failed.");return data;}
-async function userFromBearer(req){const token=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"").trim();const key=process.env.HUDHUD_SUPABASE_KEY;if(!token||!key)throw new Error("HudHud sign-in required.");const r=await fetch(base()+"/auth/v1/user",{headers:{apikey:key,Authorization:"Bearer "+token}});if(!r.ok)throw new Error("HudHud sign-in expired. Please sign in again.");return r.json();}
+async function userFromBearer(req){const token=String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"").trim();const key=browserKey();if(!token||!key)throw new Error("HudHud sign-in required.");const r=await fetch(base()+"/auth/v1/user",{headers:{apikey:key,Authorization:"Bearer "+token}});if(!r.ok)throw new Error("HudHud sign-in expired. Please sign in again.");return r.json();}
 async function saveAccount(user,provider,tokenData,profile){
- const key=process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY;if(!key)throw new Error("Provider account storage is not configured. Add HUDHUD_SUPABASE_SERVICE_ROLE_KEY.");
+ const key=serverKey();
  const accountId=String(profile.id||profile.sub||profile.account_id||crypto.createHash("sha256").update(String(tokenData.access_token)).digest("hex"));
  const payload={user_id:user.id,provider,provider_account_id:accountId,account_name:String(profile.name||profile.login||profile.username||profile.email||provider+" account"),account_email:profile.email||null,avatar_url:profile.avatar_url||profile.picture||null,access_token:tokenData.access_token||null,refresh_token:tokenData.refresh_token||null,token_expires_at:tokenData.expires_in?new Date(Date.now()+Number(tokenData.expires_in)*1000).toISOString():null,metadata:profile,is_active:true,updated_at:new Date().toISOString()};
  const r=await fetch(base()+"/rest/v1/hudhud_provider_accounts",{method:"POST",headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(payload)});
@@ -250,7 +250,7 @@ function normalizeSupabaseUrl(value){
 async function checkSupabase(){
   const rawBase=process.env.HUDHUD_SUPABASE_URL;
   const base=normalizeSupabaseUrl(rawBase);
-  const key=process.env.HUDHUD_SUPABASE_KEY;
+  const key=browserKey();
   if(!base||!key) return {status:"not_configured",configured:false,active:false,detail:"Supabase server-side connection is not configured."};
   const t=Date.now();
   try{
@@ -283,7 +283,7 @@ async function connectionHandler(req,res){
 
 
 function base(){return String(process.env.HUDHUD_SUPABASE_URL||"").trim().replace(/\/+$/,"");}
-function serviceKey(){return process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY||"";}
+function serviceKey(){return serverKey();}
 async function userFromRequest(req){
  const token=String(req.headers.authorization||"").replace(/^Bearer\s+/i,"").trim();
  const b=base(),key=process.env.HUDHUD_SUPABASE_KEY;
@@ -338,7 +338,7 @@ async function sendHandler(req,res){
 }
 
 function cronBase(){return String(process.env.HUDHUD_SUPABASE_URL||"").trim().replace(/\/+$/,"");}
-function cronServiceKey(){return process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY||"";}
+function cronServiceKey(){return serverKey();}
 async function cronDb(path,options={}){
  const key=cronServiceKey();if(!cronBase()||!key)throw new Error("Newsletter server storage is not configured.");
  const r=await fetch(cronBase()+"/rest/v1/"+path,{...options,headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json",...(options.headers||{})}});
