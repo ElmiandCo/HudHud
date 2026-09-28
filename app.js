@@ -59,12 +59,12 @@ async function initSupabase(){
    const raw=await r.text();
    let cfg=null;
    try{cfg=raw?JSON.parse(raw):null;}catch(parseError){
-     const preview=raw.replace(/\\s+/g," ").slice(0,160);
+     const preview=raw.replace(/\s+/g," ").slice(0,160);
      throw new Error("HudHud configuration API returned an invalid response (HTTP "+r.status+", "+(contentType||"unknown content type")+")."+(preview?" Response starts with: "+preview:""));
    }
    if(!r.ok)throw new Error(cfg?.error||"Supabase configuration unavailable (HTTP "+r.status+").");
    if(!cfg?.url||!cfg?.key)throw new Error("Supabase configuration is incomplete. The HudHud Vercel project needs HUDHUD_SUPABASE_URL and HUDHUD_SUPABASE_KEY.");
-   if(!/^https?:\\/\\//i.test(String(cfg.url)))throw new Error("HudHud received an invalid Supabase URL from its server configuration.");
+   if(!/^https?:\/\//i.test(String(cfg.url)))throw new Error("HudHud received an invalid Supabase URL from its server configuration.");
    if(/^sb_secret_/i.test(String(cfg.key).trim())||/^service_role/i.test(String(cfg.key).trim()))throw new Error("HudHud received a server-only Supabase key. Use the publishable/anon key for HUDHUD_SUPABASE_KEY.");
    if(!window.supabase?.createClient)throw new Error("Supabase browser client did not load.");
    supabaseClient=window.supabase.createClient(String(cfg.url).trim(),String(cfg.key).trim(),{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
