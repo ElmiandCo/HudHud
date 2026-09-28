@@ -1379,6 +1379,30 @@ async function editKnowledge(row){
  const {error}=await q;if(error){toast("Could not save knowledge");return;}toast("HudHud knowledge updated");render("knowledge");
 }
 
+function bindNavigationAccordions(root){
+  if(!root)return;
+  root.querySelectorAll("details.nav-group > summary").forEach(summary=>{
+    summary.addEventListener("click",e=>{
+      e.preventDefault();
+      const group=summary.parentElement;
+      const willOpen=!group.hasAttribute("open");
+      root.querySelectorAll("details.nav-group").forEach(other=>{
+        if(other!==group)other.removeAttribute("open");
+      });
+      if(willOpen)group.setAttribute("open","");
+    });
+  });
+}
+function openActiveNavigationGroup(view){
+  document.querySelectorAll("#nav details.nav-group").forEach(group=>{
+    const active=group.querySelector('button[data-view="'+view+'"]');
+    if(active)group.setAttribute("open","");
+  });
+  document.querySelectorAll("#mobileNavDrawer details.nav-group").forEach(group=>{
+    const active=group.querySelector('button[data-view="'+view+'"]');
+    if(active)group.setAttribute("open","");
+  });
+}
 function setupMobileNav(){
   if(document.getElementById("mobileNav"))return;
   const nav=document.getElementById("nav");
@@ -1440,6 +1464,7 @@ function setupMobileNav(){
     });
     if(willOpen)group.setAttribute("open","");
   },{passive:false});
+  bindNavigationAccordions(drawer.querySelector(".mobile-drawer-content nav"));
   drawer.querySelectorAll("button[data-view]").forEach(b=>b.addEventListener("click",()=>{close();render(b.dataset.view);}));
   wrap.querySelectorAll("[data-mobile-view]").forEach(b=>b.addEventListener("click",()=>render(b.dataset.mobileView)));
 }
