@@ -340,7 +340,7 @@ function homeComponentCard(c){
 }
 function home(){
  const components=(homeComponents.length?homeComponents:defaultHomeComponents()).filter(x=>x.enabled!==false).sort((a,b)=>(a.position||0)-(b.position||0));
- return '<section class="hero hudhud-home-banner"><div class="hudhud-banner-art" aria-hidden="true"><img src="/assets/hudhud-home-banner.png" alt=""></div><div class="home-banner-content">'+
+ return '<section class="hero hudhud-home-banner"><div class="hudhud-banner-art" aria-hidden="true"><img src="/assets/hudhud-home-bird.svg" alt=""></div><div class="home-banner-content">'+
    '<div class="home-banner-glass">'+
    '<span class="eyebrow">HEADQUARTERS</span><h1>Welcome home.</h1>'+
    '<p>Talk to HudHud here. Your Home page is personal to this workspace and can grow with the connections you authorize.</p>'+
