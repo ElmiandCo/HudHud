@@ -27,7 +27,7 @@ function admin(){
   return {url,key,headers};
 }
 async function userFromRequest(req){
-  const token=bearer(req), b=base(), key=process.env.HUDHUD_SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+  const token=bearer(req), b=base(), key=cleanBrowserKey(process.env.HUDHUD_SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY);
   if(!token||!b||!key)throw new Error("Authentication required.");
   const r=await fetch(b+"/auth/v1/user",{headers:{apikey:key,Authorization:"Bearer "+token}});
   if(!r.ok)throw new Error("Authentication expired. Please sign in again.");
