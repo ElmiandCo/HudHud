@@ -2,6 +2,12 @@ import { getAuthenticatedUser } from "../lib/hudhud-context.js";
 import { buildAuthorizeUrl, setStateCookie } from "../lib/social-oauth.js";
 
 function bearer(req){ return String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim(); }
+function cleanBrowserKey(value){
+  const key=String(value||"").trim().replace(/^["']|["']$/g,"").replace(/[\s\u0000-\u001F\u007F]/g,"");
+  if(!key) return "";
+  if(/^sb_secret_/i.test(key) || /^service_role/i.test(key)) throw new Error("Supabase browser key is server-only. Configure HUDHUD_SUPABASE_KEY with the publishable/anon key.");
+  return key;
+}
 function normalizeSupabaseUrl(value){
   return String(value||"").trim()
     .replace(/\/+$/,"")
@@ -103,9 +109,9 @@ async function supabaseConfig(req,res){
   if(req.method!=="GET"){res.setHeader("Allow","GET");return res.status(405).json({error:"Method not allowed."});}
   const rawUrl=process.env.HUDHUD_SUPABASE_URL||"";
   const url=String(rawUrl).trim().replace(/\/+$/,"").replace(/\/(?:rest\/v1|auth\/v1)$/i,"");
-  const key=process.env.HUDHUD_SUPABASE_KEY||"";
+  let key="";
+  try{key=cleanBrowserKey(process.env.HUDHUD_SUPABASE_KEY||"");}catch(e){return res.status(503).json({error:e.message});}
   if(!url||!key)return res.status(503).json({error:"Supabase is not configured."});
-  if(key.startsWith("sb_secret_")||key.startsWith("service_role"))return res.status(503).json({error:"HUDHUD_SUPABASE_KEY is a server-only key. Add a Supabase publishable key for browser authentication."});
   return res.status(200).json({url,key});
 }
 
