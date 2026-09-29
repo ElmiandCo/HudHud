@@ -143,7 +143,7 @@ async function importLegacyWorkspace(){
 }
 async function cloudInsertProject(item){
  if(!hasCloudUser())return true;
- const {data,error}=await supabaseClient.from("hudhud_projects").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
+ const {data,error}=await supabaseClient.from("hudhud_projects").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,agency:item.agency||null,opportunity_type:item.opportunityType||null,category:item.category||null,event_id:item.eventId||null,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
  if(data?.id)item.id=data.id;
  if(error){toast("Project save failed");console.error(error);return false;} return true;
 }
@@ -682,10 +682,17 @@ function projectForm(){
  '<div class="form-actions"><button type="submit" class="primary">Create project</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';
 }
 function opportunityForm(){
- return '<div class="section-head"><div><span class="eyebrow">NEW OPPORTUNITY</span><h2>Build the opportunity</h2><span class="muted">Capture the opportunity and turn the pursuit into a sequence of steps.</span></div></div>'+
+ const agencies=["Administration","Agriculture","Commerce","Corrections","Education","Employment & Economic Development","Health","Human Services","Information Technology Services","Labor & Industry","Management & Budget","Natural Resources","Public Safety","Transportation","Veterans Affairs","Other / Independent Agency"];
+ const types=["Goods & Services","Professional / Technical","Information Technology","Construction","Grant / Funding","Contract Release","Other"];
+ const categories=["IT / Software","Power Platform / Microsoft","Consulting","Staffing / Professional Services","Data / Analytics","Cybersecurity","Cloud / Infrastructure","Construction","Facilities / Maintenance","Healthcare","Transportation","Other"];
+ return '<div class="section-head"><div><span class="eyebrow">MINNESOTA STATE OPPORTUNITY</span><h2>Add opportunity</h2><span class="muted">Capture a Minnesota state opportunity with consistent agency, procurement type, and category data.</span></div></div>'+
  '<form class="card form workspace-form" id="oppForm">'+
  '<label>Opportunity name *</label><input name="name" required maxlength="100" placeholder="State Power Platform Contract">'+
+ '<label>State agency *</label><select name="agency" required><option value="">Select an agency…</option>'+agencies.map(x=>'<option>'+esc(x)+'</option>').join("")+'</select>'+
+ '<label>Opportunity type *</label><select name="opportunityType" required><option value="">Select a type…</option>'+types.map(x=>'<option>'+esc(x)+'</option>').join("")+'</select>'+
+ '<label>Category *</label><select name="category" required><option value="">Select a category…</option>'+categories.map(x=>'<option>'+esc(x)+'</option>').join("")+'</select>'+
  '<label>Description *</label><textarea name="description" required maxlength="1000" placeholder="What is the opportunity and what are we trying to win?"></textarea>'+
+ '<label>Event / solicitation number</label><input name="eventId" maxlength="80" placeholder="Optional SWIFT event or solicitation number">'+
  '<label>Starting status</label><select name="status"><option>Open</option><option>Active</option><option>On hold</option></select>'+
  '<label>Number of steps *</label><select id="opportunityStepCount" name="stepCount">'+stepOptions()+'</select>'+
  '<div class="step-builder"><div class="step-builder-head"><span>PURSUIT PLAN</span><small>Name each step in the order it should happen.</small></div><div id="opportunityStepFields" class="step-builder-fields"></div></div>'+
@@ -1626,7 +1633,7 @@ function bind(view){
    const count=Number(f.get("stepCount"))||1;
    const steps=Array.from({length:count},(_,i)=>({id:"step_"+Date.now()+"_"+i,name:String(f.get("step_"+i)||"").trim(),done:false}));
    if(steps.some(s=>!s.name)){toast("Name every opportunity step");return;}
-   const item={id:"opportunity_"+Date.now(),name,description,status:String(f.get("status")),steps,createdAt:new Date().toISOString()};
+   const item={id:"opportunity_"+Date.now(),name,description,status:String(f.get("status")),agency:String(f.get("agency")||""),opportunityType:String(f.get("opportunityType")||""),category:String(f.get("category")||""),eventId:String(f.get("eventId")||""),steps,createdAt:new Date().toISOString()};
    state.opportunities.unshift(item);
    save();
    if(!(await cloudInsertOpportunity(item))){state.opportunities.shift();save();return;}
