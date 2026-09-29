@@ -1,12 +1,49 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/social-connect", "destination": "/api/hudhud-routes" },
-    { "source": "/api/social-disconnect", "destination": "/api/hudhud-routes" },
-    { "source": "/api/social-integrations", "destination": "/api/hudhud-routes" },
-    { "source": "/api/provider-accounts", "destination": "/api/hudhud-routes" },
-    { "source": "/api/supabase-config", "destination": "/api/hudhud-routes" },
-    { "source": "/api/system-control", "destination": "/api/hudhud-routes" },
-    { "source": "/api/test-sms", "destination": "/api/hudhud-routes" }
+    {
+      "source": "/api/social-connect",
+      "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/social-disconnect",
+      "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/social-integrations",
+      "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/provider-accounts",
+      "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/supabase-config",
+      "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/system-control",
+      "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/test-sms",
+      "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/social-callback-instagram",
+      "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/social-callback-tiktok",
+      "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/social-callback-x",
+      "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/social-callback-linkedin",
+      "destination": "/api/hudhud-routes"
+    }
   ]
 }
