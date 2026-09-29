@@ -384,7 +384,6 @@ function homeComponentCard(c){
 function home(){
  const components=(homeComponents.length?homeComponents:defaultHomeComponents()).filter(x=>x.enabled!==false).sort((a,b)=>(a.position||0)-(b.position||0));
  return '<section class="hero hudhud-home-banner">'+
-   '<div class="home-bird-art" aria-hidden="true"><img src="/assets/hudhud-home-bird.png" alt=""></div>'+
    '<div class="home-banner-content">'+
    '<div class="home-banner-glass">'+
    '<span class="eyebrow">HEADQUARTERS</span><h1>Welcome home.</h1>'+
