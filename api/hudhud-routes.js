@@ -1,5 +1,5 @@
 import { getAuthenticatedUser } from "../lib/hudhud-context.js";
-import { buildAuthorizeUrl, setStateCookie } from "../lib/social-oauth.js";
+import { buildAuthorizeUrl, setStateCookie, clearStateCookie, readStateCookie, exchangeCode, fetchProfile, saveOAuthConnection, callbackRedirect } from "../lib/social-oauth.js";
 
 function bearer(req){ return String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim(); }
 function cleanBrowserKey(value){
@@ -39,6 +39,33 @@ function adminHeaders(){
   if(!/^sb_secret_/i.test(key)) headers.Authorization="Bearer "+key;
   return headers;
 }
+
+async function socialCallback(req,res,provider){
+  if(req.method!=="GET"){res.setHeader("Allow","GET");return res.status(405).send("Method not allowed.");}
+  try{
+    const state=readStateCookie(req);
+    if(state.provider!==provider)throw new Error("OAuth provider state mismatch.");
+    if(String(req.query?.state||"")!==state.state)throw new Error("OAuth state mismatch.");
+    if(req.query?.error)throw new Error(String(req.query.error_description||req.query.error));
+    const code=String(req.query?.code||"");
+    if(!code)throw new Error("Provider did not return an authorization code.");
+    const token=await exchangeCode(req,provider,code,state);
+    const profile=await fetchProfile(provider,token.access_token);
+    const account=await saveOAuthConnection(state.user_id,provider,token,profile,req);
+    clearStateCookie(res);
+    const message=provider==="linkedin" ? account.displayName+" connected" : account.accountHandle ? "Connected @"+account.accountHandle : "Connected";
+    return res.redirect(302,callbackRedirect(req,provider,"connected",message));
+  }catch(e){
+    const safeMessage=String(e?.message||"Social connection failed.").replace(/[\r\n]+/g," ").slice(0,300);
+    console.error("[Social OAuth] callback failed:",safeMessage);
+    clearStateCookie(res);
+    return res.redirect(302,callbackRedirect(req,provider,"error",safeMessage));
+  }
+}
+async function socialCallbackInstagram(req,res){return socialCallback(req,res,"instagram");}
+async function socialCallbackTiktok(req,res){return socialCallback(req,res,"tiktok");}
+async function socialCallbackX(req,res){return socialCallback(req,res,"x");}
+async function socialCallbackLinkedin(req,res){return socialCallback(req,res,"linkedin");}
 
 async function socialConnect(req,res){
   if(req.method!=="GET"){res.setHeader("Allow","GET");return res.status(405).json({error:"Method not allowed."});}
@@ -153,6 +180,10 @@ async function testSms(req,res){
 
 const handlers={
  "social-connect":socialConnect,
+ "social-callback-instagram":socialCallbackInstagram,
+ "social-callback-tiktok":socialCallbackTiktok,
+ "social-callback-x":socialCallbackX,
+ "social-callback-linkedin":socialCallbackLinkedin,
  "social-disconnect":socialDisconnect,
  "social-integrations":socialIntegrations,
  "provider-accounts":providerAccounts,
