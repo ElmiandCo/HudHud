@@ -808,3 +808,5 @@ body{transition:background-color .2s ease,color .2s ease}
 .knowledge-disclaimer-modal p strong{color:#e7dff0}
 .knowledge-disclaimer-close{position:absolute;right:14px;top:12px;width:34px;height:34px;border:1px solid #342b3d;border-radius:50%;background:#111016;color:#bdb3c7;font-size:20px;cursor:pointer}
 .knowledge-disclaimer-modal>.primary{margin-top:12px}
+
+.opportunity-meta{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 4px}.opportunity-meta span{font-size:9px;color:#a99db2;border:1px solid #332b3d;border-radius:20px;padding:5px 8px;background:#121016}.workspace-card .opportunity-meta span:first-child{color:#c8b8dc}@media(max-width:600px){.opportunity-meta{gap:5px}}
