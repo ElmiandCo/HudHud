@@ -238,6 +238,30 @@ function closeAuthModal(){
  const modal=document.getElementById("authModal");if(!modal)return;
  modal.classList.remove("show");modal.setAttribute("aria-hidden","true");
 }
+function authErrorMessage(err){
+ const candidates=[
+   err?.message,
+   err?.error_description,
+   err?.error,
+   err?.details,
+   err?.hint,
+   err?.data?.message,
+   err?.data?.error_description,
+   err?.data?.error,
+   err?.response?.data?.message
+ ];
+ for(const value of candidates){
+   if(typeof value==="string"&&value.trim())return value.trim();
+ }
+ if(err&&typeof err==="object"){
+   try{
+     const serialized=JSON.stringify(err);
+     if(serialized&&serialized!=="{}")return serialized;
+   }catch{}
+ }
+ return String(err||"Authentication failed.");
+}
+
 function bindAuthModal(){
  const modal=document.getElementById("authModal");
  modal.querySelectorAll("[data-auth-close]").forEach(b=>b.onclick=closeAuthModal);
@@ -262,7 +286,13 @@ function bindAuthModal(){
      }
      closeAuthModal();
      toast("Signed in");
-   }catch(err){if(errorEl)errorEl.textContent=err.message||"Authentication failed.";submit.disabled=false;submit.textContent=authMode==="signin"?"Sign in":"Create account";}
+   }catch(err){
+     const message=authErrorMessage(err);
+     if(errorEl)errorEl.textContent=message;
+     console.error("HudHud authentication failed",err);
+     submit.disabled=false;
+     submit.textContent=authMode==="signin"?"Sign in":"Create account";
+   }
  };
 }
 function showImportPrompt(){
