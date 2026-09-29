@@ -120,7 +120,7 @@ async function loadCloudState(){
  const error=[p,o,c,a,pc].find(x=>x.error)?.error;
  if(error){console.error("HudHud cloud load failed",error);toast("Could not load your workspace");return;}
  state.projects=(p.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
- state.opportunities=(o.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
+ state.opportunities=(o.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at,opportunityType:x.opportunity_type,eventId:x.event_id}));
  state.connections=(c.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
  state.activity=(a.data||[]).map(x=>({text:x.text,at:x.created_at,id:x.id}));
  projectConnections={};
@@ -143,7 +143,7 @@ async function importLegacyWorkspace(){
 }
 async function cloudInsertProject(item){
  if(!hasCloudUser())return true;
- const {data,error}=await supabaseClient.from("hudhud_projects").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,agency:item.agency||null,opportunity_type:item.opportunityType||null,category:item.category||null,event_id:item.eventId||null,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
+ const {data,error}=await supabaseClient.from("hudhud_projects").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
  if(data?.id)item.id=data.id;
  if(error){toast("Project save failed");console.error(error);return false;} return true;
 }
@@ -168,13 +168,13 @@ async function cloudDeleteOpportunity(item){
 }
 async function cloudInsertOpportunity(item){
  if(!hasCloudUser())return true;
- const {data,error}=await supabaseClient.from("hudhud_opportunities").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
+ const {data,error}=await supabaseClient.from("hudhud_opportunities").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,agency:item.agency||null,opportunity_type:item.opportunityType||null,category:item.category||null,event_id:item.eventId||null,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
  if(data?.id)item.id=data.id;
  if(error){toast("Opportunity save failed");console.error(error);return false;} return true;
 }
 async function cloudUpdateOpportunity(item){
  if(!hasCloudUser())return true;
- const {error}=await supabaseClient.from("hudhud_opportunities").update({name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,updated_at:item.updatedAt||new Date().toISOString()}).eq("id",item.id).eq("user_id",currentUser.id);
+ const {error}=await supabaseClient.from("hudhud_opportunities").update({name:item.name,description:item.description||"",status:item.status,agency:item.agency||null,opportunity_type:item.opportunityType||null,category:item.category||null,event_id:item.eventId||null,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,updated_at:item.updatedAt||new Date().toISOString()}).eq("id",item.id).eq("user_id",currentUser.id);
  if(error){toast("Opportunity update failed");console.error(error);return false;} return true;
 }
 async function cloudInsertConnection(item){
@@ -498,7 +498,7 @@ function workspaceCards(items,kind,filter){
      '<div class="no-steps">No steps defined for this '+(kind==="project"?"project":"opportunity")+'.</div>';
    return '<article class="workspace-card '+(item.status==="Done"?"is-done":"")+'">'+
      '<div class="workspace-card-head"><div><div class="muted">'+(kind==="project"?"PROJECT":"OPPORTUNITY")+'</div><h3>'+esc(item.name)+'</h3></div><span class="pill '+(item.status==="Done"?"pill-done":"")+'">'+esc(item.status||"Planning")+'</span></div>'+
-     '<p class="workspace-description">'+esc(item.description||item.notes||"No description provided.")+'</p>'+
+     '<p class="workspace-description">'+esc(item.description||item.notes||"No description provided.")+'</p>'+(kind==="opportunity"?'<div class="opportunity-meta"><span>'+esc(item.agency||"Agency not set")+'</span><span>'+esc(item.opportunityType||"Type not set")+'</span><span>'+esc(item.category||"Category not set")+'</span>'+(item.eventId?'<span>Event '+esc(item.eventId)+'</span>':'')+'</div>':'')+
      memberHtml+connectionHtml+
      '<div class="workspace-progress"><div><span>PROGRESS</span><strong>'+p.done+'/'+p.total+' steps</strong></div><div class="progress-track"><i style="width:'+percent+'%"></i></div></div>'+
      stepsHtml+
