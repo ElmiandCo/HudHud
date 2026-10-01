@@ -1255,37 +1255,94 @@ async function editLifeMap(row){
 function knowledge(){
  return '<section><div class="section-head"><div><span class="eyebrow">HUDHUD MEMORY / OBSERVATIONS</span><h2>What HudHud Knows</h2><span class="muted">A living report of information HudHud has learned or observed. Each item carries its own source, confidence, timestamps and usage metadata.</span></div><div class="knowledge-head-actions"><button class="secondary" data-knowledge-disclaimer>ⓘ About observations</button><button class="secondary" data-knowledge-refresh>↻ Refresh &amp; synthesize</button><button class="primary" data-knowledge-add>Add observation</button></div></div><div class="knowledge-notice card"><strong>🧠 Separate from LifeMap</strong><p>LifeMap describes the user-defined life structure. This page describes HudHud’s evolving knowledge. <strong>Refresh &amp; synthesize</strong> asks HudHud to consider your current observations, projects, opportunities, connections, activity and authorized social data and create a new combined observation at your request.</p></div><div id="knowledgeRefreshStatus" class="muted knowledge-refresh-status" aria-live="polite"></div><div id="knowledgeList" class="knowledge-list"><div class="card muted">Loading what HudHud knows…</div></div></section>';
 }
+function formatObservationNumber(value){
+ const n=Number(value);
+ if(!Number.isFinite(n)||n<0)return null;
+ return n.toLocaleString(undefined,{maximumFractionDigits:0});
+}
+function providerObservationLabel(provider){
+ return ({instagram:"Instagram",tiktok:"TikTok",x:"X",linkedin:"LinkedIn",youtube:"YouTube"})[provider]||provider||"social";
+}
+function getIntegrationStats(row){
+ const stats=row?.metadata?.stats||{};
+ const out={};
+ if(Number.isFinite(Number(stats.followers)))out.followers=Number(stats.followers);
+ if(Number.isFinite(Number(stats.following)))out.following=Number(stats.following);
+ if(Number.isFinite(Number(stats.likes)))out.likes=Number(stats.likes);
+ if(Number.isFinite(Number(stats.videos)))out.videos=Number(stats.videos);
+ if(Number.isFinite(Number(stats.media)))out.media=Number(stats.media);
+ if(Number.isFinite(Number(stats.views)))out.views=Number(stats.views);
+ if(Number.isFinite(Number(stats.subscribers)))out.followers=Number(stats.subscribers);
+ return out;
+}
 function synthesizeObservationTitle({projects,activeProjects,completedProjects,completedSteps,totalSteps,opportunities,openOpportunities,connections,connectedSocials,recentActivity,activeKnowledge}){
+ const socialCount=connectedSocials.length;
+ if(socialCount>=2)return "Your connected social presence is starting to tell a bigger story";
+ if(socialCount===1)return "A new social signal just entered HudHud";
  const projectCount=projects.length;
  const progress=totalSteps?Math.round((completedSteps/totalSteps)*100):0;
  const activeCount=activeProjects.length;
  const openOpps=openOpportunities.length;
- const socialCount=connectedSocials.length;
  const recent=String(recentActivity?.[0]||"").replace(/^Completed project step:\s*/i,"").replace(/^Created project from HudHud chat:\s*/i,"").trim();
- if(projectCount && totalSteps && completedSteps>0){
-   const focus=activeCount?activeCount+" active ":"";
-   return focus+"project"+(activeCount===1?" is":"s are")+" underway, with "+completedSteps+" of "+totalSteps+" tracked steps completed"+(progress?" ("+progress+"%)":"");
- }
- if(projectCount){
-   return projectCount+" project"+(projectCount===1?" is":"s are")+" shaping the current HudHud workspace";
- }
- if(openOpps){
-   return openOpps+" open opportunit"+(openOpps===1?"y is":"ies are")+" shaping the current workspace";
- }
- if(socialCount){
-   return socialCount+" authorized social source"+(socialCount===1?" is":"s are")+" connected to HudHud";
- }
- if(recent){
-   const short=recent.length>72?recent.slice(0,69)+"…":recent;
-   return "Recent workspace focus: "+short;
- }
- if(activeKnowledge.length){
-   const first=String(activeKnowledge[0].title||activeKnowledge[0].value||"Current user context").trim();
-   return first.length>88?first.slice(0,85)+"…":first;
- }
+ if(projectCount && totalSteps && completedSteps>0)return (activeCount?activeCount+" active ":"")+"project"+(activeCount===1?" is":"s are")+" underway, with "+completedSteps+" of "+totalSteps+" tracked steps completed"+(progress?" ("+progress+"%)":"");
+ if(projectCount)return projectCount+" project"+(projectCount===1?" is":"s are")+" shaping the current HudHud workspace";
+ if(openOpps)return openOpps+" open opportunit"+(openOpps===1?"y is":"ies are")+" shaping the current workspace";
+ if(recent){const short=recent.length>72?recent.slice(0,69)+"…":recent;return "Recent workspace focus: "+short;}
+ if(activeKnowledge.length){const first=String(activeKnowledge[0].title||activeKnowledge[0].value||"Current user context").trim();return first.length>88?first.slice(0,85)+"…":first;}
  return "Current HudHud workspace snapshot";
 }
-
+function buildCrossSourceObservation({connectedSocials,projects,activeProjects,openOpportunities,connections,lifemapRows,recentActivity,activeKnowledge}){
+ const social=connectedSocials.map(row=>{
+   const stats=getIntegrationStats(row);
+   return {
+     provider:row.provider,label:providerObservationLabel(row.provider),
+     name:row.display_name||row.account_handle||providerObservationLabel(row.provider),
+     handle:row.account_handle||null,bio:row.metadata?.bio||null,
+     headline:row.metadata?.headline||null,company:row.metadata?.company||null,
+     followers:stats.followers,following:stats.following,likes:stats.likes,videos:stats.videos,media:stats.media,
+     lastContentAt:row.metadata?.last_content_at||row.metadata?.recent_post_at||row.metadata?.last_post_at||null,
+     recentPost:row.metadata?.recent_post_excerpt||row.metadata?.latest_post||null
+   };
+ });
+ const knownFollowerRows=social.filter(x=>Number.isFinite(x.followers));
+ const totalFollowers=knownFollowerRows.reduce((n,x)=>n+x.followers,0);
+ const audienceLeader=knownFollowerRows.slice().sort((a,b)=>b.followers-a.followers)[0];
+ const newestContent=social.filter(x=>x.lastContentAt).slice().sort((a,b)=>new Date(b.lastContentAt)-new Date(a.lastContentAt))[0];
+ const professional=social.find(x=>x.provider==="linkedin"&&(x.headline||x.company||x.bio));
+ const roleText=professional?.headline||professional?.company||professional?.bio||"";
+ const roleMatch=roleText.match(/(?:^|\b)(biologist|scientist|engineer|developer|designer|consultant|manager|founder|analyst|researcher|teacher|doctor|lawyer|architect|marketer|sales|finance|accountant|creator|entrepreneur)(?:\b|$)/i);
+ const role=roleMatch?.[1]||null;
+ const names=[...new Set(social.map(x=>x.name).filter(Boolean))];
+ const handles=[...new Set(social.map(x=>x.handle).filter(Boolean))];
+ const platformList=social.map(x=>x.label);
+ const parts=[];
+ if(social.length){
+   parts.push("You just connected "+(platformList.length>1?platformList.slice(0,-1).join(", ")+" and "+platformList[platformList.length-1]:platformList[0])+", so HudHud can now see your social presence as a connected system instead of isolated accounts.");
+ }
+ if(knownFollowerRows.length>=2){
+   parts.push("Across the connected accounts, I can verify about "+formatObservationNumber(totalFollowers)+" followers in total, with "+audienceLeader.label+" contributing the largest share at "+formatObservationNumber(audienceLeader.followers)+".");
+ }else if(knownFollowerRows.length===1){
+   parts.push("I can currently verify "+formatObservationNumber(totalFollowers)+" followers on "+audienceLeader.label+"; the other connected platforms have not exposed follower totals through the permissions HudHud has.");
+ }
+ if(social.some(x=>x.provider==="tiktok")&&social.some(x=>x.provider==="x")){
+   const tiktok=social.find(x=>x.provider==="tiktok"), x=social.find(x=>x.provider==="x");
+   const tiktokSignal=[tiktok.videos!=null?formatObservationNumber(tiktok.videos)+" videos":null,tiktok.likes!=null?formatObservationNumber(tiktok.likes)+" likes":null].filter(Boolean).join(" and ");
+   parts.push("The platform mix is interesting: "+(tiktokSignal?"TikTok shows "+tiktokSignal+", ":"TikTok provides a short-form/content signal, ")+(x.recentPost?"while X has a recent post signal.":"while X is connected for profile/content access.")+" That suggests different roles across the network, but HudHud will treat the exact behavior pattern as an inference until it has enough content-history evidence.");
+ }
+ if(newestContent)parts.push("The freshest content signal currently comes from "+newestContent.label+" ("+new Date(newestContent.lastContentAt).toLocaleDateString()+").");
+ if(role)parts.push("LinkedIn also gives HudHud a professional signal around "+role+"; that can become much more useful once your work, income, projects, or sales funnels are connected.");
+ else if(professional)parts.push("LinkedIn adds a professional identity signal from "+roleText.slice(0,140)+"; connecting work, income, or sales systems would let HudHud connect that identity to measurable outcomes.");
+ if(social.length>=2 && !openOpportunities.length && !projects.length){
+   parts.push("Right now the social graph is richer than the workspace graph. Connect a funnel, sales account, calendar, or active project and HudHud can start looking for the bridge between attention, relationships, work, and money.");
+ }else if(openOpportunities.length||projects.length){
+   const workSignal=projects.length?projects.length+" project"+(projects.length===1?"":"s"):"";
+   const oppSignal=openOpportunities.length?openOpportunities.length+" open opportunit"+(openOpportunities.length===1?"y":"ies"):"";
+   parts.push("That social signal can now be compared against "+[workSignal,oppSignal].filter(Boolean).join(" and ")+", so future observations can look for movement from audience and relationships into actual work.");
+ }
+ if(names.length>1)parts.push("The connected profiles currently resolve to "+names.slice(0,4).join(", ")+", which HudHud can use as an identity-consistency signal without assuming every profile detail is identical.");
+ if(handles.length)parts.push("Known handles: "+handles.slice(0,5).map(x=>"@"+x.replace(/^@/,"")).join(", ")+".");
+ return parts.join(" ");
+}
 function showKnowledgeDisclaimer(){
  const host=document.getElementById("appModalHost"); if(!host)return;
  host.innerHTML='<div class="knowledge-disclaimer-backdrop" data-knowledge-disclaimer-close></div><section class="knowledge-disclaimer-modal" role="dialog" aria-modal="true" aria-labelledby="knowledgeDisclaimerTitle"><button class="knowledge-disclaimer-close" data-knowledge-disclaimer-close aria-label="Close">×</button><span class="eyebrow">HUDHUD / OBSERVATIONS</span><h3 id="knowledgeDisclaimerTitle">How to read HudHud observations</h3><p>HudHud observations are generated from information it is authorized to access through your connected sources and workspace data.</p><p><strong>Observation</strong> describes what the available evidence shows. <strong>Assumption</strong>, <strong>Conclusion</strong>, and <strong>Recommendation</strong> are AI-generated inferences built from that evidence.</p><p>These may be incomplete, outdated, or incorrect. They are provided for informational purposes only and should not be treated as authoritative professional, financial, legal, medical, or other expert advice.</p><button class="primary" data-knowledge-disclaimer-close>Got it</button></section>';
