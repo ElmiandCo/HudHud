@@ -1177,7 +1177,7 @@ function social(){
   linkedin:"/assets/social/linkedin.svg"
  };
  const socialLogo=(provider,label)=>'<img src="'+socialLogos[provider]+'" alt="'+label+' logo" loading="eager" referrerpolicy="no-referrer">';
- return '<section class="social-page"><div class="section-head"><div><span class="eyebrow">SOCIAL</span><h2>Your social presence</h2><span class="muted">Real OAuth connections. HudHud only receives the permissions you approve.</span></div><div class="social-summary"><strong id="socialConnectedCount">—</strong><span>connected</span></div></div><div class="social-permission-banner card"><div><strong>🔐 You stay in control</strong><p>Access tokens stay server-side. HudHud’s brain receives connection metadata and scopes, not provider credentials.</p></div></div><div id="socialOAuthError" class="card social-oauth-error" hidden></div><div id="socialGrid" class="social-grid">'+providers.map(p=>'<article class="card social-card" data-social-provider="'+p[0]+'"><div class="social-card-top"><div class="social-logo">'+socialLogo(p[0],p[1])+'</div><span class="pill social-status">Not connected</span></div><h3>'+p[1]+'</h3><p>'+p[3]+'</p><div class="social-account" data-social-account="'+p[0]+'">—</div><div class="social-details" data-social-details="'+p[0]+'"></div><div class="social-actions"><button class="secondary social-connect-btn" data-social-connect="'+p[0]+'">Connect &amp; authorize</button><button class="secondary" data-social-view="'+p[0]+'" disabled>Switch</button><button class="secondary" data-social-remove="'+p[0]+'" disabled>Disconnect</button></div></article>').join('')+'</div></section>';
+ return '<section class="social-page"><div class="section-head"><div><span class="eyebrow">SOCIAL</span><h2>Your social presence</h2><span class="muted">Real OAuth connections. HudHud only receives the permissions you approve.</span></div><div class="social-summary"><strong id="socialConnectedCount">—</strong><span>connected</span></div></div><div class="social-permission-banner card"><div><strong>🔐 You stay in control</strong><p>Access tokens stay server-side. HudHud’s brain receives connection metadata and scopes, not provider credentials.</p></div></div><div id="socialOAuthError" class="card social-oauth-error" hidden></div><div id="socialGrid" class="social-grid">'+providers.map(p=>'<article class="card social-card" data-social-provider="'+p[0]+'"><div class="social-card-top"><div class="social-logo" data-social-avatar="'+p[0]+'">'+socialLogo(p[0],p[1])+'</div><span class="pill social-status">Not connected</span></div><h3>'+p[1]+'</h3><p>'+p[3]+'</p><div class="social-account" data-social-account="'+p[0]+'">—</div><div class="social-details" data-social-details="'+p[0]+'"></div><div class="social-actions"><button class="secondary social-connect-btn" data-social-connect="'+p[0]+'">Connect &amp; authorize</button><button class="secondary" data-social-view="'+p[0]+'" disabled>Switch</button><button class="secondary" data-social-remove="'+p[0]+'" disabled>Disconnect</button></div></article>').join('')+'</div></section>';
 }
 async function bindSocial(){
  if(!hasCloudUser())return;
@@ -1200,12 +1200,13 @@ async function bindSocial(){
    rows.forEach(row=>{
      const card=document.querySelector('[data-social-provider="'+row.provider+'"]');
      if(!card)return;
-     const status=card.querySelector(".social-status"),acct=card.querySelector('[data-social-account="'+row.provider+'"]');
+     const status=card.querySelector(".social-status"),acct=card.querySelector('[data-social-account="'+row.provider+'"]'),avatar=card.querySelector('[data-social-avatar="'+row.provider+'"]');
      if(status){
        status.textContent=row.status==="connected"?"Connected":(row.status||"Not connected");
        status.classList.toggle("connected",row.status==="connected");
      }
      if(acct)acct.textContent=row.account_handle?("@"+row.account_handle):row.display_name||"Connected account";
+     if(avatar){const avatarUrl=row.metadata?.avatar_url||null;if(row.status==="connected"&&avatarUrl){avatar.innerHTML='<img src="'+esc(avatarUrl)+'" alt="'+esc(row.display_name||row.provider)+' profile photo" loading="eager" referrerpolicy="no-referrer">';avatar.classList.add("has-profile-photo");}else{avatar.innerHTML=socialLogo(row.provider,row.display_name||row.provider);avatar.classList.remove("has-profile-photo");}}
      const details=card.querySelector("[data-social-details=\""+row.provider+"\"]");
      if(details){
        if(row.provider==="tiktok" && row.status==="connected"){
