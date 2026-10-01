@@ -66,6 +66,7 @@ async function socialCallbackInstagram(req,res){return socialCallback(req,res,"i
 async function socialCallbackTiktok(req,res){return socialCallback(req,res,"tiktok");}
 async function socialCallbackX(req,res){return socialCallback(req,res,"x");}
 async function socialCallbackLinkedin(req,res){return socialCallback(req,res,"linkedin");}
+async function socialCallbackYoutube(req,res){return socialCallback(req,res,"youtube");}
 
 async function socialConnect(req,res){
   if(req.method!=="GET"){res.setHeader("Allow","GET");return res.status(405).json({error:"Method not allowed."});}
@@ -83,7 +84,7 @@ async function socialDisconnect(req,res){
   try{
     const user=await getAuthenticatedUser(bearer(req));
     const provider=String(req.body?.provider||req.query?.provider||"").toLowerCase();
-    if(!["instagram","x","tiktok","linkedin"].includes(provider))return res.status(400).json({error:"Unsupported social provider."});
+    if(!["instagram","x","tiktok","linkedin","youtube"].includes(provider))return res.status(400).json({error:"Unsupported social provider."});
     const {url,headers}=admin();
     const filter="user_id=eq."+encodeURIComponent(user.id)+"&provider=eq."+encodeURIComponent(provider);
     const tokenDelete=await fetch(url+"/rest/v1/hudhud_oauth_tokens?"+filter,{method:"DELETE",headers});
@@ -184,6 +185,7 @@ const handlers={
  "social-callback-tiktok":socialCallbackTiktok,
  "social-callback-x":socialCallbackX,
  "social-callback-linkedin":socialCallbackLinkedin,
+ "social-callback-youtube":socialCallbackYoutube,
  "social-disconnect":socialDisconnect,
  "social-integrations":socialIntegrations,
  "provider-accounts":providerAccounts,
