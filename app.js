@@ -247,8 +247,7 @@ function authErrorMessage(err){
    err?.hint,
    err?.data?.message,
    err?.data?.error_description,
-   err?.data?.error,
-   err?.response?.data?.message
+   err?.data?.error,   err?.response?.data?.message
  ];
  for(const value of candidates){
    if(typeof value==="string"&&value.trim())return value.trim();
@@ -497,8 +496,7 @@ function workspaceCards(items,kind,filter){
      '<div class="no-steps">No steps defined for this '+(kind==="project"?"project":"opportunity")+'.</div>';
    return '<article class="workspace-card '+(item.status==="Done"?"is-done":"")+'">'+
      '<div class="workspace-card-head"><div><div class="muted">'+(kind==="project"?"PROJECT":"OPPORTUNITY")+'</div><h3>'+esc(item.name)+'</h3></div><span class="pill '+(item.status==="Done"?"pill-done":"")+'">'+esc(item.status||"Planning")+'</span></div>'+
-     '<p class="workspace-description">'+esc(item.description||item.notes||"No description provided.")+'</p>'+(kind==="opportunity"?'<div class="opportunity-meta"><span>'+esc(item.agency||"Agency not set")+'</span><span>'+esc(item.opportunityType||"Type not set")+'</span><span>'+esc(item.category||"Category not set")+'</span>'+(item.eventId?'<span>Event '+esc(item.eventId)+'</span>':'')+'</div>':'')+
-     memberHtml+connectionHtml+
+     '<p class="workspace-description">'+esc(item.description||item.notes||"No description provided.")+'</p>'+(kind==="opportunity"?'<div class="opportunity-meta"><span>'+esc(item.agency||"Agency not set")+'</span><span>'+esc(item.opportunityType||"Type not set")+'</span><span>'+esc(item.category||"Category not set")+'</span>'+(item.eventId?'<span>Event '+esc(item.eventId)+'</span>':'')+'</div>':'')+     memberHtml+connectionHtml+
      '<div class="workspace-progress"><div><span>PROGRESS</span><strong>'+p.done+'/'+p.total+' steps</strong></div><div class="progress-track"><i style="width:'+percent+'%"></i></div></div>'+
      stepsHtml+
      '<div class="workspace-card-actions"><button type="button" class="secondary" data-plan-item="'+kind+'" data-item-id="'+esc(item.id)+'">✎ Manage steps</button><button type="button" class="secondary danger-button" data-delete-workspace="'+kind+'" data-item-id="'+esc(item.id)+'">Delete</button></div>'+
@@ -747,8 +745,7 @@ const newsletterTemplates=[
   {heading:"Next Steps",text:"Tell readers what is coming next.",image:""}
  ]},
  {key:"product-news",name:"Product & Company News",description:"Product announcements, launches and customer-facing news.",sections:[
-  {heading:"What’s New",text:"Introduce the latest product, feature or announcement.",image:""},
-  {heading:"Why It Matters",text:"Explain the value in a few clear sentences.",image:""},
+  {heading:"What’s New",text:"Introduce the latest product, feature or announcement.",image:""},  {heading:"Why It Matters",text:"Explain the value in a few clear sentences.",image:""},
   {heading:"Learn More",text:"Add a call to action, link or next step.",image:""}
  ]},
  {key:"newsletter",name:"Modern Newsletter",description:"Flexible newsletter with a hero, stories and a closing CTA.",sections:[
@@ -997,8 +994,7 @@ function openContactModal(contact=null,onSaved=null){
   if(!name){if(error)error.textContent="Name is required.";return;}
   if(!phone&&!email){if(error)error.textContent="Add a phone number or email address.";return;}
   const button=form.querySelector("button[type=submit]");button.disabled=true;button.textContent=contact?"Saving…":"Creating…";
-  try{
-   const payload={user_id:currentUser.id,name,phone:phone||null,email:email||null,info:info||null,updated_at:new Date().toISOString()};
+  try{   const payload={user_id:currentUser.id,name,phone:phone||null,email:email||null,info:info||null,updated_at:new Date().toISOString()};
    const query=contact
     ?supabaseClient.from("hudhud_contacts").update(payload).eq("id",contact.id).eq("user_id",currentUser.id)
     :supabaseClient.from("hudhud_contacts").insert(payload);
@@ -1168,13 +1164,15 @@ function social(){
   ["instagram","Instagram","Connect your Instagram account and authorize the profile data HudHud may use."],
   ["x","X","Connect your X account for authorized profile and public-post access."],
   ["tiktok","TikTok","Connect TikTok for profile data and, when your TikTok app is approved, content posting/upload permissions."],
-  ["linkedin","LinkedIn","Connect LinkedIn with OpenID Connect and authorize HudHud to share posts on your behalf."]
+  ["linkedin","LinkedIn","Connect LinkedIn with OpenID Connect and authorize HudHud to share posts on your behalf."],
+  ["youtube","YouTube","Connect YouTube to read your channel and, with the permissions you approve, manage and publish YouTube content."]
  ];
  const socialLogos={
   instagram:"/assets/social/instagram.svg",
   x:"/assets/social/x.svg",
   tiktok:"/assets/social/tiktok.svg",
-  linkedin:"/assets/social/linkedin.svg"
+  linkedin:"/assets/social/linkedin.svg",
+  youtube:"/assets/social/youtube.svg"
  };
  const socialLogo=(provider,label)=>'<img src="'+socialLogos[provider]+'" alt="'+label+' logo" loading="eager" referrerpolicy="no-referrer">';
  return '<section class="social-page"><div class="section-head"><div><span class="eyebrow">SOCIAL</span><h2>Your social presence</h2><span class="muted">Real OAuth connections. HudHud only receives the permissions you approve.</span></div><div class="social-summary"><strong id="socialConnectedCount">—</strong><span>connected</span></div></div><div class="social-permission-banner card"><div><strong>🔐 You stay in control</strong><p>Access tokens stay server-side. HudHud’s brain receives connection metadata and scopes, not provider credentials.</p></div></div><div id="socialOAuthError" class="card social-oauth-error" hidden></div><div id="socialGrid" class="social-grid">'+providers.map(p=>'<article class="card social-card" data-social-provider="'+p[0]+'"><div class="social-card-top"><div class="social-logo" data-social-avatar="'+p[0]+'">'+socialLogo(p[0],p[1])+'</div><span class="pill social-status">Not connected</span></div><h3>'+p[1]+'</h3><p>'+p[3]+'</p><div class="social-account" data-social-account="'+p[0]+'">—</div><div class="social-details" data-social-details="'+p[0]+'"></div><div class="social-actions"><button class="secondary social-connect-btn" data-social-connect="'+p[0]+'">Connect &amp; authorize</button><button class="secondary" data-social-view="'+p[0]+'" disabled>Switch</button><button class="secondary" data-social-remove="'+p[0]+'" disabled>Disconnect</button></div></article>').join('')+'</div></section>';
@@ -1247,8 +1245,7 @@ async function bindLifeMap(){
  if(!hasCloudUser())return;
  const {data,error}=await supabaseClient.from("hudhud_lifemap").select("*").eq("user_id",currentUser.id).order("updated_at",{ascending:false});
  const host=document.getElementById("lifemapList"); if(error){if(host)host.innerHTML='<div class="card">Could not load LifeMap.</div>';return;}
- if(host)host.innerHTML=data?.length?data.map(x=>'<article class="card knowledge-card"><div><span class="eyebrow">'+esc(x.category)+'</span><h3>'+esc(x.title)+'</h3><p>'+esc(x.value)+'</p><small>Updated '+new Date(x.updated_at).toLocaleString()+'</small></div><div class="knowledge-actions"><button class="secondary" data-lifemap-edit="'+x.id+'">Edit</button><button class="secondary" data-lifemap-delete="'+x.id+'">Remove</button></div></article>').join(""):'<div class="empty"><strong>Your LifeMap is empty.</strong><span>Add the things you want HudHud to understand as your intentional life structure.</span></div>';
- document.querySelectorAll("[data-lifemap-add]").forEach(b=>b.onclick=()=>editLifeMap(null));
+ if(host)host.innerHTML=data?.length?data.map(x=>'<article class="card knowledge-card"><div><span class="eyebrow">'+esc(x.category)+'</span><h3>'+esc(x.title)+'</h3><p>'+esc(x.value)+'</p><small>Updated '+new Date(x.updated_at).toLocaleString()+'</small></div><div class="knowledge-actions"><button class="secondary" data-lifemap-edit="'+x.id+'">Edit</button><button class="secondary" data-lifemap-delete="'+x.id+'">Remove</button></div></article>').join(""):'<div class="empty"><strong>Your LifeMap is empty.</strong><span>Add the things you want HudHud to understand as your intentional life structure.</span></div>'; document.querySelectorAll("[data-lifemap-add]").forEach(b=>b.onclick=()=>editLifeMap(null));
  document.querySelectorAll("[data-lifemap-edit]").forEach(b=>b.onclick=()=>editLifeMap(data.find(x=>x.id===b.dataset.lifemapEdit)));
  document.querySelectorAll("[data-lifemap-delete]").forEach(b=>b.onclick=async()=>{if(!confirm("Remove this LifeMap item?"))return;await supabaseClient.from("hudhud_lifemap").delete().eq("id",b.dataset.lifemapDelete).eq("user_id",currentUser.id);render("lifemap");});
 }
@@ -1497,8 +1494,7 @@ function setupMobileNav(){
     const group=summary.parentElement;
     const willOpen=!group.hasAttribute("open");
     drawerContent.querySelectorAll("details.nav-group").forEach(other=>{
-      if(other!==group)other.removeAttribute("open");
-    });
+      if(other!==group)other.removeAttribute("open");    });
     if(willOpen)group.setAttribute("open","");
   },{passive:false});
   bindNavigationAccordions(drawer.querySelector(".mobile-drawer-content nav"));
@@ -1747,8 +1743,7 @@ async function handleWorkspaceCommand(message){
    if(!item)return {reply:"I couldn't find that "+kind+"."};
    const ok=kind==="project"?await cloudDeleteProject(item):await cloudDeleteOpportunity(item);
    if(!ok)return {reply:"I couldn't delete “"+item.name+"” because the cloud save failed."};
-   const collection=kind==="project"?state.projects:state.opportunities;
-   collection.splice(collection.indexOf(item),1);
+   const collection=kind==="project"?state.projects:state.opportunities;   collection.splice(collection.indexOf(item),1);
    if(kind==="project")delete projectConnections[item.id];
    save();
    log("Deleted "+kind+": "+item.name);
@@ -1997,8 +1992,7 @@ async function runHudHudStep(projectId,index,button){
  const project=state.projects.find(p=>p.id===projectId),step=project?.steps?.[index];
  if(!project||!step)return;
  if(button){button.disabled=true;button.textContent="🪶";}
- try{
-   const token=await authAccessToken();
+ try{   const token=await authAccessToken();
    if(!token)throw new Error("Please sign in again.");
    const r=await fetch("/api/hudhud-step",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({project,step,connections:selectedProjectConnections(projectId)})});
    const raw=await r.text();let data={};try{data=JSON.parse(raw)}catch{}
