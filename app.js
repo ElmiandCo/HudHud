@@ -563,6 +563,548 @@ function tools(){return '<div class="section-head"><div><h2>Tools</h2><span clas
 ['Files','Documents, project knowledge, memory','READ + WRITE','Planned'],
 ['Web','Fresh information and research','READ','Planned']
 ].map(x=>'<div class="tool-card"><div class="tool-top"><span class="tool-icon">✦</span><span class="tool-state">'+esc(x[3])+'</span></div><h3>'+esc(x[0])+'</h3><p>'+esc(x[1])+'</p><div class="tool-bottom"><span>'+esc(x[2])+'</span><span class="tool-dot"></span></div></div>').join('')+'</div><div class="card tool-note"><div class="muted">HUDHUD TOOL ROUTER</div><h3>One brain. Many tools.</h3><p>HudHud will decide which connection to use, execute the permitted action, inspect the result, and continue until the task is complete.</p></div>';}
+udInsertActivity(text);}
+function nowLabel(){return new Intl.DateTimeFormat(undefined,{dateStyle:"medium"}).format(new Date());}
+function playHudHudChirp(){
+ try{
+   if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+   const AudioContext=window.AudioContext||window.webkitAudioContext;
+   if(!AudioContext)return;
+   const ctx=new AudioContext();
+   const t=ctx.currentTime;
+   const notes=[
+     {f:1850,start:0,dur:.09},
+     {f:2350,start:.08,dur:.10},
+     {f:2050,start:.17,dur:.12}
+   ];
+   notes.forEach(n=>{
+     const osc=ctx.createOscillator(),gain=ctx.createGain();
+     osc.type="sine";
+     osc.frequency.setValueAtTime(n.f,t+n.start);
+     osc.frequency.exponentialRampToValueAtTime(n.f*1.12,t+n.start+n.dur);
+     gain.gain.setValueAtTime(.0001,t+n.start);
+     gain.gain.exponentialRampToValueAtTime(.055,t+n.start+.012);
+     gain.gain.exponentialRampToValueAtTime(.0001,t+n.start+n.dur);
+     osc.connect(gain);gain.connect(ctx.destination);
+     osc.start(t+n.start);osc.stop(t+n.start+n.dur+.01);
+   });
+   setTimeout(()=>ctx.close().catch(()=>{}),500);
+ }catch(e){}
+}
+
+
+async function initSupabase(){
+ if(supabaseReady)return supabaseReady;
+ supabaseReady=(async()=>{
+   const r=await fetch("/api/supabase-config",{cache:"no-store",headers:{"Accept":"application/json"}});
+   const contentType=(r.headers.get("content-type")||"").toLowerCase();
+   const raw=await r.text();
+   let cfg=null;
+   try{cfg=raw?JSON.parse(raw):null;}catch(parseError){
+     const preview=raw.replace(/\s+/g," ").slice(0,160);
+     throw new Error("HudHud configuration API returned an invalid response (HTTP "+r.status+", "+(contentType||"unknown content type")+")."+(preview?" Response starts with: "+preview:""));
+   }
+   if(!r.ok)throw new Error(cfg?.error||"Supabase configuration unavailable (HTTP "+r.status+").");
+   if(!cfg?.url||!cfg?.key)throw new Error("Supabase configuration is incomplete. The HudHud Vercel project needs HUDHUD_SUPABASE_URL and HUDHUD_SUPABASE_KEY.");
+   if(!/^https?:\/\//i.test(String(cfg.url)))throw new Error("HudHud received an invalid Supabase URL from its server configuration.");
+   if(/^sb_secret_/i.test(String(cfg.key).trim())||/^service_role/i.test(String(cfg.key).trim()))throw new Error("HudHud received a server-only Supabase key. Use the publishable/anon key for HUDHUD_SUPABASE_KEY.");
+   if(!window.supabase?.createClient)throw new Error("Supabase browser client did not load.");
+   supabaseClient=window.supabase.createClient(String(cfg.url).trim(),String(cfg.key).trim(),{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+   supabaseClient.auth.onAuthStateChange((event,session)=>{
+     setTimeout(()=>handleAuthSession(session),0);
+   });
+   const {data,error}=await supabaseClient.auth.getSession();
+   if(error)throw error;
+   await handleAuthSession(data.session);
+   return supabaseClient;
+ })().catch(error=>{
+   supabaseReady=null;
+   throw error;
+ });
+ return supabaseReady;
+}
+function hasCloudUser(){return !!currentUser&&!!supabaseClient;}
+async function handleAuthSession(session){
+ const nextUser=session?.user||null;
+ if(!nextUser){
+   currentUser=null;
+   state=Object.assign({},initial,{projects:[],opportunities:[],connections:[],documents:[],activity:[]});
+   localStorage.removeItem(KEY);
+   updateAuthUI();
+   return;
+ }
+ const changed=!currentUser||currentUser.id!==nextUser.id;
+ currentUser=nextUser;
+ updateAuthUI();
+ if(changed){
+   const legacy=load();
+   await loadCloudState();
+   await loadHomePersonalization();
+   ensureHudHudWidget();
+   if(!state.projects.length&&!state.opportunities.length&&!state.connections.length&&(legacy.projects?.length||legacy.opportunities?.length||legacy.connections?.length)){
+     legacyWorkspace=legacy;
+     showImportPrompt();
+   }
+   if(pendingView){const v=pendingView;pendingView=null;render(v);}
+   if(pendingWorkspaceMessage){const m=pendingWorkspaceMessage;pendingWorkspaceMessage=null;setTimeout(()=>sendToHudHud(m),0);}
+ }
+}
+async function loadCloudState(){
+ if(!hasCloudUser())return;
+ const uid=currentUser.id;
+ const [p,o,c,a,pc]=await Promise.all([
+   supabaseClient.from("hudhud_projects").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
+   supabaseClient.from("hudhud_opportunities").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
+   supabaseClient.from("hudhud_connections").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
+   supabaseClient.from("hudhud_activity").select("*").eq("user_id",uid).order("created_at",{ascending:false}).limit(50),
+   supabaseClient.from("hudhud_project_connections").select("*").eq("user_id",uid).order("created_at",{ascending:false})
+ ]);
+ const error=[p,o,c,a,pc].find(x=>x.error)?.error;
+ if(error){console.error("HudHud cloud load failed",error);toast("Could not load your workspace");return;}
+ state.projects=(p.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
+ state.opportunities=(o.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at,opportunityType:x.opportunity_type,eventId:x.event_id}));
+ state.connections=(c.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
+ state.activity=(a.data||[]).map(x=>({text:x.text,at:x.created_at,id:x.id}));
+ projectConnections={};
+ (pc.data||[]).forEach(x=>{(projectConnections[x.project_id]||(projectConnections[x.project_id]=[])).push({...x,settings:x.settings||{}});});
+ save();
+}
+async function importLegacyWorkspace(){
+ if(!hasCloudUser()||!legacyWorkspace)return;
+ const l=legacyWorkspace;
+ const projects=(l.projects||[]).map(x=>({user_id:currentUser.id,name:x.name,description:x.description||"",status:x.status==="Done"?"Done":x.status||"Planning",steps:Array.isArray(x.steps)?x.steps:[],pre_done_status:x.preDoneStatus||null,created_at:x.createdAt||new Date().toISOString(),updated_at:x.updatedAt||x.createdAt||new Date().toISOString()}));
+ const opportunities=(l.opportunities||[]).map(x=>({user_id:currentUser.id,name:x.name,description:x.description||x.notes||"",status:x.status==="Done"?"Done":x.status||"Open",steps:Array.isArray(x.steps)?x.steps:[],pre_done_status:x.preDoneStatus||null,created_at:x.createdAt||new Date().toISOString(),updated_at:x.updatedAt||x.createdAt||new Date().toISOString()}));
+ const connections=(l.connections||[]).map(x=>({user_id:currentUser.id,name:x.name,details:x.details||"",status:x.status||"Recorded",created_at:x.createdAt||new Date().toISOString(),updated_at:x.updatedAt||x.createdAt||new Date().toISOString()}));
+ if(projects.length)await supabaseClient.from("hudhud_projects").insert(projects);
+ if(opportunities.length)await supabaseClient.from("hudhud_opportunities").insert(opportunities);
+ if(connections.length)await supabaseClient.from("hudhud_connections").insert(connections);
+ await loadCloudState();
+ legacyWorkspace=null;
+ closeAuthModal();
+ toast("Existing workspace imported");
+}
+async function cloudInsertProject(item){
+ if(!hasCloudUser())return true;
+ const {data,error}=await supabaseClient.from("hudhud_projects").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
+ if(data?.id)item.id=data.id;
+ if(error){toast("Project save failed");console.error(error);return false;} return true;
+}
+async function cloudUpdateProject(item){
+ if(!hasCloudUser())return true;
+ const {error}=await supabaseClient.from("hudhud_projects").update({name:item.name,description:item.description||"",status:item.status,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,updated_at:item.updatedAt||new Date().toISOString()}).eq("id",item.id).eq("user_id",currentUser.id);
+ if(error){toast("Project update failed");console.error(error);return false;} return true;
+}
+async function cloudDeleteProject(item){
+ if(!hasCloudUser())return true;
+ const {error:pcError}=await supabaseClient.from("hudhud_project_connections").delete().eq("project_id",item.id).eq("user_id",currentUser.id);
+ if(pcError){console.error(pcError);toast("Project connection delete failed");return false;}
+ const {error}=await supabaseClient.from("hudhud_projects").delete().eq("id",item.id).eq("user_id",currentUser.id);
+ if(error){console.error(error);toast("Project delete failed");return false;}
+ return true;
+}
+async function cloudDeleteOpportunity(item){
+ if(!hasCloudUser())return true;
+ const {error}=await supabaseClient.from("hudhud_opportunities").delete().eq("id",item.id).eq("user_id",currentUser.id);
+ if(error){console.error(error);toast("Opportunity delete failed");return false;}
+ return true;
+}
+async function cloudInsertOpportunity(item){
+ if(!hasCloudUser())return true;
+ const {data,error}=await supabaseClient.from("hudhud_opportunities").insert({user_id:currentUser.id,name:item.name,description:item.description||"",status:item.status,agency:item.agency||null,opportunity_type:item.opportunityType||null,category:item.category||null,event_id:item.eventId||null,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
+ if(data?.id)item.id=data.id;
+ if(error){toast("Opportunity save failed");console.error(error);return false;} return true;
+}
+async function cloudUpdateOpportunity(item){
+ if(!hasCloudUser())return true;
+ const {error}=await supabaseClient.from("hudhud_opportunities").update({name:item.name,description:item.description||"",status:item.status,agency:item.agency||null,opportunity_type:item.opportunityType||null,category:item.category||null,event_id:item.eventId||null,steps:item.steps||[],pre_done_status:item.preDoneStatus||null,updated_at:item.updatedAt||new Date().toISOString()}).eq("id",item.id).eq("user_id",currentUser.id);
+ if(error){toast("Opportunity update failed");console.error(error);return false;} return true;
+}
+async function cloudInsertConnection(item){
+ if(!hasCloudUser())return true;
+ const {data,error}=await supabaseClient.from("hudhud_connections").insert({user_id:currentUser.id,name:item.name,details:item.details||"",status:item.status||"Recorded",created_at:item.createdAt,updated_at:item.updatedAt||item.createdAt}).select().single();
+ if(data?.id)item.id=data.id;
+ if(error){toast("Connection save failed");console.error(error);return false;} return true;
+}
+async function cloudUpsertConnection(provider,settings,detail){
+ if(!hasCloudUser())return null;
+ const payload={user_id:currentUser.id,provider,name:provider.charAt(0).toUpperCase()+provider.slice(1),details:detail||"",status:"Configured",settings:settings||{},updated_at:new Date().toISOString()};
+ const {data,error}=await supabaseClient.from("hudhud_connections").upsert(payload,{onConflict:"user_id,provider"}).select().single();
+ if(error){console.error("Connection settings save failed",error);toast("Connection settings failed");return null;}
+ const item={...data,createdAt:data.created_at,updatedAt:data.updated_at};
+ const old=state.connections.findIndex(x=>x.provider===provider);
+ if(old>=0)state.connections[old]=item;else state.connections.unshift(item);
+ save();
+ return item;
+}
+async function cloudSaveProjectConnections(projectId,rows){
+ if(!hasCloudUser()||!projectId)return false;
+ const {error:deleteError}=await supabaseClient.from("hudhud_project_connections").delete().eq("user_id",currentUser.id).eq("project_id",projectId);
+ if(deleteError){console.error(deleteError);toast("Project connection update failed");return false;}
+ if(rows.length){
+   const {error}=await supabaseClient.from("hudhud_project_connections").insert(rows.map(x=>({user_id:currentUser.id,project_id:projectId,connection_id:x.connection_id,settings:x.settings||{}})));
+   if(error){console.error(error);toast("Project connection update failed");return false;}
+ }
+ projectConnections[projectId]=rows;
+ return true;
+}
+function projectConnectionRows(projectId){return projectConnections[projectId]||[];}
+function selectedProjectConnections(projectId){
+ return projectConnectionRows(projectId).map(row=>state.connections.find(c=>c.id===row.connection_id)||null).filter(Boolean).map(c=>({...c,projectSettings:projectConnectionRows(projectId).find(r=>r.connection_id===c.id)?.settings||{}}));
+}
+async function cloudInsertActivity(textValue){
+ if(!hasCloudUser())return;
+ const {error}=await supabaseClient.from("hudhud_activity").insert({user_id:currentUser.id,text:textValue});
+ if(error)console.error("Activity save failed",error);
+}
+function updateAuthUI(){
+ const buttons=document.querySelectorAll("[data-auth-start]");
+ buttons.forEach(b=>{b.textContent=currentUser?"Open Workspace":"Get Started";});
+ const top=document.getElementById("authUser");
+ const account=document.getElementById("authAccountButton");
+ if(top)top.textContent=currentUser?(currentUser.email||"Signed in"):"";
+ if(account){
+   account.textContent=currentUser?"Sign out":"Sign in";
+   account.onclick=()=>currentUser?signOut():showAuthModal("signin");
+ }
+}
+function authModalHtml(){
+ return '<div class="auth-backdrop" data-auth-close></div><div class="auth-dialog" role="dialog" aria-modal="true"><button class="auth-close" data-auth-close>×</button><div class="eyebrow">HUDHUD ACCOUNT</div><h2>'+ (authMode==="signin"?"Welcome back":"Create your HudHud account") +'</h2><p class="auth-subtitle">'+(authMode==="signin"?"Sign in to access your private workspace.":"Create an account so your workspace belongs to you.")+'</p><div class="auth-tabs"><button class="'+(authMode==="signin"?"active":"")+'" data-auth-mode="signin">Sign in</button><button class="'+(authMode==="signup"?"active":"")+'" data-auth-mode="signup">Create account</button></div><form id="authForm"><label>Email</label><input name="email" type="email" autocomplete="email" required placeholder="you@example.com"><label>Password</label><input name="password" type="password" autocomplete="'+(authMode==="signin"?"current-password":"new-password")+'" minlength="6" required placeholder="At least 6 characters">'+(authMode==="signup"?'<label>Confirm password</label><input name="confirm" type="password" autocomplete="new-password" minlength="6" required placeholder="Repeat your password">':"")+'<div id="authError" class="auth-error"></div><button class="primary auth-submit" type="submit">'+(authMode==="signin"?"Sign in":"Create account")+'</button></form><div class="auth-footer">'+(authMode==="signin"?"New to HudHud?":"Already have an account?")+' <button type="button" data-auth-mode="'+(authMode==="signin"?"signup":"signin")+'">'+(authMode==="signin"?"Create an account":"Sign in")+'</button></div></div>';
+}
+function showAuthModal(mode="signin"){
+ authMode=mode;
+ const modal=document.getElementById("authModal");if(!modal)return;
+ modal.innerHTML=authModalHtml();modal.classList.add("show");modal.setAttribute("aria-hidden","false");
+ bindAuthModal();
+}
+function closeAuthModal(){
+ const modal=document.getElementById("authModal");if(!modal)return;
+ modal.classList.remove("show");modal.setAttribute("aria-hidden","true");
+}
+function authErrorMessage(err){
+ const candidates=[
+   err?.message,
+   err?.error_description,
+   err?.error,
+   err?.details,
+   err?.hint,
+   err?.data?.message,
+   err?.data?.error_description,
+   err?.data?.error,   err?.response?.data?.message
+ ];
+ for(const value of candidates){
+   if(typeof value==="string"&&value.trim())return value.trim();
+ }
+ if(err&&typeof err==="object"){
+   try{
+     const serialized=JSON.stringify(err);
+     if(serialized&&serialized!=="{}")return serialized;
+   }catch{}
+ }
+ return String(err||"Authentication failed.");
+}
+
+function bindAuthModal(){
+ const modal=document.getElementById("authModal");
+ modal.querySelectorAll("[data-auth-close]").forEach(b=>b.onclick=closeAuthModal);
+ modal.querySelectorAll("[data-auth-mode]").forEach(b=>b.onclick=()=>showAuthModal(b.dataset.authMode));
+ const form=modal.querySelector("#authForm");
+ if(form)form.onsubmit=async e=>{
+   e.preventDefault();
+   const f=new FormData(form),email=String(f.get("email")).trim(),password=String(f.get("password"));
+   const errorEl=modal.querySelector("#authError"),submit=modal.querySelector(".auth-submit");
+   if(errorEl)errorEl.textContent="";
+   if(authMode==="signup"&&password!==String(f.get("confirm"))){if(errorEl)errorEl.textContent="Passwords do not match.";return;}
+   submit.disabled=true;submit.textContent=authMode==="signin"?"Signing in…":"Creating account…";
+   try{
+     await initSupabase();
+     const result=authMode==="signin"
+       ?await supabaseClient.auth.signInWithPassword({email,password})
+       :await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin}});
+     if(result.error)throw result.error;
+     if(authMode==="signup"&&!result.data.session){
+       if(errorEl)errorEl.textContent="Account created. Check your email to confirm your account, then sign in.";
+       submit.disabled=false;submit.textContent="Create account";return;
+     }
+     closeAuthModal();
+     toast("Signed in");
+   }catch(err){
+     const message=authErrorMessage(err);
+     if(errorEl)errorEl.textContent=message;
+     console.error("HudHud authentication failed",err);
+     submit.disabled=false;
+     submit.textContent=authMode==="signin"?"Sign in":"Create account";
+   }
+ };
+}
+function showImportPrompt(){
+ const modal=document.getElementById("authModal");if(!modal||!legacyWorkspace)return;
+ const p=legacyWorkspace.projects?.length||0,o=legacyWorkspace.opportunities?.length||0,c=legacyWorkspace.connections?.length||0;
+ modal.innerHTML='<div class="auth-backdrop"></div><div class="auth-dialog import-dialog"><div class="eyebrow">WORKSPACE FOUND</div><h2>Import your existing workspace?</h2><p class="auth-subtitle">HudHud found '+p+' project(s), '+o+' opportunity(ies), and '+c+' connection(s) stored on this browser. Import them into your signed-in account?</p><div class="form-actions"><button class="primary" data-import-workspace>Import workspace</button><button class="secondary" data-skip-import>Start fresh</button></div></div>';
+ modal.classList.add("show");modal.setAttribute("aria-hidden","false");
+ modal.querySelector("[data-import-workspace]").onclick=async b=>{b.currentTarget.disabled=true;b.currentTarget.textContent="Importing…";await importLegacyWorkspace();};
+ modal.querySelector("[data-skip-import]").onclick=()=>{legacyWorkspace=null;closeAuthModal();localStorage.removeItem(KEY);};
+}
+function requireAuth(view){
+ if(currentUser)return true;
+ pendingView=view;
+ showAuthModal("signin");
+ return false;
+}
+async function signOut(){
+ if(supabaseClient)await supabaseClient.auth.signOut();
+ currentUser=null;
+ state=Object.assign({},initial,{projects:[],opportunities:[],connections:[],documents:[],activity:[]});
+ localStorage.removeItem(KEY);
+ toast("Signed out");
+ render("home");
+}
+
+
+let homeComponents=[];
+let hudhudSettings={theme:"night",bird_enabled:true,bird_x:null,bird_y:null};
+
+function defaultHomeComponents(){
+ return [
+  {component_key:"projects",title:"Projects",source:"hudhud",metric:"projects",position:0,enabled:true},
+  {component_key:"opportunities",title:"Opportunities",source:"hudhud",metric:"opportunities",position:1,enabled:true},
+  {component_key:"activity",title:"Activity",source:"hudhud",metric:"activity",position:2,enabled:true}
+ ];
+}
+async function loadHomePersonalization(){
+ if(!hasCloudUser())return;
+ try{
+  const [settings,components]=await Promise.all([
+   supabaseClient.from("hudhud_user_settings").select("*").eq("user_id",currentUser.id).maybeSingle(),
+   supabaseClient.from("hudhud_home_components").select("*").eq("user_id",currentUser.id).eq("enabled",true).order("position")
+  ]);
+  if(settings.data) hudhudSettings={...hudhudSettings,...settings.data};
+  if(components.data?.length) homeComponents=components.data;
+  else{
+   homeComponents=defaultHomeComponents();
+   await supabaseClient.from("hudhud_home_components").upsert(homeComponents.map(x=>({...x,user_id:currentUser.id})),{onConflict:"user_id,component_key"});
+  }
+  applyTheme(hudhudSettings.theme||"night",false);
+ }catch(e){console.warn("Home personalization load failed",e);}
+}
+async function saveHudHudSettings(patch){
+ if(!hasCloudUser())return;
+ hudhudSettings={...hudhudSettings,...patch};
+ await supabaseClient.from("hudhud_user_settings").upsert({user_id:currentUser.id,...hudhudSettings,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+}
+async function saveHomeComponents(){
+ if(!hasCloudUser())return;
+ const rows=homeComponents.map((x,i)=>({...x,user_id:currentUser.id,position:i,updated_at:new Date().toISOString()}));
+ await supabaseClient.from("hudhud_home_components").upsert(rows,{onConflict:"user_id,component_key"});
+}
+function homeComponentValue(c){
+ if(c.metric==="projects")return {value:state.projects.length,detail:"Created in this workspace"};
+ if(c.metric==="opportunities")return {value:state.opportunities.length,detail:"Added by you"};
+ if(c.metric==="activity")return {value:state.activity.length,detail:"Real workspace events"};
+ return {value:"—",detail:c.provider?c.provider+" connection":"Connect a source"};
+}
+async function refreshConnectionHomeMetric(c,host){
+ if(!c.provider||!host)return;
+ try{
+  const token=await authAccessToken();
+  const r=await fetch("/api/connection-resources?provider="+encodeURIComponent(c.provider),{headers:token?{Authorization:"Bearer "+token}:{}});
+  const d=await r.json();
+  if(r.ok){
+   const count=(d.resources||[]).length;
+   const value=host.querySelector(".metric"); const detail=host.querySelector(".home-component-detail");
+   if(value)value.textContent=count;
+   if(detail)detail.textContent=(c.provider.charAt(0).toUpperCase()+c.provider.slice(1))+" resources discovered";
+  }
+ }catch(e){}
+}
+function homeComponentCard(c){
+ const v=homeComponentValue(c), icon=c.provider==="github"?"🐙":c.provider==="vercel"?"▲":c.provider==="supabase"?"⚡":"";
+ return '<article class="card home-component-card" draggable="true" data-home-component="'+esc(c.component_key)+'">'+
+   '<div class="home-component-head"><span class="muted">'+esc(c.title.toUpperCase())+'</span><button type="button" class="home-component-edit" title="Remove component" data-home-remove="'+esc(c.component_key)+'">×</button></div>'+
+   '<div class="metric">'+(icon?icon+" ":"")+esc(v.value)+'</div><div class="muted home-component-detail">'+esc(v.detail)+'</div></article>';
+}
+function home(){
+ const components=(homeComponents.length?homeComponents:defaultHomeComponents()).filter(x=>x.enabled!==false).sort((a,b)=>(a.position||0)-(b.position||0));
+ return '<section class="hero hudhud-home-banner">'+
+   '<div class="home-banner-content">'+
+   '<div class="home-banner-glass">'+
+   '<span class="eyebrow">HEADQUARTERS</span><h1>Welcome home.</h1>'+
+   '<p>Talk to HudHud here. Your Home page is personal to this workspace and can grow with the connections you authorize.</p>'+
+   '<div class="home-legal-links" aria-label="Legal and account links"><a href="/privacy">Privacy Policy</a><span aria-hidden="true">•</span><a href="/terms">Terms of Service</a><span aria-hidden="true">•</span><button type="button" data-go="core">Settings</button></div>'+
+   '<div class="actions"><button class="primary" data-auth-start>Get Started</button><button class="secondary" data-home-add-component>＋ Add Component</button></div>'+
+   '<div class="home-chat"><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div>'+
+   '</div></div></section>'+
+   '<section class="home-feature-rail" aria-label="HudHud capabilities"><div class="home-feature"><b>⚡</b><span>AI Agents</span><small>Automate. Amplify.</small></div><div class="home-feature"><b>◈</b><span>Social Media</span><small>Connect. Publish.</small></div><div class="home-feature"><b>▥</b><span>Analytics</span><small>Track. Grow.</small></div><div class="home-feature"><b>◇</b><span>Build</span><small>Create. Scale.</small></div></section>'+
+   '<section id="homeComponentGrid" class="grid home-component-grid" style="margin-top:34px">'+components.map(homeComponentCard).join("")+'</section><div id="homeComponentModal"></div>';
+}
+function openHomeComponentModal(){
+ const host=document.getElementById("homeComponentModal");if(!host)return;
+ const existing=new Set(homeComponents.map(x=>x.component_key));
+ const connected=new Set((state.connections||[]).map(x=>x.provider));
+ const options=[
+  ["projects","Projects","HudHud","projects","Workspace project count"],
+  ["opportunities","Opportunities","HudHud","opportunities","Workspace opportunity count"],
+  ["activity","Activity","HudHud","activity","Recent workspace events"],
+  ["github-resources","GitHub Resources","GitHub","resources","Authorized GitHub resources"],
+  ["vercel-resources","Vercel Resources","Vercel","resources","Authorized Vercel resources"],
+  ["supabase-resources","Supabase Resources","Supabase","resources","Authorized Supabase resources"]
+ ];
+ host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-home-components></div><div class="resource-dialog home-component-picker"><button class="resource-close" data-close-home-components>×</button><div class="eyebrow">HOME COMPONENTS</div><h2>Customize your Home</h2><p class="resource-subtitle">Add metric cards from HudHud or from connections you have authorized.</p><div class="home-component-options">'+options.map(o=>{const provider=o[2].toLowerCase();const locked=!["HudHud"].includes(o[2])&&!connected.has(provider);return '<button class="home-option" '+((existing.has(o[0])||locked)?"disabled":"")+' data-add-home="'+esc(o[0])+'" data-home-provider="'+esc(provider)+'"><span>'+esc(o[2])+'</span><strong>'+esc(o[1])+'</strong><small>'+esc(locked?"Connect "+o[2]+" first":o[4])+'</small></button>';}).join("")+'</div></div></div>';
+ host.querySelectorAll("[data-close-home-components]").forEach(b=>b.onclick=()=>host.innerHTML="");
+ host.querySelectorAll("[data-add-home]").forEach(b=>b.onclick=async()=>{
+   const key=b.dataset.addHome, provider=b.dataset.homeProvider;
+   const opt=options.find(x=>x[0]===key);if(!opt)return;
+   homeComponents.push({component_key:key,title:opt[1],source:opt[2],provider:provider==="hudhud"?null:provider,metric:opt[3],position:homeComponents.length,enabled:true,config:{}});
+   await saveHomeComponents();host.innerHTML="";render("home");toast(opt[1]+" added to Home");
+ });
+}
+function removeHomeComponent(key){
+ if(["projects","opportunities","activity"].includes(key)){toast("Your default Home cards stay available.");return;}
+ homeComponents=homeComponents.filter(x=>x.component_key!==key);
+ saveHomeComponents();render("home");toast("Component removed");
+}
+function bindHomeComponents(){
+ document.querySelector("[data-home-add-component]")?.addEventListener("click",openHomeComponentModal);
+ document.querySelectorAll("[data-home-remove]").forEach(b=>b.onclick=()=>removeHomeComponent(b.dataset.homeRemove));
+ const grid=document.getElementById("homeComponentGrid");let dragKey=null;
+ grid?.querySelectorAll("[data-home-component]").forEach(card=>{
+  card.ondragstart=()=>{dragKey=card.dataset.homeComponent;card.classList.add("dragging");};
+  card.ondragend=()=>{dragKey=null;card.classList.remove("dragging");};
+  card.ondragover=e=>e.preventDefault();
+  card.ondrop=async e=>{e.preventDefault();const target=card.dataset.homeComponent;if(!dragKey||dragKey===target)return;const a=homeComponents.findIndex(x=>x.component_key===dragKey),b=homeComponents.findIndex(x=>x.component_key===target);if(a<0||b<0)return;const [m]=homeComponents.splice(a,1);homeComponents.splice(b,0,m);await saveHomeComponents();render("home");};
+  const c=homeComponents.find(x=>x.component_key===card.dataset.homeComponent);if(c&&c.provider)refreshConnectionHomeMetric(c,card);
+ });
+}
+function ensureHudHudWidget(){
+ if(!currentUser||!hudhudSettings.bird_enabled)return;
+ let host=document.getElementById("hudhudFloatingHost");
+ if(host)return;
+ host=document.createElement("div");host.id="hudhudFloatingHost";document.body.appendChild(host);
+ const x=Number(hudhudSettings.bird_x),y=Number(hudhudSettings.bird_y);
+ const left=Number.isFinite(x)?x:(window.innerWidth-82),top=Number.isFinite(y)?y:(window.innerHeight-170);
+ host.innerHTML='<button id="hudhudBird" class="hudhud-bird" aria-label="Open HudHud"><img src="/assets/hudhud-logo.svg" alt="HudHud"></button><div id="hudhudBirdMenu" class="hudhud-bird-menu" hidden><div class="hudhud-bird-title">HUDHUD</div><button data-bird-chat>💬 HudHud Chat</button><button data-bird-theme>☼ Day / Night</button><button data-bird-signout>⇥ Sign out</button></div>';
+ host.style.left=Math.max(12,Math.min(window.innerWidth-70,left))+"px";host.style.top=Math.max(70,Math.min(window.innerHeight-70,top))+"px";
+ const bird=host.querySelector("#hudhudBird"),menu=host.querySelector("#hudhudBirdMenu");
+ bird.onclick=()=>menu.hidden=!menu.hidden;
+ host.querySelector("[data-bird-chat]").onclick=()=>{menu.hidden=true;render("home");setTimeout(()=>document.getElementById("chatInput")?.focus(),80);};
+ host.querySelector("[data-bird-theme]").onclick=async()=>{const next=(hudhudSettings.theme||"night")==="night"?"day":"night";applyTheme(next);await saveHudHudSettings({theme:next});};
+ host.querySelector("[data-bird-signout]").onclick=()=>signOut();
+ let dragging=false,dx=0,dy=0;
+ const move=e=>{if(!dragging)return;const p=e.touches?e.touches[0]:e;host.style.left=Math.max(8,Math.min(window.innerWidth-68,p.clientX-dx))+"px";host.style.top=Math.max(62,Math.min(window.innerHeight-68,p.clientY-dy))+"px";};
+ const end=async()=>{if(!dragging)return;dragging=false;await saveHudHudSettings({bird_x:parseFloat(host.style.left),bird_y:parseFloat(host.style.top)});};
+ bird.addEventListener("pointerdown",e=>{dragging=true;dx=e.clientX-host.offsetLeft;dy=e.clientY-host.offsetTop;bird.setPointerCapture?.(e.pointerId);});
+ bird.addEventListener("pointermove",move);bird.addEventListener("pointerup",end);bird.addEventListener("pointercancel",end);
+}
+
+
+function list(items,title,desc){
+ if(!items.length)return '<div class="empty"><strong>'+title+'</strong>'+desc+'</div>';
+ return '<div class="list">'+items.map(x=>'<div class="row"><div><h3>'+esc(x.name||x.text)+'</h3><p>'+esc(x.description||x.notes||x.details||((x.at)?new Date(x.at).toLocaleString():""))+'</p></div><span class="pill">'+esc(x.status||"Recorded")+'</span></div>').join("")+'</div>';
+}
+function ensureSteps(item){
+ if(!Array.isArray(item.steps))item.steps=[];
+ return item.steps;
+}
+function stepProgress(item){
+ const steps=ensureSteps(item);
+ const done=steps.filter(s=>s.done).length;
+ return {done,total:steps.length};
+}
+function workspaceTabs(kind,activeCount,doneCount){
+ const filter=kind==="project"?projectFilter:opportunityFilter;
+ return '<div class="workspace-tabs">'+
+   '<button class="'+(filter==="active"?"active":"")+'" data-workspace-filter="'+kind+'" data-filter="active">Active <span>'+activeCount+'</span></button>'+
+   '<button class="'+(filter==="done"?"active":"")+'" data-workspace-filter="'+kind+'" data-filter="done">Done <span>'+doneCount+'</span></button>'+
+   '<button class="'+(filter==="all"?"active":"")+'" data-workspace-filter="'+kind+'" data-filter="all">All <span>'+(activeCount+doneCount)+'</span></button>'+
+ '</div>';
+}
+function workspaceCards(items,kind,filter){
+ const filtered=items.filter(item=>{
+   const isDone=item.status==="Done";
+   return filter==="done"?isDone:filter==="active"?!isDone:true;
+ });
+ if(!filtered.length){
+   return '<div class="empty workspace-empty"><strong>'+ (filter==="done"?"Nothing is done yet.":"No active "+(kind==="project"?"projects":"opportunities")+" yet.")+'</strong>'+
+     (filter==="done"?"Finish every step on an item and it will move here automatically.":"Create one above and break it into clear steps.")+'</div>';
+ }
+ return '<div class="workspace-cards">'+filtered.map(item=>{
+   const p=stepProgress(item),percent=p.total?Math.round((p.done/p.total)*100):0;
+   const linked=selectedProjectConnections(item.id);
+   const connectionHtml=kind==="project"?'<div class="project-connections"><div class="project-connections-head"><span>CONNECTIONS</span><button type="button" class="secondary mini-button" data-project-connections="'+esc(item.id)+'">⚙ Configure</button></div><div class="project-connection-chips">'+(linked.length?linked.map(c=>'<span class="project-chip">'+(c.provider==="github"?"🐙":c.provider==="vercel"?"▲":"⚡")+' '+esc(c.name)+'</span>').join(""):'<span class="muted">No connections selected.</span>')+'</div></div>':'';
+   const memberHtml='<div class="project-members"><div class="project-members-head"><span>MEMBERS</span><button type="button" class="secondary mini-button" data-members-kind="'+kind+'" data-members-id="'+esc(item.id)+'">＋ Manage</button></div><div class="project-member-chips" data-member-chips="'+kind+'" data-member-item="'+esc(item.id)+'"><span class="muted">Loading contacts…</span></div></div>';
+   const stepsHtml=p.total?'<div class="workspace-steps">'+item.steps.map((step,index)=>
+     '<div class="workspace-step-row"><button type="button" class="workspace-step '+(step.done?"done":"")+'" data-step-toggle="'+kind+'" data-item-id="'+esc(item.id)+'" data-step-index="'+index+'"><span class="step-check">'+(step.done?"✓":"")+'</span><span>'+esc(step.name)+'</span></button>'+
+     (kind==="project"?'<button type="button" class="hudhud-step-button" title="Ask HudHud to complete this step" data-hudhud-step="'+esc(item.id)+'" data-step-index="'+index+'">🦉</button>':'')+
+     '</div>').join("")+'</div>':
+     '<div class="no-steps">No steps defined for this '+(kind==="project"?"project":"opportunity")+'.</div>';
+   return '<article class="workspace-card '+(item.status==="Done"?"is-done":"")+'">'+
+     '<div class="workspace-card-head"><div><div class="muted">'+(kind==="project"?"PROJECT":"OPPORTUNITY")+'</div><h3>'+esc(item.name)+'</h3></div><span class="pill '+(item.status==="Done"?"pill-done":"")+'">'+esc(item.status||"Planning")+'</span></div>'+
+     '<p class="workspace-description">'+esc(item.description||item.notes||"No description provided.")+'</p>'+(kind==="opportunity"?'<div class="opportunity-meta"><span>'+esc(item.agency||"Agency not set")+'</span><span>'+esc(item.opportunityType||"Type not set")+'</span><span>'+esc(item.category||"Category not set")+'</span>'+(item.eventId?'<span>Event '+esc(item.eventId)+'</span>':'')+'</div>':'')+     memberHtml+connectionHtml+
+     '<div class="workspace-progress"><div><span>PROGRESS</span><strong>'+p.done+'/'+p.total+' steps</strong></div><div class="progress-track"><i style="width:'+percent+'%"></i></div></div>'+
+     stepsHtml+
+     '<div class="workspace-card-actions"><button type="button" class="secondary" data-plan-item="'+kind+'" data-item-id="'+esc(item.id)+'">✎ Manage steps</button><button type="button" class="secondary danger-button" data-delete-workspace="'+kind+'" data-item-id="'+esc(item.id)+'">Delete</button></div>'+
+   '</article>';
+ }).join("")+'</div>';
+}
+
+let projectFilter="active";
+let opportunityFilter="active";
+function workspacePlanForm(kind,item){
+ const steps=ensureSteps(item);
+ const count=steps.length||3;
+ return '<div class="section-head"><div><span class="eyebrow">EDIT WORKFLOW</span><h2>Manage '+(kind==="project"?"project":"opportunity")+'</h2><span class="muted">Update the description, choose the number of steps, and give HudHud a prompt for each step.</span></div></div>'+
+ '<form class="card form workspace-form" id="planForm" data-plan-kind="'+kind+'" data-plan-id="'+esc(item.id)+'">'+
+ '<label>Name *</label><input name="name" required maxlength="100" value="'+esc(item.name)+'">'+
+ '<label>Description *</label><textarea name="description" required maxlength="1000">'+esc(item.description||item.notes||"")+'</textarea>'+
+ '<label>Number of steps *</label><select id="planStepCount" name="stepCount">'+Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'" '+((i+1)===count?"selected":"")+'>'+(i+1)+(i===0?" step":" steps")+'</option>').join("")+'</select>'+
+ '<div class="step-builder"><div class="step-builder-head"><span>WORKFLOW STEPS</span><small>Name the step, then tell HudHud what completing it means.</small></div><div id="planStepFields" class="step-builder-fields"></div></div>'+
+ '<div class="form-actions"><button type="submit" class="primary">Save workflow</button><button type="button" class="secondary" data-action="cancel">Cancel</button></div></form>';
+}
+function bindPlanBuilder(item){
+ const select=document.getElementById("planStepCount"),fields=document.getElementById("planStepFields");
+ if(!select||!fields)return;
+ const renderFields=()=>{
+   const count=Number(select.value)||1,steps=ensureSteps(item);
+   fields.innerHTML=Array.from({length:count},(_,i)=>{
+     const existing=steps[i];
+     return '<div class="step-builder-item"><div class="step-name-field"><span>'+String(i+1).padStart(2,"0")+'</span><input name="step_'+i+'" maxlength="120" placeholder="Step '+(i+1)+' name" value="'+esc(existing?.name||"")+'" required></div><input class="step-prompt-field" name="step_prompt_'+i+'" maxlength="500" placeholder="HudHud prompt for this step (optional)" value="'+esc(existing?.prompt||existing?.name||"")+'"></div>';
+   }).join("");
+ };
+ select.onchange=renderFields;
+ renderFields();
+}
+function editWorkspacePlan(kind,id){
+ const collection=kind==="project"?state.projects:state.opportunities;
+ const item=collection.find(x=>x.id===id);
+ if(!item){toast("Item not found");return;}
+ document.getElementById("main").innerHTML=workspacePlanForm(kind,item);
+ bind(kind==="project"?"projects":"opportunities");
+ bindPlanBuilder(item);
+}
+
+function projects(){
+ const items=state.projects||[];
+ const active=items.filter(x=>x.status!=="Done").length;
+ const done=items.filter(x=>x.status==="Done").length;
+ return '<div class="section-head"><div><span class="eyebrow">WORKSPACE</span><h2>Projects</h2><span class="muted">Give every project a description, a clear sequence of steps, and a visible finish line.</span></div><button class="primary" data-action="new-project">＋ New project</button></div>'+
+ workspaceTabs("project",active,done)+
+ workspaceCards(items,"project",projectFilter);
+}
+function opportunities(){
+ const items=state.opportunities||[];
+ const active=items.filter(x=>x.status!=="Done").length;
+ const done=items.filter(x=>x.status==="Done").length;
+ return '<div class="section-head"><div><span class="eyebrow">PIPELINE</span><h2>Opportunities</h2><span class="muted">Break each opportunity into steps and move it to Done automatically when the work is complete.</span></div><button class="primary" data-action="new-opportunity">＋ Add opportunity</button></div>'+
+ workspaceTabs("opportunity",active,done)+
+ workspaceCards(items,"opportunity",opportunityFilter);
+}
+function tools(){return '<div class="section-head"><div><h2>Tools</h2><span class="muted">HudHud\'s action layer — capabilities are separated from the brain.</span></div></div><div class="tool-grid">'+[
+['GitHub','Code, repositories, issues, pull requests','READ + WRITE','Ready to wire'],
+['Vercel','Projects, deployments, build status','READ + DEPLOY','Ready to wire'],
+['Supabase','Database, auth, storage, Edge Functions','READ + WRITE','Ready to wire'],
+['OpenClaw','Browser and computer-side actions','ACTION','Local bridge'],
+['Files','Documents, project knowledge, memory','READ + WRITE','Planned'],
+['Web','Fresh information and research','READ','Planned']
+].map(x=>'<div class="tool-card"><div class="tool-top"><span class="tool-icon">✦</span><span class="tool-state">'+esc(x[3])+'</span></div><h3>'+esc(x[0])+'</h3><p>'+esc(x[1])+'</p><div class="tool-bottom"><span>'+esc(x[2])+'</span><span class="tool-dot"></span></div></div>').join('')+'</div><div class="card tool-note"><div class="muted">HUDHUD TOOL ROUTER</div><h3>One brain. Many tools.</h3><p>HudHud will decide which connection to use, execute the permitted action, inspect the result, and continue until the task is complete.</p></div><section class="card" style="margin-top:18px"><div class="command-section-head"><div><span class="eyebrow">STRIPE CONNECT</span><h3>Your Stripe account</h3><p>Connect a Stripe account for HudHud payment and payout workflows. X API usage billing remains a HudHud billing relationship; this connection is for your Stripe merchant account.</p></div><button class="primary" data-stripe-connect>Connect Stripe</button></div></section>';}
 function bindTools(){document.querySelectorAll("[data-stripe-connect]").forEach(b=>b.onclick=async()=>{b.disabled=true;b.textContent="Opening Stripe…";try{const token=await authAccessToken();if(!token){showAuthModal("signin");return;}const r=await fetch("/api/stripe-connect-start",{method:"POST",headers:{Authorization:"Bearer "+token}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Stripe connection could not start.");if(d.url)window.location.href=d.url;else throw new Error("Stripe onboarding URL was not returned.");}catch(e){toast(e.message||"Stripe connection failed");b.disabled=false;b.textContent="Connect Stripe";}});}
 <section class="card" style="margin-top:18px"><div class="command-section-head"><div><span class="eyebrow">STRIPE CONNECT</span><h3>Your Stripe account</h3><p>Connect a Stripe account for HudHud payment and payout workflows. X API usage billing remains a HudHud billing relationship; this connection is for your Stripe merchant account.</p></div><button class="primary" data-stripe-connect>Connect Stripe</button></div></section>function gameLab(){
  const saved=JSON.parse(localStorage.getItem("hudhud_game_projects_v1")||"[]"),latest=saved[0];
