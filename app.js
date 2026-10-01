@@ -1168,7 +1168,7 @@ function social(){
   ["instagram","Instagram","Connect your Instagram account and authorize the profile data HudHud may use."],
   ["x","X","Connect your X account for authorized profile and public-post access."],
   ["tiktok","TikTok","Connect TikTok for profile data and, when your TikTok app is approved, content posting/upload permissions."],
-  ["linkedin","LinkedIn","Connect your LinkedIn profile through LinkedIn OpenID Connect."]
+  ["linkedin","LinkedIn","Connect LinkedIn with OpenID Connect and authorize HudHud to share posts on your behalf."]
  ];
  const socialLogos={
   instagram:"/assets/social/instagram.svg",
