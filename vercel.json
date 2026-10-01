@@ -44,6 +44,10 @@
     {
       "source": "/api/social-callback-linkedin",
       "destination": "/api/hudhud-routes"
+    },
+    {
+      "source": "/api/social-callback-youtube",
+      "destination": "/api/hudhud-routes"
     }
   ]
 }
