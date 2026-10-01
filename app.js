@@ -1387,19 +1387,19 @@ async function refreshHudHudKnowledge(){
    const lifeMap=lifemapRows.slice(0,8).map(x=>(x.title||x.category)+": "+String(x.value||"").slice(0,160)).join(" | ");
    const prior=activeKnowledge.slice(0,8).map(x=>(x.title||"Observation")+": "+String(x.value||"").slice(0,180)).join(" | ");
    const title=synthesizeObservationTitle({projects,activeProjects,completedProjects,completedSteps,totalSteps,opportunities,openOpportunities,connections,connectedSocials,recentActivity,activeKnowledge});
+   const crossSource=buildCrossSourceObservation({connectedSocials,projects,activeProjects,openOpportunities,connections,lifemapRows,recentActivity,activeKnowledge});
+   const workspaceContext=[
+     projects.length?projects.length+" project"+(projects.length===1?"":"s")+" in the workspace":"",
+     openOpportunities.length?openOpportunities.length+" open opportunit"+(openOpportunities.length===1?"y":"ies"):"",
+     connections.length?connections.length+" workspace connection"+(connections.length===1?"":"s"):"",
+     lifeMap?"LifeMap signals: "+lifeMap:"",
+     recentActivity.length?"Recent activity: "+recentActivity.slice(0,3).join(" | "):""
+   ].filter(Boolean).join(". ");
    const value=[
-     "HudHud refreshed its understanding at the user's request using the current workspace and authorized evidence.",
-     "Knowledge: "+activeKnowledge.length+" active observations.",
-     "Workspace: "+projects.length+" projects ("+completedProjects.length+" completed, "+activeProjects.length+" active), "+opportunities.length+" opportunities ("+openOpportunities.length+" open), "+connections.length+" connections.",
-     "Project progress: "+completedSteps+" of "+totalSteps+" tracked steps completed.",
-     connectedSocials.length?"Authorized social sources: "+currentSocials+".":"No connected social sources were available for this synthesis.",
-     currentProjects?"Active projects: "+currentProjects+".":"",
-     currentOpportunities?"Open opportunities: "+currentOpportunities+".":"",
-     currentConnections?"Connections: "+currentConnections+".":"",
-     lifeMap?"LifeMap context: "+lifeMap+".":"",
-     recentActivity.length?"Recent activity signals: "+recentActivity.join(" | ")+".":"",
-     prior?"Existing observations considered: "+prior+".":"",
-     "This is a synthesized evidence snapshot, not a definitive judgment about the user. It should be updated when new authorized evidence or meaningful workspace changes occur."
+     crossSource,
+     workspaceContext?"Workspace context: "+workspaceContext+".":"",
+     prior?"HudHud also considered prior observations: "+prior+".":"",
+     "This is a synthesized evidence snapshot. Direct facts are separated from inference, and missing connector permissions are not treated as missing real-world activity."
    ].filter(Boolean).join(" ");
    const evidenceIds=activeKnowledge.slice(0,20).map(x=>x.id).filter(Boolean);
    const metadata={
