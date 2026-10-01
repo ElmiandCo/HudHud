@@ -40,6 +40,74 @@ function adminHeaders(){
   return headers;
 }
 
+async function recordXApiUsage(userId, resource, action, providerCostMicrousd, metadata={}){
+  try{
+    const {url,headers}=admin();
+    const prefResponse=await fetch(url+"/rest/v1/hudhud_api_billing_preferences?select=x_enabled,x_fee_microusd&user_id=eq."+encodeURIComponent(userId),{headers});
+    const prefs=await prefResponse.json().catch(()=>[]);
+    const pref=prefs?.[0]||null;
+    const fee=Number(pref?.x_fee_microusd ?? 5000);
+    const status=pref?.x_enabled===true?"billable":"pending_consent";
+    await fetch(url+"/rest/v1/hudhud_api_usage",{method:"POST",headers:{...headers,Prefer:"return=minimal"},body:JSON.stringify({user_id:userId,provider:"x",resource,action,provider_cost_microusd:Number(providerCostMicrousd),hudhud_fee_microusd:fee,total_microusd:Number(providerCostMicrousd)+fee,quantity:1,status,metadata})});
+  }catch(error){console.error("[HudHud Billing] X usage ledger failed:",error?.message||error);}
+}
+async function xBillingPreference(req,res){
+  try{
+    const user=await userFromRequest(req),{url,headers}=admin();
+    if(req.method==="GET"){
+      const r=await fetch(url+"/rest/v1/hudhud_api_billing_preferences?select=*&user_id=eq."+encodeURIComponent(user.id),{headers});
+      const rows=await r.json().catch(()=>[]);
+      if(!r.ok)throw new Error("Could not load X billing preference.");
+      return res.status(200).json({preference:rows?.[0]||null});
+    }
+    if(req.method!=="POST"){res.setHeader("Allow","GET, POST");return res.status(405).json({error:"Method not allowed."});}
+    const body=typeof req.body==="string"?JSON.parse(req.body||"{}"):(req.body||{});
+    const enabled=body.enabled===true;
+    const payload={user_id:user.id,x_enabled:enabled,x_consent_at:enabled?new Date().toISOString():null,x_fee_microusd:5000,updated_at:new Date().toISOString()};
+    const up=await fetch(url+"/rest/v1/hudhud_api_billing_preferences?on_conflict=user_id",{method:"POST",headers:{...headers,Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(payload)});
+    if(!up.ok)throw new Error("Could not save X billing preference.");
+    await fetch(url+"/rest/v1/hudhud_api_usage?user_id=eq."+encodeURIComponent(user.id)+"&provider=eq.x&status=eq.pending_consent",{method:"PATCH",headers:{...headers,Prefer:"return=minimal"},body:JSON.stringify({status:enabled?"billable":"waived"})});
+    return res.status(200).json({ok:true,enabled});
+  }catch(e){return res.status(/Authentication/i.test(e.message)?401:500).json({error:e.message||"X billing preference failed."});}
+}
+async function xBillingAnalytics(req,res){
+  try{
+    const user=await userFromRequest(req),{url,headers}=admin();
+    const r=await fetch(url+"/rest/v1/hudhud_api_usage?select=provider,resource,action,provider_cost_microusd,hudhud_fee_microusd,total_microusd,status,quantity,created_at&user_id=eq."+encodeURIComponent(user.id)+"&order=created_at.desc&limit=1000",{headers});
+    const rows=await r.json().catch(()=>[]);
+    if(!r.ok)throw new Error("Could not load API usage.");
+    const x=rows.filter(row=>row.provider==="x");
+    const sum=(key,statuses)=>x.filter(row=>statuses.includes(row.status)).reduce((n,row)=>n+Number(row[key]||0),0);
+    const operations=x.reduce((n,row)=>n+Number(row.quantity||1),0);
+    return res.status(200).json({provider:"x",operations,providerCostMicrousd:sum("provider_cost_microusd",["billable","charged"]),hudhudFeeMicrousd:sum("hudhud_fee_microusd",["billable","charged"]),totalMicrousd:sum("total_microusd",["billable","charged"]),pendingMicrousd:sum("total_microusd",["pending_consent"]),rows:x.slice(0,100)});
+  }catch(e){return res.status(/Authentication/i.test(e.message)?401:500).json({error:e.message||"API analytics failed."});}
+}
+async function stripeConnectStart(req,res){
+  if(req.method!=="POST"){res.setHeader("Allow","POST");return res.status(405).json({error:"Method not allowed."});}
+  try{
+    const user=await userFromRequest(req);
+    const secret=String(process.env.STRIPE_SECRET_KEY||"").trim();
+    if(!secret)throw new Error("Stripe Connect is not configured yet. Add STRIPE_SECRET_KEY to HudHud.");
+    const {url,headers}=admin();
+    const existing=await fetch(url+"/rest/v1/hudhud_stripe_connected_accounts?select=*&user_id=eq."+encodeURIComponent(user.id),{headers});
+    const rows=await existing.json().catch(()=>[]);
+    let accountId=rows?.[0]?.stripe_account_id;
+    if(!accountId){
+      const accountBody=new URLSearchParams({type:"express",country:"US",email:String(user.email||"")});
+      const ar=await fetch("https://api.stripe.com/v1/accounts",{method:"POST",headers:{Authorization:"Bearer "+secret,"Content-Type":"application/x-www-form-urlencoded"},body:accountBody});
+      const account=await ar.json().catch(()=>({}));
+      if(!ar.ok)throw new Error(account?.error?.message||"Stripe could not create the connected account.");
+      accountId=account.id;
+      await fetch(url+"/rest/v1/hudhud_stripe_connected_accounts",{method:"POST",headers:{...headers,Prefer:"return=minimal"},body:JSON.stringify({user_id:user.id,stripe_account_id:account.id,account_type:account.type,charges_enabled:!!account.charges_enabled,payouts_enabled:!!account.payouts_enabled,details_submitted:!!account.details_submitted})});
+    }
+    const form=new URLSearchParams({account:accountId,refresh_url:"https://hudhudhq.vercel.app/?stripe=refresh",return_url:"https://hudhudhq.vercel.app/?stripe=connected",type:"account_onboarding"});
+    const lr=await fetch("https://api.stripe.com/v1/account_links",{method:"POST",headers:{Authorization:"Bearer "+secret,"Content-Type":"application/x-www-form-urlencoded"},body:form});
+    const link=await lr.json().catch(()=>({}));
+    if(!lr.ok)throw new Error(link?.error?.message||"Stripe onboarding could not start.");
+    return res.status(200).json({url:link.url,accountId});
+  }catch(e){return res.status(/Authentication/i.test(e.message)?401:500).json({error:e.message||"Stripe connection failed."});}
+}
+
 async function socialCallback(req,res,provider){
   if(req.method!=="GET"){res.setHeader("Allow","GET");return res.status(405).send("Method not allowed.");}
   try{
@@ -51,6 +119,7 @@ async function socialCallback(req,res,provider){
     if(!code)throw new Error("Provider did not return an authorization code.");
     const token=await exchangeCode(req,provider,code,state);
     const profile=await fetchProfile(provider,token.access_token);
+    if(provider==="x") await recordXApiUsage(state.user_id,"User","read",10000,{source:"oauth_profile",account_handle:profile?.username||profile?.data?.username||null});
     const account=await saveOAuthConnection(state.user_id,provider,token,profile,req);
     clearStateCookie(res);
     const message=provider==="linkedin" ? account.displayName+" connected" : account.accountHandle ? "Connected @"+account.accountHandle : "Connected";
@@ -191,7 +260,10 @@ const handlers={
  "provider-accounts":providerAccounts,
  "supabase-config":supabaseConfig,
  "system-control":systemControl,
- "test-sms":testSms
+ "test-sms":testSms,
+ "x-billing-preference":xBillingPreference,
+ "x-billing-analytics":xBillingAnalytics,
+ "stripe-connect-start":stripeConnectStart
 };
 
 export default async function handler(req,res){
