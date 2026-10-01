@@ -2058,13 +2058,15 @@ async function promptXBillingConsent(){
  }catch(e){console.error("X billing consent failed",e);}
 }
 function moneyMicrousd(value){return "$"+(Number(value||0)/1000000).toFixed(3);}
+async function buyApiCredit(plan){const token=await authAccessToken();if(!token){showAuthModal("signin");return;}try{const r=await fetch("/api/stripe-checkout",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({plan})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Could not open API credit checkout.");if(d.url)window.location.href=d.url;}catch(e){toast(e.message||"API credit checkout failed");}}
 async function loadXBillingAnalytics(){
+ document.querySelectorAll("[data-api-credit]").forEach(b=>b.onclick=()=>buyApiCredit(b.dataset.apiCredit));
  const host=document.getElementById("xApiBillingAnalytics");if(!host||!currentUser)return;
  try{
   const r=await authorizedFetch("/api/x-billing-analytics",{cache:"no-store"});
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(d.error||"Could not load X API charges.");
-  host.innerHTML="<div class=\"analytics-kpis\"><div><span>🔌 X API operations</span><strong>"+Number(d.operations||0).toLocaleString()+"</strong><small>Billable operations recorded</small></div><div><span>⚡ X provider cost</span><strong>"+moneyMicrousd(d.providerCostMicrousd)+"</strong><small>Estimated from X usage</small></div><div><span>🪶 HudHud fee</span><strong>"+moneyMicrousd(d.hudhudFeeMicrousd)+"</strong><small>$0.005 per billable operation</small></div><div><span>💰 API / computing charges</span><strong>"+moneyMicrousd(d.totalMicrousd)+"</strong><small>Provider + HudHud</small></div></div><div class=\"command-section-head\"><div><span class=\"eyebrow\">X USAGE</span><h3>API / Computing Charges</h3><p>Charges are tracked per X API resource and separated from your normal HudHud subscription.</p></div></div>";
+  host.innerHTML="<div class=\"analytics-kpis\"><div><span>🔌 X API operations</span><strong>"+Number(d.operations||0).toLocaleString()+"</strong><small>Billable operations recorded</small></div><div><span>⚡ X provider cost</span><strong>"+moneyMicrousd(d.providerCostMicrousd)+"</strong><small>Estimated from X usage</small></div><div><span>🪶 HudHud fee</span><strong>"+moneyMicrousd(d.hudhudFeeMicrousd)+"</strong><small>$0.005 per billable operation</small></div><div><span>💰 API / computing charges</span><strong>"+moneyMicrousd(d.totalMicrousd)+"</strong><small>Provider + HudHud</small></div></div><div class=\"command-section-head\"><div><span class=\"eyebrow\">X USAGE</span><h3>API / Computing Charges</h3><p>Charges are tracked per X API resource and separated from your normal HudHud subscription.</p></div><button class=\"primary\" data-api-credit=\"api_credit_5\">Add $5 API Credit</button></div><div class=\"muted\" style=\"margin-top:10px\">Available API credit: <strong>"+moneyMicrousd(d.walletBalanceMicrousd)+"</strong></div>";
  }catch(e){host.innerHTML="<div class=\"muted\">X API charge analytics unavailable right now.</div>";}
 }
 function handleSocialCallbackResult(){
