@@ -20,14 +20,21 @@ export default async function handler(req,res){
  if(!user?.id)return res.status(401).json({error:"Sign in required."});
  const body=typeof req.body==="string"?JSON.parse(req.body||"{}"):(req.body||{});
  const plan=String(body.plan||"").toLowerCase();
- if(!["pro","premium","test","pro_lifetime","premium_lifetime"].includes(plan))return res.status(400).json({error:"Invalid plan."});
+ if(!["pro","premium","test","pro_lifetime","premium_lifetime","api_credit_5","api_credit_10","api_credit_25"].includes(plan))return res.status(400).json({error:"Invalid plan."});
  const secret=stripeKey(),price=priceFor(plan);
  if(!secret)return res.status(503).json({error:"Stripe is not configured on the server."});
  if(!price)return res.status(503).json({error:"This plan's Stripe Price ID is not configured yet."});
  const origin=normalizeBase(process.env.HUDHUD_PUBLIC_URL)||("https://"+req.headers.host);
  const params=new URLSearchParams();
- params.set("mode",plan==="test"||plan.endsWith("_lifetime")?"payment":"subscription");
- params.set("line_items[0][price]",price);
+ params.set("mode",plan==="test"||plan.endsWith("_lifetime")||plan.startsWith("api_credit_")?"payment":"subscription");
+ if(plan.startsWith("api_credit_")){
+   const credits={api_credit_5:500,api_credit_10:1000,api_credit_25:2500};
+   params.set("line_items[0][price_data][currency]","usd");
+   params.set("line_items[0][price_data][product_data][name]","HudHud API Credits");
+   params.set("line_items[0][price_data][unit_amount]",String(credits[plan]||500));
+ }else{
+   params.set("line_items[0][price]",price);
+ }
  params.set("line_items[0][quantity]","1");
  params.set("success_url",origin+"/?billing=success&plan="+encodeURIComponent(plan)+"&session_id={CHECKOUT_SESSION_ID}");
  params.set("cancel_url",origin+"/?billing=cancelled");
@@ -35,6 +42,7 @@ export default async function handler(req,res){
  params.set("client_reference_id",String(user.id));
  params.set("metadata[hudhud_user_id]",String(user.id));
  params.set("metadata[hudhud_plan]",plan);
+ if(plan.startsWith("api_credit_")){const creditMicrousd={api_credit_5:5000000,api_credit_10:10000000,api_credit_25:25000000};params.set("metadata[hudhud_api_credit_microusd]",String(creditMicrousd[plan]||0));}
  if(plan!=="test"&&!plan.endsWith("_lifetime")){
    params.set("subscription_data[metadata][hudhud_user_id]",String(user.id));
    params.set("subscription_data[metadata][hudhud_plan]",plan);
