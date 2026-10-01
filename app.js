@@ -563,7 +563,8 @@ function tools(){return '<div class="section-head"><div><h2>Tools</h2><span clas
 ['Files','Documents, project knowledge, memory','READ + WRITE','Planned'],
 ['Web','Fresh information and research','READ','Planned']
 ].map(x=>'<div class="tool-card"><div class="tool-top"><span class="tool-icon">✦</span><span class="tool-state">'+esc(x[3])+'</span></div><h3>'+esc(x[0])+'</h3><p>'+esc(x[1])+'</p><div class="tool-bottom"><span>'+esc(x[2])+'</span><span class="tool-dot"></span></div></div>').join('')+'</div><div class="card tool-note"><div class="muted">HUDHUD TOOL ROUTER</div><h3>One brain. Many tools.</h3><p>HudHud will decide which connection to use, execute the permitted action, inspect the result, and continue until the task is complete.</p></div>';}
-function gameLab(){
+function bindTools(){document.querySelectorAll("[data-stripe-connect]").forEach(b=>b.onclick=async()=>{b.disabled=true;b.textContent="Opening Stripe…";try{const token=await authAccessToken();if(!token){showAuthModal("signin");return;}const r=await fetch("/api/stripe-connect-start",{method:"POST",headers:{Authorization:"Bearer "+token}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Stripe connection could not start.");if(d.url)window.location.href=d.url;else throw new Error("Stripe onboarding URL was not returned.");}catch(e){toast(e.message||"Stripe connection failed");b.disabled=false;b.textContent="Connect Stripe";}});}
+<section class="card" style="margin-top:18px"><div class="command-section-head"><div><span class="eyebrow">STRIPE CONNECT</span><h3>Your Stripe account</h3><p>Connect a Stripe account for HudHud payment and payout workflows. X API usage billing remains a HudHud billing relationship; this connection is for your Stripe merchant account.</p></div><button class="primary" data-stripe-connect>Connect Stripe</button></div></section>function gameLab(){
  const saved=JSON.parse(localStorage.getItem("hudhud_game_projects_v1")||"[]"),latest=saved[0];
  return '<div class="section-head"><div><span class="eyebrow">HUDHUD CREATION LAYER</span><h2>Game Lab</h2><span class="muted">Describe a game once. HudHud turns the idea into an engine-ready blueprint, platform checklist, and handoff package.</span></div><span class="studio-badge">AI CREATION</span></div>'+
  '<div class="game-lab-layout"><section class="card game-brief-card"><div class="muted">GAME BRIEF</div><h3>What do you want to build?</h3><label class="game-label">Game concept</label><textarea id="gameConcept" class="studio-input game-textarea" placeholder="Example: A fast 1v1 basketball game with 60-second rounds.">'+esc(latest?.concept||"")+'</textarea><div class="game-form-grid"><div><label class="game-label">Build engine</label><select id="gameEngine"><option value="unity">Unity</option><option value="cocos">Cocos Creator</option><option value="laya">LayaAir</option></select></div><div><label class="game-label">Launch target</label><select id="gameTarget"><option value="tiktok">TikTok Mini Games</option><option value="web">Web / PWA</option><option value="mobile">Mobile app</option></select></div></div><div class="game-options"><label><input id="gameAiAssets" type="checkbox" checked> AI-assisted assets</label><label><input id="gameMultiplayer" type="checkbox"> Multiplayer</label><label><input id="gameMonetization" type="checkbox"> Monetization</label></div><div class="form-actions"><button class="primary" id="gameCreate">Create Game Blueprint</button><button class="secondary" id="gameDownload" disabled>Export Blueprint</button></div><div id="gameStatus" class="studio-status">HudHud will identify required accounts, APIs, SDKs, and approvals instead of inventing credentials.</div></section><aside class="card game-plan-card"><div class="muted">HUDHUD HANDOFF</div><h3 id="gamePlanTitle">Your build plan</h3><div id="gamePlan"><div class="game-empty">Create a blueprint to see the engine, platform, account, API, testing, and publishing steps.</div></div></aside></div><section class="card game-pipeline-card"><div class="muted">CREATION PIPELINE</div><h3>Idea → Build → Test → Push</h3><div class="game-pipeline"><div><b>01</b><span>Describe</span><small>HudHud structures the game brief.</small></div><div><b>02</b><span>Build</span><small>Handoff to Unity, Cocos, or Laya.</small></div><div><b>03</b><span>Validate</span><small>Check SDKs, accounts, assets and platform rules.</small></div><div><b>04</b><span>Publish</span><small>Return the package to Command Center for upload and release tracking.</small></div></div></section><section class="card game-warning"><strong>Platform-aware by design</strong><p>For TikTok Mini Games, HudHud guides the current native-runtime workflow rather than treating a normal website or HTML build as the final package.</p></section>';
@@ -734,7 +735,7 @@ function runCommandDiagnostic(){const stateEl=document.getElementById("commandDi
 function loadCommandResources(){const host=document.getElementById("commandResourceGrid");if(!host)return;authAccessToken().then(token=>{const providers=[["github","🐙","GitHub"],["vercel","▲","Vercel"],["supabase","⚡","Supabase"]];return Promise.all(providers.map(async([provider,icon,label])=>{try{const r=await fetch("/api/connection-resources?provider="+provider,{headers:token?{Authorization:"Bearer "+token}:{}}),d=await r.json(),resources=d.resources||[];return '<div class="command-resource-card"><span>'+icon+'</span><strong>'+label+'</strong><small>'+resources.length+' resource(s) discovered</small><div class="command-resource-list">'+resources.slice(0,6).map(x=>'<span>'+esc(x.name||x.full_name||x.id)+'</span>').join("")+'</div></div>'}catch(e){return '<div class="command-resource-card"><span>'+icon+'</span><strong>'+label+'</strong><small>Unable to inspect resources</small></div>'}})).then(rows=>host.innerHTML=rows.join(""))})}
 function openCommandToolModal(){const host=document.getElementById("commandToolModal");if(!host)return;host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-command-tool></div><div class="resource-dialog"><button class="resource-close" data-close-command-tool>×</button><div class="eyebrow">ADD TOOL</div><h2>Connect another service</h2><p class="resource-subtitle">Authentication and permissions will be added as integrations are enabled.</p><div class="command-tool-grid">'+["AWS","Azure","Google Cloud","Gmail","Google Calendar","Slack","Notion","Linear","Jira","Microsoft 365","OpenAI","Anthropic","Google Gemini","Groq","xAI"].map(x=>'<button class="command-tool-placeholder"><span>＋</span><div><strong>'+x+'</strong><small>Integration</small></div><em>Coming soon</em></button>').join("")+'</div></div></div>';host.querySelectorAll("[data-close-command-tool]").forEach(b=>b.onclick=()=>host.innerHTML="")}
 function showCommandNode(key){const names={github:"GitHub",vercel:"Vercel",supabase:"Supabase",stripe:"Stripe"};const host=document.getElementById("commandToolModal");if(host)host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-command-tool></div><div class="resource-dialog"><button class="resource-close" data-close-command-tool>×</button><div class="eyebrow">CONNECTION</div><h2>'+names[key]+'</h2><p class="resource-subtitle">Use Connections to configure accounts and resource scope.</p><div class="form-actions"><button class="primary" data-open-connections>Open Connections</button></div></div></div>';document.querySelector("[data-open-connections]")?.addEventListener("click",()=>{host.innerHTML="";render("connections")})}
-function bindCommandCenter(){document.querySelectorAll("[data-command-diagnostic]").forEach(b=>b.onclick=runCommandDiagnostic);document.querySelectorAll("[data-command-add-tool]").forEach(b=>b.onclick=openCommandToolModal);document.querySelectorAll("[data-command-node]").forEach(b=>b.onclick=()=>showCommandNode(b.dataset.commandNode));document.querySelectorAll("[data-analytics-series]").forEach(b=>b.onchange=renderAnalytics);document.getElementById("analyticsRange")?.addEventListener("change",renderAnalytics);renderAnalytics();}
+function bindCommandCenter(){loadXBillingAnalytics();document.querySelectorAll("[data-command-diagnostic]").forEach(b=>b.onclick=runCommandDiagnostic);document.querySelectorAll("[data-command-add-tool]").forEach(b=>b.onclick=openCommandToolModal);document.querySelectorAll("[data-command-node]").forEach(b=>b.onclick=()=>showCommandNode(b.dataset.commandNode));document.querySelectorAll("[data-analytics-series]").forEach(b=>b.onchange=renderAnalytics);document.getElementById("analyticsRange")?.addEventListener("change",renderAnalytics);renderAnalytics();}
 
 let newsletterDraft=null;
 
@@ -1501,6 +1502,29 @@ function setupMobileNav(){
   drawer.querySelectorAll("button[data-view]").forEach(b=>b.addEventListener("click",()=>{close();render(b.dataset.view);}));
   wrap.querySelectorAll("[data-mobile-view]").forEach(b=>b.addEventListener("click",()=>render(b.dataset.mobileView)));
 }
+async function promptXBillingConsent(){
+ if(!currentUser)return;
+ try{
+  const r=await authorizedFetch("/api/x-billing-preference",{cache:"no-store"});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)return;
+  if(d.preference)return;
+  const yes=window.confirm("X is now connected. HudHud can use X API features on your behalf. X charges usage-based API fees, and HudHud adds $0.005 per billable X operation. Do you want to allow billable X API usage?\n\nYES = allow X API features and billable usage.\nNO = keep future billable X actions disabled.");
+  const save=await authorizedFetch("/api/x-billing-preference",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:yes})});
+  if(!save.ok){toast("Could not save X billing preference.");return;}
+  toast(yes?"X API billing enabled":"X API billing disabled");
+ }catch(e){console.error("X billing consent failed",e);}
+}
+function moneyMicrousd(value){return "$"+(Number(value||0)/1000000).toFixed(3);}
+async function loadXBillingAnalytics(){
+ const host=document.getElementById("xApiBillingAnalytics");if(!host||!currentUser)return;
+ try{
+  const r=await authorizedFetch("/api/x-billing-analytics",{cache:"no-store"});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Could not load X API charges.");
+  host.innerHTML="<div class=\"analytics-kpis\"><div><span>🔌 X API operations</span><strong>"+Number(d.operations||0).toLocaleString()+"</strong><small>Billable operations recorded</small></div><div><span>⚡ X provider cost</span><strong>"+moneyMicrousd(d.providerCostMicrousd)+"</strong><small>Estimated from X usage</small></div><div><span>🪶 HudHud fee</span><strong>"+moneyMicrousd(d.hudhudFeeMicrousd)+"</strong><small>$0.005 per billable operation</small></div><div><span>💰 API / computing charges</span><strong>"+moneyMicrousd(d.totalMicrousd)+"</strong><small>Provider + HudHud</small></div></div><div class=\"command-section-head\"><div><span class=\"eyebrow\">X USAGE</span><h3>API / Computing Charges</h3><p>Charges are tracked per X API resource and separated from your normal HudHud subscription.</p></div></div>";
+ }catch(e){host.innerHTML="<div class=\"muted\">X API charge analytics unavailable right now.</div>";}
+}
 function handleSocialCallbackResult(){
  const params=new URLSearchParams(window.location.search);
  const socialStatus=params.get("social");
@@ -1508,7 +1532,7 @@ function handleSocialCallbackResult(){
  const provider=params.get("provider")||"social";
  const message=params.get("message");
  const label=provider==="x"?"X":provider.charAt(0).toUpperCase()+provider.slice(1);
- if(socialStatus==="connected")toast(label+" connected");
+ if(socialStatus==="connected"){toast(label+" connected");if(provider==="x")setTimeout(promptXBillingConsent,250);}
  else if(message)toast(message);
  else toast(label+" connection failed. Check the Social page for details.");
  history.replaceState({},document.title,window.location.pathname);
@@ -1528,6 +1552,7 @@ function render(view){
  bind(view);
  if(view==="home") { bindChat(); bindHomeAuth(); bindHomeComponents(); ensureHudHudWidget(); }
  if(view==="core") bindThemeToggle();
+ if(view==="tools") bindTools();
  if(view==="studio") bindStudio();
  if(view==="gamelab") bindGameLab();
  if(view==="system") bindSystem();
