@@ -79,7 +79,10 @@ async function xBillingAnalytics(req,res){
     const x=rows.filter(row=>row.provider==="x");
     const sum=(key,statuses)=>x.filter(row=>statuses.includes(row.status)).reduce((n,row)=>n+Number(row[key]||0),0);
     const operations=x.reduce((n,row)=>n+Number(row.quantity||1),0);
-    return res.status(200).json({provider:"x",operations,providerCostMicrousd:sum("provider_cost_microusd",["billable","charged"]),hudhudFeeMicrousd:sum("hudhud_fee_microusd",["billable","charged"]),totalMicrousd:sum("total_microusd",["billable","charged"]),pendingMicrousd:sum("total_microusd",["pending_consent"]),rows:x.slice(0,100)});
+    const walletResponse=await fetch(url+"/rest/v1/hudhud_api_wallets?select=balance_microusd,status&user_id=eq."+encodeURIComponent(user.id),{headers});
+    const walletRows=await walletResponse.json().catch(()=>[]);
+    const wallet=walletRows?.[0]||{balance_microusd:0,status:"active"};
+    return res.status(200).json({provider:"x",operations,providerCostMicrousd:sum("provider_cost_microusd",["billable","charged"]),hudhudFeeMicrousd:sum("hudhud_fee_microusd",["billable","charged"]),totalMicrousd:sum("total_microusd",["billable","charged"]),pendingMicrousd:sum("total_microusd",["pending_consent"]),walletBalanceMicrousd:Number(wallet.balance_microusd||0),walletStatus:wallet.status,rows:x.slice(0,100)});
   }catch(e){return res.status(/Authentication/i.test(e.message)?401:500).json({error:e.message||"API analytics failed."});}
 }
 async function stripeConnectStart(req,res){
