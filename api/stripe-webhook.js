@@ -15,6 +15,19 @@ async function dbUpsert(row){
  const r=await fetch(base+"/rest/v1/hudhud_billing",{method:"POST",headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(row)});
  if(!r.ok)throw new Error(await r.text());
 }
+
+async function dbCreditApiWallet(userId, microusd){
+ const base=normalizeBase(process.env.HUDHUD_SUPABASE_URL),key=process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY;
+ if(!base||!key)throw new Error("Supabase billing server configuration is missing.");
+ const headers={apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"};
+ const existing=await fetch(base+"/rest/v1/hudhud_api_wallets?select=balance_microusd&user_id=eq."+encodeURIComponent(userId),{headers});
+ const rows=await existing.json();
+ const current=Number(rows?.[0]?.balance_microusd||0);
+ const next=current+Number(microusd||0);
+ const r=await fetch(base+"/rest/v1/hudhud_api_wallets?on_conflict=user_id",{method:"POST",headers:{...headers,Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({user_id:userId,balance_microusd:next,status:"active",updated_at:new Date().toISOString()})});
+ if(!r.ok)throw new Error(await r.text());
+}
+
 async function dbFindBySubscription(subscriptionId){
  const base=normalizeBase(process.env.HUDHUD_SUPABASE_URL),key=process.env.HUDHUD_SUPABASE_SERVICE_ROLE_KEY;
  const r=await fetch(base+"/rest/v1/hudhud_billing?stripe_subscription_id=eq."+encodeURIComponent(subscriptionId)+"&select=user_id",{headers:{apikey:key,Authorization:"Bearer "+key}});
@@ -31,7 +44,9 @@ export default async function handler(req,res){
   if(event.type==="checkout.session.completed"){
     const uid=obj.metadata?.hudhud_user_id||obj.client_reference_id;
     const plan=obj.metadata?.hudhud_plan||"free";
-    if(uid)await dbUpsert({user_id:uid,stripe_customer_id:obj.customer||null,stripe_subscription_id:obj.subscription||null,plan,status:"active",updated_at:new Date().toISOString()});
+    const creditMicrousd=Number(obj.metadata?.hudhud_api_credit_microusd||0);
+    if(uid&&creditMicrousd>0)await dbCreditApiWallet(uid,creditMicrousd);
+    if(uid&&creditMicrousd<=0)await dbUpsert({user_id:uid,stripe_customer_id:obj.customer||null,stripe_subscription_id:obj.subscription||null,plan,status:"active",updated_at:new Date().toISOString()});
   } else if(event.type==="customer.subscription.updated"||event.type==="customer.subscription.created"||event.type==="customer.subscription.deleted"){
     const uid=obj.metadata?.hudhud_user_id||await dbFindBySubscription(obj.id);
     if(uid){
