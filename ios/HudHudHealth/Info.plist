@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>NSHealthShareUsageDescription</key>
+<string>HudHud Health uses your Apple Health data to show activity, nutrition and wellness context in HudHud.</string>
+</dict></plist>
