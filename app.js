@@ -750,16 +750,39 @@ const newsletterTemplates=[
  ]}
 ];
 
+function isFirstUserJourney(){return !!currentUser&&currentUser.user_metadata?.hudhud_onboarding_completed===false;}
+const onboardingSteps=[
+ {id:"brain",eyebrow:"01 • YOUR BRAIN",title:"Choose how HudHud thinks with you",why:"Your Brain is the reasoning layer. HudHud keeps the memory, permissions, connections, tools and workspace; the Brain helps reason and generate.",know:"Brain/provider identity and configuration you authorize.",do:"Reason, generate, summarize and help select actions.",connect:"A configured Brain unlocks personalized AI workflows.",view:"connections"},
+ {id:"about",eyebrow:"02 • ABOUT YOU",title:"Give HudHud a starting picture",why:"A little context lets HudHud understand what you are trying to accomplish instead of treating every interaction like a blank slate.",know:"The goals, work, projects and priorities you choose to share.",do:"Use that context when answering and organizing your workspace.",connect:"Your answers become the starting point for LifeMap, observations and planning.",view:"lifemap"},
+ {id:"work",eyebrow:"03 • WORK",title:"Connect the tools that run your work",why:"Work connections let HudHud move from conversation into real workspace context.",know:"Authorized projects, repositories, deployments or other resources.",do:"Read permitted resources and perform supported actions.",connect:"Work connections can combine into project and execution intelligence.",view:"connections"},
+ {id:"social",eyebrow:"04 • SOCIAL",title:"Connect the accounts you want HudHud to understand",why:"Social accounts can provide authorized identity, content and publishing context.",know:"Only the profile/content data and scopes you approve.",do:"Supported providers can publish, read or manage authorized content.",connect:"Social + communication permissions can support Making Contact and content workflows.",view:"social"},
+ {id:"finance",eyebrow:"05 • FINANCE",title:"Build HudHud Finance",why:"Connect financial sources when you want HudHud to organize authorized money information and help you understand your financial picture.",know:"Authorized balances, transactions or store/payment information, depending on the connector.",do:"Process permitted financial data and organize it for analysis.",connect:"Bank/eStore/PayPal-style sources can combine into HudHud Finance and projections.",view:"premium"},
+ {id:"planning",eyebrow:"06 • PLANNING",title:"Build HudHud Planning",why:"A calendar and goals give HudHud a time dimension for what you are trying to accomplish.",know:"Authorized calendar events and planning context.",do:"Use schedule information for planning and organization.",connect:"Calendar + goals + work context can create planning intelligence.",view:"connections"},
+ {id:"contact",eyebrow:"07 • COMMUNICATION",title:"Build Making Contact",why:"Communication is useful when HudHud needs a permitted way to reach people or services on your behalf.",know:"Authorized phone, contact and communication metadata.",do:"Use supported communication tools after explicit permission.",connect:"Phone + Twilio + social + permission can form Making Contact.",view:"connections"},
+ {id:"devices",eyebrow:"08 • DEVICES",title:"Bring HudHud into your devices",why:"Devices are how HudHud can eventually meet you where you work and live.",know:"Device type, platform and only the capabilities you authorize.",do:"Use supported device capabilities through their integrations.",connect:"Devices can extend HudHud from a web workspace into your connected environment.",view:"devices"}
+];
+function onboardingJourney(){
+ const saved=JSON.parse(localStorage.getItem("hudhud_onboarding_progress_"+currentUser.id)||"{}");
+ const step=Math.min(Math.max(Number(saved.step)||0,0),onboardingSteps.length-1);
+ const s=onboardingSteps[step];
+ const connected=Array.isArray(saved.completed)?saved.completed:[];
+ return '<section class="onboarding-page">'+
+  '<div class="onboarding-hero"><div class="onboarding-bird"><img src="/assets/hudhud-logo.svg" alt="HudHud"></div><div><span class="eyebrow">WELCOME TO HUDHUD</span><h1>Let’s build your HudHud.</h1><p>This is your first-user setup. HudHud will walk you through the connections, explain why each one matters, and let you skip anything you are not ready to connect.</p></div></div>'+
+  '<div class="onboarding-progress"><div><strong>YOUR HUDHUD JOURNEY</strong><span>'+(step+1)+' of '+onboardingSteps.length+'</span></div><div class="onboarding-progress-bar"><i style="width:'+(((step+1)/onboardingSteps.length)*100)+'%"></i></div></div>'+
+  '<div class="onboarding-layout"><aside class="onboarding-steps">'+onboardingSteps.map((x,i)=>'<button class="'+(i===step?"active ":"")+(connected.includes(x.id)?"done":"")+'" data-onboarding-step="'+i+'"><span>'+String(i+1).padStart(2,"0")+'</span><div><b>'+esc(x.title)+'</b><small>'+(connected.includes(x.id)?"Connected / reviewed":i===step?"You are here":"Up next")+'</small></div></button>').join("")+'</aside>'+
+  '<main class="onboarding-card"><span class="eyebrow">'+esc(s.eyebrow)+'</span><h2>'+esc(s.title)+'</h2><p class="onboarding-why"><strong>Why this matters</strong>'+esc(s.why)+'</p><div class="onboarding-triad"><div><b>KNOW</b><p>'+esc(s.know)+'</p></div><div><b>DO</b><p>'+esc(s.do)+'</p></div><div><b>CONNECT</b><p>'+esc(s.connect)+'</p></div></div><div class="onboarding-actions"><button class="secondary" data-onboarding-open="'+esc(s.view)+'">Explore this connection →</button><button class="primary" data-onboarding-complete="'+esc(s.id)+'">'+(connected.includes(s.id)?"Reviewed — Continue":"I’m ready — Continue")+'</button></div><button class="onboarding-skip" data-onboarding-skip>Skip this for now</button></main></div>'+
+  '<div class="onboarding-footer"><span>Nothing is connected without your authorization.</span><button class="secondary" data-onboarding-finish>Finish later</button></div>'+
+ '</section>';
+}
 function getStarted(){
+ if(isFirstUserJourney())return onboardingJourney();
  return '<section class="getstarted-page">'+
   '<div class="getstarted-hero"><span class="eyebrow">HUDHUD PROGRAMS</span><h1>Get something done.</h1><p>Pick a program. HudHud walks you through the steps, handles the technical work, and keeps the result organized for you.</p></div>'+
   '<div class="program-grid">'+
    '<button class="program-card" data-program="site"><span class="program-icon">🌐</span><span class="program-kicker">LAUNCH</span><h3>Site Online in 3–5 mins</h3><small>You can customize more later with HudHudAI’s help.</small><strong>Start Website →</strong></button>'+
    '<button class="program-card featured" data-program="newsletter"><span class="program-icon">📰</span><span class="program-kicker">AUTOMATION</span><h3>Automated Newsletter</h3><small>Build it, schedule it, send it and monitor every campaign.</small><strong>Start Newsletter →</strong></button>'+
    '<button class="program-card" data-program="video"><span class="program-icon">🎬</span><span class="program-kicker">CREATE</span><h3>AI Video with HudHudAI</h3><small>Walk through the idea, script, style, review and export steps.</small><strong>Create AI Video →</strong></button>'+
-  '</div>'+
-  '<div class="program-lower"><div class="card"><span class="eyebrow">COMING PROGRAMS</span><h3>More one-click business launches</h3><div class="coming-grid"><span>🖥️ VPS + Gateway</span><span>🤖 AI Agent</span><span>📄 AI PDF</span><span>💳 Payments</span><span>📊 Analytics</span><span>📱 Social Content</span></div></div></div>'+
- '</section>';
+  '</div><div class="program-lower"><div class="card"><span class="eyebrow">COMING PROGRAMS</span><h3>More one-click business launches</h3><div class="coming-grid"><span>🖥️ VPS + Gateway</span><span>🤖 AI Agent</span><span>📄 AI PDF</span><span>💳 Payments</span><span>📊 Analytics</span><span>📱 Social Content</span></div></div></div></section>';
 }
 
 function newsletterProgram(){
