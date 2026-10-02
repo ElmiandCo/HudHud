@@ -6,6 +6,8 @@
   "use strict";
 
   const STORAGE_KEY="hudhud_connector_specs_v1";
+  const DOWNLOADED_KEY="hudhud_downloaded_apps_v1";
+  const DOWNLOADABLE_IDS=new Set(["instagram","facebook","x","tiktok","linkedin","youtube","threads","discord","reddit","github","figma","notion","googledrive","googlecalendar","slack","gmail","googlesheets","dropbox","asana","monday","airtable","wordpress","mailchimp","calendly","shopify","stripe"]);
   const LOGOS="https://cdn.simpleicons.org/";
 
   const catalog=[
@@ -92,25 +94,31 @@
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
   function read(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch(e){return[]}}
   function write(rows){localStorage.setItem(STORAGE_KEY,JSON.stringify(rows))}
+  function downloaded(){try{return new Set(JSON.parse(localStorage.getItem(DOWNLOADED_KEY)||"[]"))}catch(e){return new Set()}}
+  function markDownloaded(id){const set=downloaded();set.add(id);localStorage.setItem(DOWNLOADED_KEY,JSON.stringify([...set]));}
+  function downloadUrl(item){return "https://apps.apple.com/us/search?term="+encodeURIComponent(item.name)}
   function logo(item){
     return item.icon
-      ? '<img src="'+LOGOS+encodeURIComponent(item.icon)+'" alt="'+esc(item.name)+' logo" loading="lazy" referrerpolicy="no-referrer">'
+      ? '<img src="'+LOGOS+encodeURIComponent(item.icon)+'" alt="'+esc(item.name)+' logo" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="connector-monogram" hidden>'+esc(item.name.slice(0,2).toUpperCase())+"</span>"
       : '<span class="connector-monogram">'+esc(item.name.slice(0,2).toUpperCase())+"</span>";
   }
   function itemById(id){return catalog.find(x=>x.id===id)||null}
 
   function card(item,custom){
     const meta=custom||item, known=item||itemById(custom?.provider_id);
-    const ready=!!custom;
+    const ready=!!custom, isDownloadable=!!known&&DOWNLOADABLE_IDS.has(known.id), isDownloaded=downloaded().has(known?.id);
+    const actionLabel=ready?"Manage":(isDownloadable?(isDownloaded?"Connect":"Download app"):"Connect");
+    const actionAttrs=ready?' data-store-action="'+esc(meta.id)+'"':(isDownloadable&&!isDownloaded?' data-store-download="'+esc(known.id)+'"':' data-store-action="'+esc(meta.id)+'"');
     return '<article class="connector-store-card" data-store-card="'+esc(meta.id)+'">'+
       '<div class="connector-store-card-top"><div class="connector-logo">'+(known?logo(known):'<span class="connector-monogram">'+esc(String(meta.name||"??").slice(0,2).toUpperCase())+"</span>")+'</div>'+
-      '<span class="connector-status '+(ready?"recipe":"available")+'">'+(ready?"Ready":"Available")+"</span></div>"+
+      '<span class="connector-status '+(ready||isDownloaded?"recipe":"available")+'">'+(ready?"Ready":(isDownloaded?"Downloaded":(isDownloadable?"Download first":"Available")))+"</span></div>"+
       '<div class="connector-store-copy"><h3>'+esc(meta.name)+'</h3><p>'+esc(categoryLabels[meta.category]||meta.category||"Custom")+' · '+esc(meta.auth||"custom")+"</p></div>"+
       '<div class="connector-tags">'+(meta.tags||[]).slice(0,3).map(t=>"<span>"+esc(t)+"</span>").join("")+"</div>"+
-      '<button class="connector-store-action '+(ready?"ready":"")+'" data-store-action="'+esc(meta.id)+'">'+(ready?"Manage":"Connect")+"</button>"+
-      "</article>";
+      (isDownloadable&&!isDownloaded?'<div class="connector-download-note">Install the app first, then HudHud can connect it.</div>':"")+
+      '<div class="connector-card-actions"><button class="connector-store-action '+(ready||isDownloaded?"ready":"")+'"'+actionAttrs+'>'+actionLabel+"</button>"+
+      (isDownloadable&&!isDownloaded?'<button class="connector-mark-downloaded" data-mark-downloaded="'+esc(known.id)+'">I downloaded it</button>':"")+
+      "</div></article>";
   }
-
   function openHub(defaultCategory){
     const host=modal(), custom=read();
     const category=defaultCategory||"all";
@@ -170,12 +178,14 @@
     let active="all";
     function draw(){
       const q=search.value.trim().toLowerCase();
-      let rows=catalog.filter(x=>(active==="all"||active==="popular"||x.category===active) && (!q||[x.name,x.category,...(x.tags||[])].join(" ").toLowerCase().includes(q)));
+      let rows=catalog.filter(x=>(active==="downloaded"?downloaded().has(x.id):(active==="all"||active==="popular"||x.category===active) && (!q||[x.name,x.category,...(x.tags||[])].join(" ").toLowerCase().includes(q)));
       if(active==="popular")rows=catalog.filter(x=>["instagram","youtube","linkedin","github","vercel","supabase","openai","googlecalendar","googledrive","slack","stripe"].includes(x.id)).filter(x=>!q||[x.name,x.category,...x.tags].join(" ").toLowerCase().includes(q));
       const customRows=custom.filter(x=>active==="all"||active===x.category).filter(x=>!q||[x.name,x.category,...(x.tags||[])].join(" ").toLowerCase().includes(q));
       grid.innerHTML=rows.map(x=>card(x)).join("")+customRows.map(x=>card(itemById(x.provider_id),x)).join("");
       store.querySelector(".connector-store-empty").hidden=!!(rows.length||customRows.length);
       grid.querySelectorAll("[data-store-action]").forEach(b=>b.onclick=()=>openBuilder(b.dataset.storeAction));
+      grid.querySelectorAll("[data-store-download]").forEach(b=>b.onclick=()=>{const item=itemById(b.dataset.storeDownload);if(item)window.open(downloadUrl(item),"_blank","noopener,noreferrer");});
+      grid.querySelectorAll("[data-mark-downloaded]").forEach(b=>b.onclick=()=>{markDownloaded(b.dataset.markDownloaded);draw();});
     }
     store.querySelectorAll("[data-store-filter]").forEach(b=>b.onclick=()=>{
       active=b.dataset.storeFilter;
