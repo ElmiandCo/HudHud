@@ -387,7 +387,7 @@ function home(){
  const components=(homeComponents.length?homeComponents:defaultHomeComponents()).filter(x=>x.enabled!==false).sort((a,b)=>(a.position||0)-(b.position||0));
  return '<section class="hero hudhud-home-banner">'+
    '<div class="home-cosmic-glow"></div>'+
-   '<div class="home-bird-art" aria-hidden="true"><img src="/assets/hudhud-home-bird.svg" alt=""></div>'+
+   '<div class="home-bird-art" aria-hidden="true"><img src="/assets/hudhud-home-bird.png" alt="HudHud"></div>'+
    '<div class="home-orbit home-orbit-a"></div><div class="home-orbit home-orbit-b"></div>'+
    '<div class="home-banner-content">'+
    '<div class="home-banner-glass">'+
