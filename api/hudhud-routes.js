@@ -186,6 +186,7 @@ async function healthSync(req,res){
     const source={user_id:user.id,provider:"apple_health",status:"connected",permissions:body.permissions&&typeof body.permissions==="object"?body.permissions:{},metadata:body.metadata&&typeof body.metadata==="object"?body.metadata:{},connected_at:new Date().toISOString(),last_synced_at:new Date().toISOString(),updated_at:new Date().toISOString()};
     const src=await fetch(url+"/rest/v1/hudhud_health_sources?on_conflict=user_id,provider",{method:"POST",headers:{...headers,Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(source)});
     if(!src.ok){const detail=await src.text();throw new Error("Could not save health connection: "+detail.slice(0,300));}
+    await fetch(url+"/rest/v1/hudhud_activity",{method:"POST",headers:{...headers,Prefer:"return=minimal"},body:JSON.stringify({user_id:user.id,text:"Apple Health synced "+normalized.length+" health samples to HudHud Health.",created_at:new Date().toISOString()})});
     return res.status(200).json({ok:true,synced:normalized.length,provider:"apple_health"});
   }catch(e){return res.status(/Authentication|required/i.test(e.message)?401:500).json({error:e.message||"Health sync failed."});}
 }
