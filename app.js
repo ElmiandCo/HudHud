@@ -414,6 +414,33 @@ function home(){
    '</div></section>'+
    '<div id="homePulseDetailModal"></div>'+'<section id="homeComponentGrid" class="grid home-component-grid" style="margin-top:34px">'+components.map(homeComponentCard).join("")+'</section><div id="homeComponentModal"></div>';
 }
+function buildHudHudContextSignals(){
+ const health=window.hudhudHealthCore?.load?.()||{sources:[],meals:[],transactions:[]};
+ const connected=(state.connections||[]).filter(x=>String(x.status||"").toLowerCase().includes("config")||String(x.status||"").toLowerCase()==="connected");
+ const healthConnected=(health.sources||[]).filter(x=>x.status==="connected").length;
+ const today=new Date().toISOString().slice(0,10);
+ const meals=(health.meals||[]).filter(x=>x.date===today),tx=(health.transactions||[]).filter(x=>x.date===today);
+ const recent=(state.activity||[]).filter(x=>Date.now()-new Date(x.at||0).getTime()<7*86400000).length;
+ const signals=[];
+ if((state.projects||[]).length&&recent)signals.push({icon:"◈",title:"Work ↔ Activity",value:"Active",copy:"Projects exist and HudHud has recent workspace activity.",path:"Projects → Activity"});
+ if(healthConnected||meals.length||tx.length)signals.push({icon:"♥",title:"Health ↔ Money",value:healthConnected?"Connected":"Building",copy:"Health, diet and transaction data can be viewed together when authorized.",path:"Health → Diet → Transactions"});
+ if(connected.length)signals.push({icon:"⌁",title:"Connections ↔ Context",value:connected.length+" active",copy:"Connected services give HudHud more authorized context to organize.",path:"Connections → Sources → Actions"});
+ if((state.opportunities||[]).length)signals.push({icon:"◇",title:"Opportunities ↔ Work",value:"Tracked",copy:"Opportunities can be related to projects and activity instead of living as isolated records.",path:"Opportunities → Projects → Activity"});
+ if(!signals.length)signals.push({icon:"🧠",title:"Context layer ready",value:"Waiting for signals",copy:"Connect or record something and HudHud will show the relationship path here.",path:"Connections → Activity → Understanding"});
+ return {signals,metrics:{recent,connected:connected.length,healthConnected}};
+}
+function contextPulse(){
+ const c=buildHudHudContextSignals();
+ return '<section class="hudhud-context-pulse" aria-label="HudHud Context Pulse"><div class="context-pulse-head"><div><span class="eyebrow">HUDHUD CONTEXT PULSE</span><h2>See the relationship, not just the data.</h2><p>HudHud groups authorized signals into explainable paths so each connection can become useful context.</p></div><button class="secondary context-learn" type="button" data-context-open>HOW IT WORKS →</button></div><div class="context-signal-grid">'+c.signals.slice(0,4).map(s=>'<button type="button" class="context-signal-card" data-context-open><span class="context-signal-icon">'+s.icon+'</span><div><strong>'+esc(s.title)+'</strong><b>'+esc(s.value)+'</b><small>'+esc(s.copy)+'</small><em>'+esc(s.path)+'</em></div></button>').join('')+'</div><div class="context-footer"><span>🛡️ User-authorized • source-aware • explainable</span><span>'+c.metrics.connected+' connections · '+c.metrics.recent+' recent events · '+c.metrics.healthConnected+' health sources</span></div><div id="hudhudContextModal"></div></section>';
+}
+function openHudHudContextModal(){
+ const host=document.getElementById("hudhudContextModal");if(!host)return;
+ const c=buildHudHudContextSignals();
+ host.innerHTML='<div class="context-modal-backdrop" data-context-close></div><section class="context-modal-dialog"><button class="context-close" data-context-close>×</button><span class="eyebrow">HUDHUD UNDERSTANDING LAYER</span><h2>How HudHud connects the pieces</h2><p>HudHud starts with data you authorize, preserves the source, and shows the relationship path before presenting an insight.</p><div class="context-method"><div><b>1</b><span>Collect</span><small>Authorized connector signals</small></div><i>→</i><div><b>2</b><span>Relate</span><small>Time, category and workspace context</small></div><i>→</i><div><b>3</b><span>Explain</span><small>Show why the signal matters</small></div></div><div class="context-detail-list">'+c.signals.map(s=>'<article><span>'+s.icon+'</span><div><strong>'+esc(s.title)+'</strong><small>'+esc(s.copy)+'</small><em>'+esc(s.path)+'</em></div></article>').join('')+'</div><div class="context-modal-actions"><button class="primary" data-context-go-health>Open HudHud Health</button><button class="secondary" data-context-go-connections>Open Connector Store</button></div></section>';
+ host.querySelectorAll("[data-context-close]").forEach(b=>b.onclick=()=>host.innerHTML="");
+ host.querySelector("[data-context-go-health]")?.addEventListener("click",()=>{host.innerHTML="";render("health");});
+ host.querySelector("[data-context-go-connections]")?.addEventListener("click",()=>{host.innerHTML="";render("connections");});
+}
 function openHomeComponentModal(){
  const host=document.getElementById("homeComponentModal");if(!host)return;
  const existing=new Set(homeComponents.map(x=>x.component_key));
