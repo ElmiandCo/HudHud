@@ -26,7 +26,7 @@ export default async function handler(req,res){
     const user=await getAuthenticatedUser(token);
     const context=await buildHudHudContext(token,user.id);
 
-    const toolRun=await runToolIfRequested(message);
+    const toolRun=await runToolIfRequested(message,user.id);
     if(toolRun){
       if(toolRun.error)return res.status(503).json({error:`HudHud ${toolRun.tool} tool: ${toolRun.error}`,tool:toolRun.tool});
       const compact=JSON.stringify(toolRun.result);
