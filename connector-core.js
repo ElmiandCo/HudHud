@@ -9,6 +9,11 @@
   const LOGOS="https://cdn.simpleicons.org/";
 
   const catalog=[
+    // Health / personal intelligence
+    {id:"apple-health",name:"Apple Health",category:"health",icon:"apple",auth:"native",tags:["health","apple","watch","activity","nutrition"]},
+    {id:"apple-watch",name:"Apple Watch",category:"health",icon:"apple",auth:"native",tags:["health","watch","activity","heart"]},
+    {id:"nutrition",name:"Nutrition",category:"health",icon:"applehealth",auth:"native",tags:["health","diet","meals","nutrition"]},
+    {id:"financial-transactions",name:"Financial Transactions",category:"finance",icon:"plaid",auth:"oauth2",tags:["finance","transactions","spending","budget"]},
     // Social
     {id:"instagram",name:"Instagram",category:"social",icon:"instagram",auth:"oauth2",tags:["social","content","photo","video"]},
     {id:"facebook",name:"Facebook",category:"social",icon:"facebook",auth:"oauth2",tags:["social","content","community"]},
@@ -68,14 +73,14 @@
 
   const categoryLabels={
     all:"All",popular:"Popular",social:"Social",developer:"Developer",design:"Design",
-    ai:"AI",productivity:"Productivity",communication:"Communication",business:"Business",
+    ai:"AI",productivity:"Productivity",communication:"Communication",business:"Business",finance:"Finance",health:"Health",
     automation:"Automation",content:"Content"
   };
   const pageMaps={
     social:{title:"Social Apps",subtitle:"Connect the platforms HudHud can publish, monitor, and organize for you.",categories:["all","popular","social","content","communication"]},
-    connections:{title:"Connector Store",subtitle:"Browse every service HudHud can connect to, with one consistent search and filter system.",categories:["all","popular","social","developer","ai","productivity","communication","business","automation","content"]},
-    tools:{title:"Build & Developer Store",subtitle:"Connect the tools HudHud can use to build, deploy, design, and automate.",categories:["all","popular","developer","design","ai","automation","business"]},
-    studio:{title:"Studio App Store",subtitle:"Bring content, AI, publishing, and creative tools into your HudHud workflow.",categories:["all","popular","ai","content","design","productivity","social"]},
+    connections:{title:"Connector Store",subtitle:"Browse every service HudHud can connect to, with one consistent search and filter system.",categories:["all","popular","social","developer","ai","productivity","communication","business","finance","health","automation","content"]},
+    tools:{title:"Build & Developer Store",subtitle:"Connect the tools HudHud can use to build, deploy, design, and automate.",categories:["all","popular","developer","design","ai","automation","business","health","finance"]},
+    studio:{title:"Studio App Store",subtitle:"Bring content, AI, publishing, and creative tools into your HudHud workflow.",categories:["all","popular","ai","content","design","productivity","social","health"]},
     projects:{title:"Project Connections",subtitle:"Choose the services that belong to your projects and development workflows.",categories:["all","popular","developer","design","productivity","communication","automation"]},
     documents:{title:"Document & Content Store",subtitle:"Connect storage, documents, publishing, and content tools.",categories:["all","popular","productivity","content","communication"]},
     messages:{title:"Communication Store",subtitle:"Connect the services HudHud can use to communicate and coordinate.",categories:["all","popular","communication","social","productivity"]},
