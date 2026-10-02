@@ -1,10 +1,10 @@
 import { routeTool, detectTool } from "./tool-router.js";
 import { getAuthenticatedUser, buildHudHudContext, contextPrompt } from "../lib/hudhud-context.js";
 
-async function runToolIfRequested(message){
+async function runToolIfRequested(message,contextUserId){
   const detected=detectTool(message);
   if(!detected)return null;
-  try{return{tool:detected.tool,args:detected.args,result:await routeTool(detected.tool,detected.args)}}
+  try{return{tool:detected.tool,args:detected.args,result:await routeTool(detected.tool,detected.args,{userId:contextUserId})}}
   catch(error){return{tool:detected.tool,args:detected.args,error:error.message}}
 }
 
