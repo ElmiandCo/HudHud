@@ -392,7 +392,11 @@ function home(){
    '<p>Talk to HudHud here. Your Home page is personal to this workspace and can grow with the connections you authorize.</p>'+
    '<div class="home-chat"><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div>'+
    '</div></div></section>'+
-   '<section class="home-feature-rail" aria-label="HudHud capabilities"><div class="home-feature"><b>⚡</b><span>AI Agents</span><small>Automate. Amplify.</small></div><div class="home-feature"><b>◈</b><span>Social Media</span><small>Connect. Publish.</small></div><div class="home-feature"><b>▥</b><span>Analytics</span><small>Track. Grow.</small></div><div class="home-feature"><b>◇</b><span>Build</span><small>Create. Scale.</small></div></section>'+
+   '<section id="workspacePulse" class="home-pulse" aria-label="Workspace Pulse">'+
+   '<div class="home-pulse-head"><div><span class="eyebrow">WORKSPACE PULSE</span><h2>Your workspace, right now.</h2><p>Live counts from HudHud. Every number opens the relevant workspace.</p></div></div>'+
+   '<div class="home-pulse-grid">'+
+   [['projects','Projects',state.projects?.length||0,'What you are building','projects'],['opportunities','Opportunities',state.opportunities?.length||0,'What could become something','opportunities'],['connections','Connections',state.connections?.length||0,'Authorized sources HudHud can use','connections'],['plans','Plans',state.plans?.length||0,'What you are intentionally trying to accomplish','planning'],['goals','Goals',state.goals?.length||0,'Why you are doing it','planning'],['activity','Activity',state.activity?.length||0,'What is happening now','activity']].map(x=>'<button class="home-pulse-card" type="button" data-pulse-view="'+esc(x[4])+'"><span class="home-pulse-icon">'+({'projects':'▣','opportunities':'◇','connections':'⌁','plans':'◈','goals':'◎','activity':'◷'}[x[0]]||'•')+'</span><strong>'+esc(x[1])+'</strong><b>'+esc(x[2])+'</b><small>'+esc(x[3])+'</small><em>OPEN →</em></button>').join('')+
+   '</div></section>'+
    '<section id="homeComponentGrid" class="grid home-component-grid" style="margin-top:34px">'+components.map(homeComponentCard).join("")+'</section><div id="homeComponentModal"></div>';
 }
 function openHomeComponentModal(){
@@ -420,6 +424,9 @@ function removeHomeComponent(key){
  if(["projects","opportunities","activity"].includes(key)){toast("Your default Home cards stay available.");return;}
  homeComponents=homeComponents.filter(x=>x.component_key!==key);
  saveHomeComponents();render("home");toast("Component removed");
+}
+function bindHomePulse(){
+ document.querySelectorAll("[data-pulse-view]").forEach(b=>b.onclick=()=>nav(b.dataset.pulseView));
 }
 function bindHomeComponents(){
  document.querySelector("[data-home-add-component]")?.addEventListener("click",openHomeComponentModal);
@@ -1623,7 +1630,7 @@ function render(view){
  handleSocialCallbackResult();
  hudhudFlyby(view==="home"?1:2);
  bind(view);
- if(view==="home") { bindChat(); bindHomeAuth(); bindHomeComponents(); ensureHudHudWidget(); }
+ if(view==="home") { bindChat(); bindHomeAuth(); bindHomePulse(); bindHomeComponents(); ensureHudHudWidget(); }
  if(view==="core") bindThemeToggle();
  if(view==="tools") bindTools();
  if(view==="studio") bindStudio();
