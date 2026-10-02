@@ -1,13 +1,13 @@
-/* HudHud Connector Core UI */
+/* HudHud Connector Core + App Store UI */
 .connector-more-button{margin-left:auto;white-space:nowrap}
 .connector-modal-backdrop{position:fixed;inset:0;background:rgba(2,5,14,.72);backdrop-filter:blur(10px);z-index:4000}
-.connector-modal{position:fixed;z-index:4001;left:50%;top:50%;transform:translate(-50%,-50%);width:min(940px,94vw);max-height:88vh;overflow:auto;padding:28px;border:1px solid rgba(89,145,255,.3);border-radius:24px;background:linear-gradient(145deg,rgba(8,15,32,.98),rgba(20,9,32,.98));box-shadow:0 30px 100px rgba(0,0,0,.7);color:#eef5ff}
+.connector-modal{position:fixed;z-index:4001;left:50%;top:50%;transform:translate(-50%,-50%);width:min(980px,94vw);max-height:90vh;overflow:auto;padding:28px;border:1px solid rgba(89,145,255,.3);border-radius:24px;background:linear-gradient(145deg,rgba(8,15,32,.98),rgba(20,9,32,.98));box-shadow:0 30px 100px rgba(0,0,0,.7);color:#eef5ff}
 .connector-modal h2{margin:8px 0 8px;font-size:32px;letter-spacing:-1px}
 .connector-subtitle{color:#91a2c1;line-height:1.6;margin:0 0 20px;max-width:760px}
 .connector-close{position:absolute;right:18px;top:16px;width:40px;height:40px;border-radius:12px;border:1px solid rgba(101,143,224,.25);background:rgba(24,31,54,.7);color:#eef4ff;font-size:24px;cursor:pointer}
-.connector-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
-.connector-tabs button{border:1px solid rgba(91,132,210,.2);background:rgba(16,25,47,.8);color:#9eb0d1;border-radius:999px;padding:9px 14px;cursor:pointer}
-.connector-tabs button.active{color:#fff;border-color:#39d9ff;background:rgba(39,173,255,.12)}
+.connector-tabs,.connector-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.connector-tabs button,.connector-filter{border:1px solid rgba(91,132,210,.2);background:rgba(16,25,47,.8);color:#9eb0d1;border-radius:999px;padding:9px 14px;cursor:pointer}
+.connector-tabs button.active,.connector-filter.active{color:#fff;border-color:#39d9ff;background:rgba(39,173,255,.12)}
 .connector-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .connector-card{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;padding:12px;border:1px solid rgba(91,132,210,.18);border-radius:16px;background:rgba(11,20,39,.72)}
 .connector-logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);overflow:hidden}
@@ -21,5 +21,32 @@
 .connector-form{display:grid;gap:13px}.connector-form label{display:grid;gap:7px;color:#a8b7d0;font-size:11px}.connector-form input,.connector-form textarea,.connector-form select{width:100%;box-sizing:border-box;border:1px solid rgba(91,132,210,.24);border-radius:12px;background:rgba(3,9,21,.75);color:#f2f7ff;padding:12px;font:inherit}.connector-form textarea{min-height:100px;resize:vertical}.connector-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .connector-builder-rules{display:grid;gap:4px;padding:13px;border-radius:14px;border:1px solid rgba(101,143,224,.15);background:rgba(255,255,255,.025);font-size:10px}.connector-builder-rules span{color:#7f90ad;line-height:1.55}
 .connector-recipe{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:20px 0}.connector-recipe>div{padding:14px;border:1px solid rgba(91,132,210,.18);border-radius:14px;background:rgba(255,255,255,.025)}.connector-recipe span,.connector-recipe strong{display:block}.connector-recipe span{font-size:9px;color:#5fcfff;letter-spacing:.12em}.connector-recipe strong{margin-top:6px;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
-@media(max-width:760px){.connector-grid{grid-template-columns:1fr 1fr}.connector-modal{padding:22px 16px;max-height:90vh}.connector-modal h2{font-size:27px}.connector-form-grid,.connector-recipe{grid-template-columns:1fr}.connector-builder-callout{align-items:flex-start;flex-direction:column}.connector-more-button{margin-left:0;margin-top:10px}}
-@media(max-width:480px){.connector-grid{grid-template-columns:1fr}.connector-card{grid-template-columns:38px 1fr auto}.connector-card .connector-use{padding:7px 8px}}
+
+/* Contextual HudHud App Store */
+.hudhud-connector-store{margin:28px 0 8px;padding:22px;border:1px solid rgba(91,132,210,.18);border-radius:24px;background:linear-gradient(145deg,rgba(8,15,32,.76),rgba(20,9,32,.64));box-shadow:0 18px 55px rgba(0,0,0,.22)}
+.connector-store-header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
+.connector-store-header h2{margin:6px 0 5px;font-size:25px;letter-spacing:-.5px}.connector-store-header p{margin:0;color:#8091af;line-height:1.5;max-width:700px;font-size:12px}
+.connector-count{padding:8px 11px;border:1px solid rgba(91,132,210,.18);border-radius:999px;color:#8fa4c5;font-size:10px;white-space:nowrap}
+.connector-store-toolbar{display:grid;gap:12px;margin-bottom:18px}
+.connector-store-search{display:flex;align-items:center;gap:10px;padding:0 13px;border:1px solid rgba(91,132,210,.22);border-radius:14px;background:rgba(3,9,21,.68);min-height:44px}
+.connector-store-search span{color:#6f83a4;font-size:20px}.connector-store-search input{border:0;outline:0;background:transparent;color:#f2f7ff;width:100%;font:inherit;font-size:12px}.connector-store-search input::placeholder{color:#5f7190}
+.connector-filter-row{margin:0}
+.connector-filter{padding:8px 12px;font-size:10px;text-transform:none}
+.connector-store-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.connector-store-card{min-width:0;padding:15px;border:1px solid rgba(91,132,210,.17);border-radius:18px;background:linear-gradient(145deg,rgba(14,25,47,.8),rgba(9,15,29,.72));transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.connector-store-card:hover{transform:translateY(-2px);border-color:rgba(57,217,255,.35);box-shadow:0 12px 30px rgba(0,0,0,.22)}
+.connector-store-card-top{display:flex;justify-content:space-between;align-items:center;gap:8px}.connector-store-card .connector-logo{width:46px;height:46px;border-radius:14px}.connector-store-card .connector-logo img{width:27px;height:27px}
+.connector-status{font-size:8px;text-transform:uppercase;letter-spacing:.1em;padding:5px 7px;border-radius:999px;border:1px solid rgba(91,132,210,.18);color:#7e91b2}.connector-status.recipe{color:#72edc0;border-color:rgba(76,231,175,.22);background:rgba(76,231,175,.06)}
+.connector-store-copy h3{margin:14px 0 4px;font-size:14px;color:#f2f7ff}.connector-store-copy p{margin:0;color:#7183a2;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+.connector-tags{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0 14px;min-height:18px}.connector-tags span{padding:4px 6px;border-radius:999px;background:rgba(255,255,255,.04);color:#7f91af;font-size:8px}
+.connector-store-action{width:100%;padding:9px 10px;border:1px solid rgba(91,132,210,.25);border-radius:10px;background:rgba(28,45,75,.7);color:#dceaff;cursor:pointer;font-size:10px;font-weight:700}.connector-store-action:hover{border-color:#39d9ff}.connector-store-action.ready{color:#75efc1}
+.connector-store-empty{padding:24px;text-align:center;color:#8091af;font-size:12px;border:1px dashed rgba(91,132,210,.22);border-radius:16px}.connector-store-empty[hidden]{display:none}.connector-store-empty button{margin-left:8px}
+
+@media(max-width:1000px){.connector-store-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){
+  .connector-grid{grid-template-columns:1fr 1fr}.connector-modal{padding:22px 16px;max-height:90vh}.connector-modal h2{font-size:27px}.connector-form-grid,.connector-recipe{grid-template-columns:1fr}.connector-builder-callout{align-items:flex-start;flex-direction:column}.connector-more-button{margin-left:0;margin-top:10px}
+  .connector-store-header{flex-direction:column}.connector-store-grid{grid-template-columns:1fr 1fr}.connector-count{align-self:flex-start}
+}
+@media(max-width:480px){
+  .connector-grid,.connector-store-grid{grid-template-columns:1fr}.connector-card{grid-template-columns:38px 1fr auto}.connector-card .connector-use{padding:7px 8px}.hudhud-connector-store{padding:16px;border-radius:19px}.connector-store-grid{gap:9px}
+}
