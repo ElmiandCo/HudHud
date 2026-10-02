@@ -121,7 +121,7 @@
       '<div class="eyebrow">HUDHUD CONNECTOR CORE</div><h2 id="connectorTitle">App & Service Store</h2>'+
       '<p class="connector-subtitle">Search HudHud’s catalog, filter it by category, or build a connector when a service is missing.</p>'+
       '<div class="connector-store-search"><span>⌕</span><input id="connectorStoreSearch" placeholder="Search apps, services, tools..." autocomplete="off"></div>'+
-      '<div class="connector-tabs">'+Object.entries(categoryLabels).slice(0,4).map(([k,v])=>'<button class="'+(category===k?"active":"")+'" data-connector-tab="'+k+'">'+v+"</button>").join("")+'</div>'+
+      '<div class="connector-tabs">'+Object.entries(categoryLabels).map(([k,v])=>'<button class="'+(category===k?"active":"")+'" data-connector-tab="'+k+'">'+v+"</button>").join("")+'</div>'+
       '<div class="connector-grid" id="connectorModalGrid">'+filtered.map(x=>card(x)).join("")+'</div>'+
       (custom.length?'<div class="connector-custom-section"><div class="eyebrow">YOUR CONNECTORS</div><div class="connector-grid">'+custom.map(x=>card(itemById(x.provider_id),x)).join("")+"</div></div>":"")+
       '<div class="connector-builder-callout"><div><strong>Don’t see it?</strong><span>HudHud can create a deterministic connector recipe from an API description.</span></div><button class="primary" data-connector-new>＋ Build connector</button></div>'+
