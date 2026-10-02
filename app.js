@@ -503,6 +503,7 @@ function openHomePulseDetail(key){
 }
 function bindHomePulse(){
  document.querySelectorAll("[data-pulse-view]").forEach(b=>b.onclick=()=>openHomePulseDetail(b.dataset.pulseView));
+ document.querySelectorAll("[data-context-open]").forEach(b=>b.onclick=openHudHudContextModal);
 }
 function bindHomeComponents(){
  document.querySelector("[data-home-add-component]")?.addEventListener("click",openHomeComponentModal);
