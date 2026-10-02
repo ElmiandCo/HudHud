@@ -1496,13 +1496,29 @@ function bindNavigationAccordions(root){
   root.querySelectorAll("details.nav-group > summary").forEach(summary=>{
     summary.addEventListener("click",e=>{
       e.preventDefault();
+      e.stopPropagation();
       const group=summary.parentElement;
       const willOpen=!group.hasAttribute("open");
-      root.querySelectorAll("details.nav-group").forEach(other=>{
-        if(other!==group)other.removeAttribute("open");
-      });
+      root.querySelectorAll("details.nav-group").forEach(other=>other.removeAttribute("open"));
       if(willOpen)group.setAttribute("open","");
     });
+  });
+}
+function closeAllNavigationGroups(except){
+  document.querySelectorAll("#nav details.nav-group,#mobileNavDrawer details.nav-group").forEach(group=>{
+    if(group!==except)group.removeAttribute("open");
+  });
+}
+function setupDesktopNavigation(){
+  const nav=document.getElementById("nav");
+  if(!nav||nav.dataset.bound==="1")return;
+  nav.dataset.bound="1";
+  bindNavigationAccordions(nav);
+  document.addEventListener("click",e=>{
+    if(!nav.contains(e.target) && !e.target.closest(".sidebar-footer,.legal-footer"))closeAllNavigationGroups();
+  });
+  document.querySelectorAll(".sidebar-footer,.legal-footer").forEach(el=>{
+    el.addEventListener("click",()=>closeAllNavigationGroups());
   });
 }
 function openActiveNavigationGroup(view){
@@ -1515,6 +1531,7 @@ function openActiveNavigationGroup(view){
     if(active)group.setAttribute("open","");
   });
 }
+setupDesktopNavigation();
 function setupMobileNav(){
   if(document.getElementById("mobileNav"))return;
   const nav=document.getElementById("nav");
