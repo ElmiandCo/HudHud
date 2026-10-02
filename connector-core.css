@@ -1,0 +1,25 @@
+/* HudHud Connector Core UI */
+.connector-more-button{margin-left:auto;white-space:nowrap}
+.connector-modal-backdrop{position:fixed;inset:0;background:rgba(2,5,14,.72);backdrop-filter:blur(10px);z-index:4000}
+.connector-modal{position:fixed;z-index:4001;left:50%;top:50%;transform:translate(-50%,-50%);width:min(940px,94vw);max-height:88vh;overflow:auto;padding:28px;border:1px solid rgba(89,145,255,.3);border-radius:24px;background:linear-gradient(145deg,rgba(8,15,32,.98),rgba(20,9,32,.98));box-shadow:0 30px 100px rgba(0,0,0,.7);color:#eef5ff}
+.connector-modal h2{margin:8px 0 8px;font-size:32px;letter-spacing:-1px}
+.connector-subtitle{color:#91a2c1;line-height:1.6;margin:0 0 20px;max-width:760px}
+.connector-close{position:absolute;right:18px;top:16px;width:40px;height:40px;border-radius:12px;border:1px solid rgba(101,143,224,.25);background:rgba(24,31,54,.7);color:#eef4ff;font-size:24px;cursor:pointer}
+.connector-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.connector-tabs button{border:1px solid rgba(91,132,210,.2);background:rgba(16,25,47,.8);color:#9eb0d1;border-radius:999px;padding:9px 14px;cursor:pointer}
+.connector-tabs button.active{color:#fff;border-color:#39d9ff;background:rgba(39,173,255,.12)}
+.connector-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.connector-card{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;padding:12px;border:1px solid rgba(91,132,210,.18);border-radius:16px;background:rgba(11,20,39,.72)}
+.connector-logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);overflow:hidden}
+.connector-logo img{width:22px;height:22px;object-fit:contain}
+.connector-monogram{font-size:11px;font-weight:800;color:#8feaff}
+.connector-card-copy{min-width:0}.connector-card-copy strong,.connector-card-copy small{display:block}.connector-card-copy strong{font-size:12px}.connector-card-copy small{margin-top:4px;color:#7183a2;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+.connector-use{padding:8px 10px;font-size:10px}
+.connector-custom-section{margin-top:24px;padding-top:20px;border-top:1px solid rgba(101,143,224,.14)}
+.connector-builder-callout{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-top:22px;padding:16px;border:1px solid rgba(54,217,255,.18);border-radius:18px;background:linear-gradient(100deg,rgba(34,143,255,.08),rgba(190,55,255,.08))}
+.connector-builder-callout strong,.connector-builder-callout span{display:block}.connector-builder-callout span{margin-top:4px;color:#8293b1;font-size:11px}
+.connector-form{display:grid;gap:13px}.connector-form label{display:grid;gap:7px;color:#a8b7d0;font-size:11px}.connector-form input,.connector-form textarea,.connector-form select{width:100%;box-sizing:border-box;border:1px solid rgba(91,132,210,.24);border-radius:12px;background:rgba(3,9,21,.75);color:#f2f7ff;padding:12px;font:inherit}.connector-form textarea{min-height:100px;resize:vertical}.connector-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.connector-builder-rules{display:grid;gap:4px;padding:13px;border-radius:14px;border:1px solid rgba(101,143,224,.15);background:rgba(255,255,255,.025);font-size:10px}.connector-builder-rules span{color:#7f90ad;line-height:1.55}
+.connector-recipe{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:20px 0}.connector-recipe>div{padding:14px;border:1px solid rgba(91,132,210,.18);border-radius:14px;background:rgba(255,255,255,.025)}.connector-recipe span,.connector-recipe strong{display:block}.connector-recipe span{font-size:9px;color:#5fcfff;letter-spacing:.12em}.connector-recipe strong{margin-top:6px;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+@media(max-width:760px){.connector-grid{grid-template-columns:1fr 1fr}.connector-modal{padding:22px 16px;max-height:90vh}.connector-modal h2{font-size:27px}.connector-form-grid,.connector-recipe{grid-template-columns:1fr}.connector-builder-callout{align-items:flex-start;flex-direction:column}.connector-more-button{margin-left:0;margin-top:10px}}
+@media(max-width:480px){.connector-grid{grid-template-columns:1fr}.connector-card{grid-template-columns:38px 1fr auto}.connector-card .connector-use{padding:7px 8px}}
