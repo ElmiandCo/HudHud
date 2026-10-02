@@ -182,6 +182,43 @@
     draw();
   }
 
+  function openBuilder(providerId){
+    const host=modal(), known=itemById(providerId), existing=read().find(x=>x.id===providerId);
+    host.innerHTML='<div class="connector-modal-backdrop" data-connector-close></div>'+
+      '<section class="connector-modal connector-builder" role="dialog" aria-modal="true">'+
+      '<button class="connector-close" data-connector-close>×</button>'+
+      '<div class="eyebrow">BUILD ON THE SPOT</div><h2>'+(known?"Configure "+esc(known.name):"Build a new connector")+'</h2>'+
+      '<p class="connector-subtitle">HudHud creates the integration recipe first. Credentials are added through the secure gateway later.</p>'+
+      '<form id="connectorBuilderForm" class="connector-form">'+
+      '<label>Service name<input name="name" required maxlength="80" value="'+esc(existing?.name||known?.name||"")+'" placeholder="Example: Acme CRM"></label>'+
+      '<label>API base URL<input name="baseUrl" type="url" required placeholder="https://api.example.com/v1" value="'+esc(existing?.base_url||"")+'"></label>'+
+      '<div class="connector-form-grid"><label>Category<select name="category"><option value="social">Social</option><option value="developer">Developer</option><option value="ai">AI</option><option value="productivity">Productivity</option><option value="communication">Communication</option><option value="business">Business</option><option value="content">Content</option><option value="other">Other</option></select></label>'+
+      '<label>Authentication<select name="auth"><option value="oauth2">OAuth 2.0</option><option value="api_key">API key</option><option value="bearer">Bearer token</option><option value="none">No authentication</option></select></label></div>'+
+      '<label>Permissions / scopes<input name="scopes" maxlength="800" placeholder="profile, read, write" value="'+esc(existing?.scopes?.join(", ")||"")+'"></label>'+
+      '<label>Actions HudHud should support<textarea name="actions" maxlength="1200" placeholder="Example: read profile; list items; create item">'+esc(existing?.actions?.join("\n")||"")+'</textarea></label>'+
+      '<div class="connector-builder-rules"><strong>HudHud will enforce</strong><span>HTTPS only • least privilege • no secrets in browser • server-side execution • no invented credentials</span></div>'+
+      '<div id="connectorBuilderError" class="auth-error"></div><div class="form-actions"><button type="button" class="secondary" data-connector-close>Cancel</button><button class="primary" type="submit">Build connector recipe</button></div>'+
+      '</form></section>';
+    host.querySelectorAll("[data-connector-close]").forEach(b=>b.onclick=()=>host.innerHTML="");
+    const form=host.querySelector("#connectorBuilderForm");
+    form.category.value=existing?.category||known?.category||"developer";
+    form.auth.value=existing?.auth||known?.auth||"oauth2";
+    form.onsubmit=e=>{
+      e.preventDefault();
+      const f=new FormData(form),name=String(f.get("name")||"").trim(),baseUrl=String(f.get("baseUrl")||"").trim(),error=host.querySelector("#connectorBuilderError");
+      let url;try{url=new URL(baseUrl)}catch{if(error)error.textContent="Enter a valid HTTPS API base URL.";return}
+      if(url.protocol!=="https:"){if(error)error.textContent="Connector gateways require HTTPS.";return}
+      const scopes=String(f.get("scopes")||"").split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
+      const actions=String(f.get("actions")||"").split(/\n|;/).map(x=>x.trim()).filter(Boolean);
+      if(!actions.length){if(error)error.textContent="Give HudHud at least one action.";return}
+      const id=known?.id||("custom_"+name.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"")+"_"+Date.now());
+      const spec={id,name,provider_id:known?.id||null,category:String(f.get("category")),auth:String(f.get("auth")),base_url:url.origin+url.pathname.replace(/\/$/,""),scopes,actions,tags:[String(f.get("category"))],health_check:{method:"GET",path:"/"},status:"recipe_ready",created_at:new Date().toISOString(),protocol_version:"2.0"};
+      write([spec,...read().filter(x=>x.id!==id)]);
+      host.innerHTML='<div class="connector-modal-backdrop" data-connector-close></div><section class="connector-modal connector-success"><div class="eyebrow">RECIPE READY</div><h2>'+esc(name)+' is mapped.</h2><p class="connector-subtitle">HudHud now has a deterministic connector definition. The next step is secure authorization through the provider gateway.</p><div class="connector-recipe"><div><span>AUTH</span><strong>'+esc(spec.auth)+'</strong></div><div><span>BASE</span><strong>'+esc(spec.base_url)+'</strong></div><div><span>SCOPES</span><strong>'+esc(spec.scopes.join(", ")||"none")+'</strong></div><div><span>ACTIONS</span><strong>'+esc(spec.actions.join(" • "))+'</strong></div></div><div class="connector-builder-rules"><strong>Runtime rule</strong><span>HudHud may use this recipe, but it must not execute the endpoint until the server-side gateway has approved the host and the user has authorized the connection.</span></div><div class="form-actions"><button class="primary" data-connector-done>Done</button></div></section>';
+      host.querySelector("[data-connector-done]").onclick=()=>openHub("all");
+    };
+  }
+
   function currentView(){
     const active=document.querySelector('#nav [data-view].active')||document.querySelector('[data-view].active');
     return active?.dataset?.view||"";
