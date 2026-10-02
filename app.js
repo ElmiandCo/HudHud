@@ -1577,7 +1577,10 @@ function setupMobileNav(){
   drawer.innerHTML=`
     <div class="mobile-drawer-head"><div><strong>HUDHUD</strong><span>Navigate</span></div><button data-mobile-close aria-label="Close navigation">×</button></div>
     <div class="mobile-drawer-content"></div>`;
-  drawer.querySelector(".mobile-drawer-content").appendChild(nav.cloneNode(true));
+  const mobileNavMarkup=nav.cloneNode(true);
+  mobileNavMarkup.removeAttribute("id");
+  mobileNavMarkup.setAttribute("data-mobile-menu","true");
+  drawer.querySelector(".mobile-drawer-content").appendChild(mobileNavMarkup);
   document.body.appendChild(drawer);
 
   const close=()=>{drawer.classList.remove("open");backdrop.classList.remove("open");};
@@ -1600,16 +1603,6 @@ function setupMobileNav(){
     });
     if(willOpen)group.setAttribute("open","");
   });
-  drawerContent.addEventListener("touchend",e=>{
-    const summary=e.target.closest("details.nav-group > summary");
-    if(!summary || !drawerContent.contains(summary))return;
-    e.preventDefault();
-    const group=summary.parentElement;
-    const willOpen=!group.hasAttribute("open");
-    drawerContent.querySelectorAll("details.nav-group").forEach(other=>{
-      if(other!==group)other.removeAttribute("open");    });
-    if(willOpen)group.setAttribute("open","");
-  },{passive:false});
   bindNavigationAccordions(drawer.querySelector(".mobile-drawer-content nav"));
   drawer.querySelectorAll("button[data-view]").forEach(b=>b.addEventListener("click",()=>{close();render(b.dataset.view);}));
   wrap.querySelectorAll("[data-mobile-view]").forEach(b=>b.addEventListener("click",()=>render(b.dataset.mobileView)));
