@@ -2147,6 +2147,7 @@ function bindHomeAuth(){
 }
 
 function bindChat(){
+ const ask=document.querySelector("[data-home-ask]");ask?.addEventListener("click",()=>document.getElementById("chatInput")?.focus());
  const form=document.getElementById("chatForm");if(!form)return;
  const input=document.getElementById("chatInput");
  form.onsubmit=async e=>{e.preventDefault();const message=input.value.trim();if(!message)return;addMessage("You",message,"user");input.value="";log("Sent message to HudHud: "+message);await sendToHudHud(message);};
