@@ -1,6 +1,4 @@
-import crypto from "node:crypto";
-
-function bearer(req){return String(req.headers.authorization||"").replace(/^Bearer\\s+/i,"").trim();}
+function bearer(req){return String(req.headers.authorization||"").replace(/^Bearer\s+/i,"").trim();}
 async function supaUser(token){
  const url=process.env.HUDHUD_SUPABASE_URL, key=process.env.HUDHUD_SUPABASE_KEY;
  if(!url||!key)throw new Error("Supabase server configuration is missing.");
