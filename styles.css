@@ -1040,7 +1040,7 @@ body{transition:background-color .2s ease,color .2s ease}
 .home-pulse-card:hover{border-color:rgba(47,210,255,.55);box-shadow:0 16px 35px rgba(19,117,255,.12)}
 .home-pulse-card em{color:#42dfff}
 
-@keyframes hudhud-bird-float{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-10px) rotate(1deg)}}
+@keyframes hudhud-bird-float{0%,100%{transform:translate3d(0,0,0) rotate(-1deg)}25%{transform:translate3d(0,-7px,0) rotate(0deg)}50%{transform:translate3d(0,-16px,0) rotate(1deg)}75%{transform:translate3d(0,-7px,0) rotate(0deg)}}
 @keyframes hudhud-glow{0%{opacity:.65;transform:scale(.96)}100%{opacity:1;transform:scale(1.04)}}
 
 :root[data-theme="day"] .hudhud-home-banner{
@@ -1215,3 +1215,5 @@ body{transition:background-color .2s ease,color .2s ease}
   .home-bird-art{height:auto!important;aspect-ratio:1 / 1!important;}
   .home-bird-art img{height:auto!important;aspect-ratio:1 / 1!important;}
 }
+
+@media(prefers-reduced-motion:reduce){.home-bird-art{animation:none!important}}
