@@ -1096,3 +1096,98 @@ body{transition:background-color .2s ease,color .2s ease}
   .home-status-main strong{font-size:11px}
   .home-status-main small{font-size:7px}
 }
+
+/* Final HudHud mobile composition */
+@media(max-width:800px){
+  .home-bird-art{
+    left:50%!important;
+    right:auto!important;
+    margin-left:0!important;
+    transform:translateX(-50%)!important;
+    width:min(520px,92vw)!important;
+    height:auto!important;
+    top:10px!important;
+    z-index:5!important;
+  }
+  .home-bird-art img{
+    width:100%!important;
+    height:auto!important;
+    object-fit:contain!important;
+  }
+
+  .mobile-nav-drawer{
+    left:50%;
+    right:auto;
+    bottom:12px;
+    width:min(94vw,520px);
+    max-height:72vh;
+    transform:translate(-50%,105%);
+    border:1px solid rgba(89,145,255,.32);
+    border-radius:28px;
+    padding:16px 14px calc(18px + env(safe-area-inset-bottom));
+    background:linear-gradient(145deg,rgba(7,13,29,.97),rgba(18,9,31,.96));
+    box-shadow:0 24px 90px rgba(0,0,0,.65),0 0 45px rgba(64,105,255,.08);
+  }
+  .mobile-nav-drawer.open{transform:translate(-50%,0)}
+  .mobile-drawer-head{
+    padding:4px 4px 15px;
+    background:transparent;
+    border-bottom:1px solid rgba(101,143,224,.16);
+  }
+  .mobile-drawer-head strong{
+    font-size:15px;
+    letter-spacing:4px;
+    background:linear-gradient(90deg,#fff,#9ddfff,#d878ff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .mobile-drawer-head span{font-size:10px;color:#7888aa}
+  .mobile-drawer-head button{
+    width:40px;height:40px;border-radius:13px;
+    background:rgba(24,31,54,.72);
+    border-color:rgba(101,143,224,.28);
+    color:#eaf4ff;
+  }
+  .mobile-drawer-content{padding-top:14px}
+  .mobile-drawer-content nav{grid-template-columns:1fr 1fr;gap:10px}
+  .mobile-drawer-content .nav-group{
+    min-height:64px;
+    border:1px solid rgba(87,126,208,.20);
+    border-radius:17px;
+    background:linear-gradient(145deg,rgba(13,22,44,.88),rgba(14,10,27,.88));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+  }
+  .mobile-drawer-content .nav-group summary{
+    min-height:64px;
+    padding:14px 13px;
+    font-size:10px;
+    letter-spacing:1.8px;
+    color:#9bb0d6;
+  }
+  .mobile-drawer-content .nav-group summary:after{color:#62b9ff}
+  .mobile-drawer-content .nav-group[open]{grid-column:1/-1}
+  .mobile-drawer-content .nav-group button{
+    font-size:12px;
+    padding:10px 12px;
+    color:#a8b6cf;
+  }
+  .mobile-drawer-content .nav-group button.active{
+    background:linear-gradient(90deg,rgba(45,142,255,.16),rgba(178,57,255,.12));
+    box-shadow:inset 2px 0 #39d9ff;
+  }
+  .mobile-drawer-content .nav-group button i{color:#61baff}
+}
+
+@media(max-width:520px){
+  .home-bird-art{
+    width:clamp(330px,94vw,470px)!important;
+    top:16px!important;
+  }
+  .hudhud-home-banner{
+    overflow:hidden!important;
+  }
+  .mobile-nav-drawer{
+    width:calc(100vw - 22px);
+    bottom:8px;
+    max-height:76vh;
+  }
+}
