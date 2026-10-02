@@ -1104,6 +1104,7 @@ body{transition:background-color .2s ease,color .2s ease}
     right:auto!important;
     margin-left:0!important;
     transform:translateX(-50%)!important;
+    animation:none!important;
     width:min(520px,92vw)!important;
     height:auto!important;
     top:10px!important;
@@ -1113,6 +1114,8 @@ body{transition:background-color .2s ease,color .2s ease}
     width:100%!important;
     height:auto!important;
     object-fit:contain!important;
+    animation:hudhud-bird-float 6s ease-in-out infinite;
+    transform-origin:center center;
   }
 
   .mobile-nav-drawer{
