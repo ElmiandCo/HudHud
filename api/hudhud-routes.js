@@ -167,6 +167,29 @@ async function socialDisconnect(req,res){
   }catch(e){return res.status(/Authentication/i.test(e.message)?401:503).json({error:e.message||"Could not disconnect social provider."});}
 }
 
+async function healthSync(req,res){
+  if(req.method!=="POST"){res.setHeader("Allow","POST");return res.status(405).json({error:"Method not allowed."});}
+  try{
+    const user=await userFromRequest(req),body=typeof req.body==="string"?JSON.parse(req.body||"{}"):(req.body||{});
+    const samples=Array.isArray(body.samples)?body.samples.slice(0,500):[];
+    const allowedTypes=new Set(["step_count","active_energy","heart_rate","walking_running_distance","workout","dietary_energy","dietary_protein","sleep"]);
+    const normalized=samples.filter(x=>x&&allowedTypes.has(String(x.sample_type||""))&&x.started_at).map(x=>({
+      user_id:user.id,provider:"apple_health",sample_type:String(x.sample_type),external_id:x.external_id?String(x.external_id):null,
+      value:x.value==null?null:Number(x.value),unit:x.unit?String(x.unit):null,started_at:new Date(x.started_at).toISOString(),
+      ended_at:x.ended_at?new Date(x.ended_at).toISOString():null,source_name:x.source_name?String(x.source_name):null,metadata:x.metadata&&typeof x.metadata==="object"?x.metadata:{}
+    }));
+    const {url,headers}=admin();
+    if(normalized.length){
+      const up=await fetch(url+"/rest/v1/hudhud_health_samples?on_conflict=user_id,provider,sample_type,external_id",{method:"POST",headers:{...headers,Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(normalized)});
+      if(!up.ok){const detail=await up.text();throw new Error("Could not save health samples: "+detail.slice(0,300));}
+    }
+    const source={user_id:user.id,provider:"apple_health",status:"connected",permissions:body.permissions&&typeof body.permissions==="object"?body.permissions:{},metadata:body.metadata&&typeof body.metadata==="object"?body.metadata:{},connected_at:new Date().toISOString(),last_synced_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+    const src=await fetch(url+"/rest/v1/hudhud_health_sources?on_conflict=user_id,provider",{method:"POST",headers:{...headers,Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(source)});
+    if(!src.ok){const detail=await src.text();throw new Error("Could not save health connection: "+detail.slice(0,300));}
+    return res.status(200).json({ok:true,synced:normalized.length,provider:"apple_health"});
+  }catch(e){return res.status(/Authentication|required/i.test(e.message)?401:500).json({error:e.message||"Health sync failed."});}
+}
+
 async function socialIntegrations(req,res){
   if(req.method!=="GET"){res.setHeader("Allow","GET");return res.status(405).json({error:"Method not allowed."});}
   try{
@@ -260,6 +283,7 @@ const handlers={
  "social-callback-youtube":socialCallbackYoutube,
  "social-disconnect":socialDisconnect,
  "social-integrations":socialIntegrations,
+ "health-sync":healthSync,
  "provider-accounts":providerAccounts,
  "supabase-config":supabaseConfig,
  "system-control":systemControl,
