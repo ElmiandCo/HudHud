@@ -57,16 +57,58 @@
   function addMeal(){
     const s=load();
     modal("Log a meal",'<form class="health-form" id="healthMealForm"><label>Meal / food<input name="name" required placeholder="Chicken, rice, vegetables"></label><div class="health-form-grid"><label>Calories<input name="calories" type="number" min="0" step="1" placeholder="650"></label><label>Protein (g)<input name="protein" type="number" min="0" step="1" placeholder="45"></label></div><label>Date<input name="date" type="date" value="'+today()+'"></label><div class="health-modal-actions"><button class="primary" type="submit">Save meal</button><button class="secondary" type="button" data-health-close>Cancel</button></div></form>');
-    document.getElementById("healthMealForm")?.addEventListener("submit",e=>{e.preventDefault();const f=new FormData(e.currentTarget);s.meals.unshift({id:"meal_"+Date.now(),name:String(f.get("name")).trim(),calories:Number(f.get("calories")||0),protein:Number(f.get("protein")||0),date:String(f.get("date")||today())});save(s);document.getElementById("healthModalHost").innerHTML="";render("health");});
+    document.getElementById("healthMealForm")?.addEventListener("submit",e=>{e.preventDefault();const f=new FormData(e.currentTarget);const item={id:"meal_"+Date.now(),name:String(f.get("name")).trim(),calories:Number(f.get("calories")||0),protein:Number(f.get("protein")||0),date:String(f.get("date")||today())};s.meals.unshift(item);save(s);cloudInsertMeal(item);document.getElementById("healthModalHost").innerHTML="";render("health");});
   }
   function addTransaction(){
     const s=load();
     modal("Add transaction",'<form class="health-form" id="healthTxForm"><label>Merchant<input name="merchant" required placeholder="Grocery store"></label><div class="health-form-grid"><label>Amount<input name="amount" type="number" min="0" step=".01" required placeholder="42.50"></label><label>Category<select name="category"><option>groceries</option><option>restaurant</option><option>coffee</option><option>fast-food</option><option>pharmacy</option><option>other</option></select></label></div><label>Date<input name="date" type="date" value="'+today()+'"></label><div class="health-modal-actions"><button class="primary" type="submit">Save transaction</button><button class="secondary" type="button" data-health-close>Cancel</button></div></form>');
-    document.getElementById("healthTxForm")?.addEventListener("submit",e=>{e.preventDefault();const f=new FormData(e.currentTarget);s.transactions.unshift({id:"tx_"+Date.now(),merchant:String(f.get("merchant")).trim(),amount:Number(f.get("amount")||0),category:String(f.get("category")),date:String(f.get("date")||today())});save(s);document.getElementById("healthModalHost").innerHTML="";render("health");});
+    document.getElementById("healthTxForm")?.addEventListener("submit",e=>{e.preventDefault();const f=new FormData(e.currentTarget);const item={id:"tx_"+Date.now(),merchant:String(f.get("merchant")).trim(),amount:Number(f.get("amount")||0),category:String(f.get("category")),date:String(f.get("date")||today())};s.transactions.unshift(item);save(s);cloudInsertTransaction(item);document.getElementById("healthModalHost").innerHTML="";render("health");});
+  }
+  let cloudClient=null,cloudUser=null,cloudHydrated=false,cloudHydrating=false;
+  async function initCloud(){
+    if(cloudClient||cloudHydrating)return cloudClient;
+    cloudHydrating=true;
+    try{
+      const cfgRes=await fetch("/api/supabase-config",{cache:"no-store",headers:{Accept:"application/json"}});
+      const cfg=await cfgRes.json();
+      if(!cfg?.url||!cfg?.key||!window.supabase?.createClient){cloudHydrating=false;return null;}
+      cloudClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      const session=(await cloudClient.auth.getSession()).data?.session;
+      cloudUser=session?.user||null;
+      cloudHydrating=false;
+      return cloudClient;
+    }catch(e){cloudHydrating=false;return null;}
+  }
+  async function hydrateCloud(){
+    if(cloudHydrated||cloudHydrating)return;
+    const client=await initCloud(); if(!client||!cloudUser)return;
+    const uid=cloudUser.id;
+    try{
+      const [meals,tx]=await Promise.all([
+        client.from("hudhud_health_meals").select("*").eq("user_id",uid).order("date",{ascending:false}).limit(200),
+        client.from("hudhud_health_transactions").select("*").eq("user_id",uid).order("date",{ascending:false}).limit(300)
+      ]);
+      if(!meals.error&&Array.isArray(meals.data)){
+        const local=load(); local.meals=meals.data.map(x=>({id:x.external_id||x.id,name:x.name,date:x.date,calories:Number(x.calories||0),protein:Number(x.protein_g||0)})); save(local);
+      }
+      if(!tx.error&&Array.isArray(tx.data)){
+        const local=load(); local.transactions=tx.data.map(x=>({id:x.external_id||x.id,merchant:x.merchant,amount:Number(x.amount||0),category:x.category,date:x.date})); save(local);
+      }
+      cloudHydrated=true;
+    }catch(e){}
+  }
+  async function cloudInsertMeal(item){
+    const client=await initCloud(); if(!client||!cloudUser)return;
+    await client.from("hudhud_health_meals").upsert({user_id:cloudUser.id,external_id:item.id,name:item.name,date:item.date,calories:item.calories,protein_g:item.protein,updated_at:new Date().toISOString()},{onConflict:"user_id,external_id"});
+  }
+  async function cloudInsertTransaction(item){
+    const client=await initCloud(); if(!client||!cloudUser)return;
+    await client.from("hudhud_health_transactions").upsert({user_id:cloudUser.id,external_id:item.id,merchant:item.merchant,amount:item.amount,category:item.category,date:item.date,updated_at:new Date().toISOString()},{onConflict:"user_id,external_id"});
   }
   function toastHealth(msg){const t=document.getElementById("toast");if(!t)return;t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2800);}
   function page(){
     const s=load(),c=calc(s),ins=insightList(s);
+    if(!cloudHydrated) setTimeout(async()=>{await hydrateCloud(); if(cloudHydrated) render("health");},0);
     const pct=Math.min(100,Math.round((c.calories/Math.max(1,s.profile.calorieTarget))*100));
     const ppct=Math.min(100,Math.round((c.protein/Math.max(1,s.profile.proteinTarget))*100));
     const src=s.sources;
@@ -87,5 +129,5 @@
   }
   window.hudhudHealthPage=page;
   window.hudhudBindHealth=bind;
-  window.hudhudHealthCore={load,save,calc,insightList};
+  window.hudhudHealthCore={load,save,calc,insightList,hydrateCloud};
 })();
