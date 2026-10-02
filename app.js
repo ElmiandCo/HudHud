@@ -1658,13 +1658,13 @@ function handleSocialCallbackResult(){
 }
 
 function render(view){
- if(["projects","opportunities","connections","documents","activity","premium","social","messages","devices","lifemap","knowledge"].includes(view)&&!requireAuth(view))return;
+ if(["projects","opportunities","connections","documents","activity","premium","social","messages","devices","health","lifemap","knowledge"].includes(view)&&!requireAuth(view))return;
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  document.querySelectorAll("#mobileNav [data-mobile-view]").forEach(b=>b.classList.toggle("active",b.dataset.mobileView===view));
  document.querySelectorAll("#mobileNavDrawer button[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  const m=document.getElementById("main");
  if(!m)return;
- const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,social:social,messages:messages,devices:devices,lifemap:lifemap,knowledge:knowledge,tools:tools,studio:studio,gamelab:gameLab,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
+ const pages={home:home,projects:projects,opportunities:opportunities,connections:connections,social:social,messages:messages,devices:devices,health:window.hudhudHealthPage,lifemap:lifemap,knowledge:knowledge,tools:tools,studio:studio,gamelab:gameLab,documents:documents,activity:activity,core:core,system:system,premium:premium,command:commandCenter,analytics:commandCenter,getstarted:getStarted,newsletter:newsletterProgram,siteprogram:siteProgram,videoprogram:videoProgram};
  m.innerHTML=(pages[view]||home)();
  handleSocialCallbackResult();
  hudhudFlyby(view==="home"?1:2);
@@ -1680,6 +1680,7 @@ function render(view){
  if(view==="messages") bindMessages();
  if(view==="projects"||view==="opportunities") bindWorkspaceMembers();
  if(view==="devices") bindDevices();
+ if(view==="health") window.hudhudBindHealth?.();
  if(view==="lifemap") bindLifeMap();
  if(view==="knowledge") bindKnowledge();
  if(view==="premium") bindPremium();
