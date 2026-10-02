@@ -386,12 +386,25 @@ function homeComponentCard(c){
 function home(){
  const components=(homeComponents.length?homeComponents:defaultHomeComponents()).filter(x=>x.enabled!==false).sort((a,b)=>(a.position||0)-(b.position||0));
  return '<section class="hero hudhud-home-banner">'+
+   '<div class="home-cosmic-glow"></div>'+
+   '<div class="home-bird-art" aria-hidden="true"><img src="/assets/hudhud-home-bird.svg" alt=""></div>'+
+   '<div class="home-orbit home-orbit-a"></div><div class="home-orbit home-orbit-b"></div>'+
    '<div class="home-banner-content">'+
    '<div class="home-banner-glass">'+
-   '<span class="eyebrow">HEADQUARTERS</span><h1>Welcome home.</h1>'+
-   '<p>Talk to HudHud here. Your Home page is personal to this workspace and can grow with the connections you authorize.</p>'+
+   '<span class="eyebrow home-welcome">WELCOME TO HUDHUD</span>'+
+   '<h1>Your AI. Your Tools.<br><span>Your World.</span></h1>'+
+   '<p>Connect. Build. Automate. — All in one place.</p>'+
+   '<div class="actions home-hero-actions"><button class="primary home-ask" type="button" data-home-ask>✦ Ask HudHud <b>→</b></button></div>'+
    '<div class="home-chat"><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div>'+
-   '</div></div></section>'+
+   '</div></div>'+
+   '<div class="home-status-rail">'+
+   '<div class="home-status-main"><i></i><div><strong>System Online</strong><small>All systems operational</small></div></div>'+
+   '<div><b>'+esc(state.projects?.length||0)+'</b><small>Projects</small></div>'+
+   '<div><b>'+esc(state.opportunities?.length||0)+'</b><small>Opportunities</small></div>'+
+   '<div><b>'+esc(state.activity?.length||0)+'</b><small>Activity</small></div>'+
+   '</div>'+
+   '<div class="home-signature"><span>HUDHUD</span><small>MORE THAN A BIRD<br>A HIGHER PERSPECTIVE</small></div>'+
+   '</section>'+
    '<section id="workspacePulse" class="home-pulse" aria-label="Workspace Pulse">'+
    '<div class="home-pulse-head"><div><span class="eyebrow">WORKSPACE PULSE</span><h2>Your workspace, right now.</h2><p>Live counts from HudHud. Every number opens the relevant workspace.</p></div></div>'+
    '<div class="home-pulse-grid">'+
