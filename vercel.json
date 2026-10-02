@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/health-sync",
+      "destination": "/api/hudhud-routes"
+    },
+    {
       "source": "/api/social-connect",
       "destination": "/api/hudhud-routes"
     },
