@@ -64,20 +64,18 @@
     modal("Add transaction",'<form class="health-form" id="healthTxForm"><label>Merchant<input name="merchant" required placeholder="Grocery store"></label><div class="health-form-grid"><label>Amount<input name="amount" type="number" min="0" step=".01" required placeholder="42.50"></label><label>Category<select name="category"><option>groceries</option><option>restaurant</option><option>coffee</option><option>fast-food</option><option>pharmacy</option><option>other</option></select></label></div><label>Date<input name="date" type="date" value="'+today()+'"></label><div class="health-modal-actions"><button class="primary" type="submit">Save transaction</button><button class="secondary" type="button" data-health-close>Cancel</button></div></form>');
     document.getElementById("healthTxForm")?.addEventListener("submit",e=>{e.preventDefault();const f=new FormData(e.currentTarget);const item={id:"tx_"+Date.now(),merchant:String(f.get("merchant")).trim(),amount:Number(f.get("amount")||0),category:String(f.get("category")),date:String(f.get("date")||today())};s.transactions.unshift(item);save(s);cloudInsertTransaction(item);document.getElementById("healthModalHost").innerHTML="";render("health");});
   }
-  let cloudClient=null,cloudUser=null,cloudHydrated=false,cloudHydrating=false;
+  let cloudClient=null,cloudUser=null,cloudHydrated=false;
   async function initCloud(){
-    if(cloudClient||cloudHydrating)return cloudClient;
-    cloudHydrating=true;
+    if(cloudClient)return cloudClient;
     try{
       const cfgRes=await fetch("/api/supabase-config",{cache:"no-store",headers:{Accept:"application/json"}});
       const cfg=await cfgRes.json();
-      if(!cfg?.url||!cfg?.key||!window.supabase?.createClient){cloudHydrating=false;return null;}
+      if(!cfg?.url||!cfg?.key||!window.supabase?.createClient){return null;}
       cloudClient=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       const session=(await cloudClient.auth.getSession()).data?.session;
       cloudUser=session?.user||null;
-      cloudHydrating=false;
       return cloudClient;
-    }catch(e){cloudHydrating=false;return null;}
+    }catch(e){return null;}
   }
   async function hydrateCloud(){
     if(cloudHydrated||cloudHydrating)return;
