@@ -1194,3 +1194,24 @@ body{transition:background-color .2s ease,color .2s ease}
     max-height:76vh;
   }
 }
+
+
+/* Preserve the original 1245×1245 HudHud artwork while keeping the float animation. */
+.home-bird-art{
+  aspect-ratio:1 / 1;
+  height:auto;
+}
+.home-bird-art img{
+  width:100%;
+  height:auto;
+  aspect-ratio:1 / 1;
+  object-fit:contain;
+  display:block;
+  image-rendering:auto;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+@media(max-width:800px){
+  .home-bird-art{height:auto!important;aspect-ratio:1 / 1!important;}
+  .home-bird-art img{height:auto!important;aspect-ratio:1 / 1!important;}
+}
