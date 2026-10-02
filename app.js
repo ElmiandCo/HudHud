@@ -105,6 +105,9 @@ async function handleAuthSession(session){
    }
    if(pendingView){const v=pendingView;pendingView=null;render(v);}
    if(pendingWorkspaceMessage){const m=pendingWorkspaceMessage;pendingWorkspaceMessage=null;setTimeout(()=>sendToHudHud(m),0);}
+   if(nextUser.user_metadata?.hudhud_onboarding_completed===false){
+     setTimeout(()=>render("getstarted"),0);
+   }
  }
 }
 async function loadCloudState(){
@@ -277,7 +280,7 @@ function bindAuthModal(){
      await initSupabase();
      const result=authMode==="signin"
        ?await supabaseClient.auth.signInWithPassword({email,password})
-       :await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin}});
+       :await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin,data:{hudhud_onboarding_completed:false}}});
      if(result.error)throw result.error;
      if(authMode==="signup"&&!result.data.session){
        if(errorEl)errorEl.textContent="Account created. Check your email to confirm your account, then sign in.";
