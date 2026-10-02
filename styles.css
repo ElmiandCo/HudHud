@@ -845,3 +845,12 @@ body{transition:background-color .2s ease,color .2s ease}
 .onboarding-footer{display:flex;justify-content:space-between;align-items:center;margin-top:15px;color:var(--subtle-text);font-size:10px}
 @media(max-width:850px){.onboarding-layout{grid-template-columns:1fr}.onboarding-steps{grid-template-columns:repeat(2,1fr)}.onboarding-triad{grid-template-columns:1fr}.onboarding-card{min-height:0}}
 @media(max-width:600px){.onboarding-hero{grid-template-columns:1fr}.onboarding-steps{grid-template-columns:1fr}.onboarding-card{padding:22px}.onboarding-card h2{font-size:28px}.onboarding-footer{align-items:flex-start;gap:10px;flex-direction:column}}
+
+/* Desktop: sidebar is one continuous nav rail directly attached to the header. */
+@media(min-width:801px){
+  .layout{align-items:stretch}
+  .sidebar{position:sticky;top:72px;margin-top:0;height:calc(100vh - 72px);align-self:flex-start;border-top:0}
+  .sidebar nav{align-content:start}
+  .nav-group{margin:0}
+  .legal-footer{margin-left:225px}
+}
