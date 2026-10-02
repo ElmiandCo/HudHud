@@ -82,15 +82,25 @@
     const client=await initCloud(); if(!client||!cloudUser)return;
     const uid=cloudUser.id;
     try{
-      const [meals,tx]=await Promise.all([
+      const [meals,tx,sources]=await Promise.all([
         client.from("hudhud_health_meals").select("*").eq("user_id",uid).order("date",{ascending:false}).limit(200),
-        client.from("hudhud_health_transactions").select("*").eq("user_id",uid).order("date",{ascending:false}).limit(300)
+        client.from("hudhud_health_transactions").select("*").eq("user_id",uid).order("date",{ascending:false}).limit(300),
+        client.from("hudhud_health_sources").select("*").eq("user_id",uid)
       ]);
       if(!meals.error&&Array.isArray(meals.data)){
         const local=load(); local.meals=meals.data.map(x=>({id:x.external_id||x.id,name:x.name,date:x.date,calories:Number(x.calories||0),protein:Number(x.protein_g||0)})); save(local);
       }
       if(!tx.error&&Array.isArray(tx.data)){
         const local=load(); local.transactions=tx.data.map(x=>({id:x.external_id||x.id,merchant:x.merchant,amount:Number(x.amount||0),category:x.category,date:x.date})); save(local);
+      }
+      if(!sources.error&&Array.isArray(sources.data)){
+        const local=load();
+        (sources.data||[]).forEach(x=>{
+          const id=x.provider==="apple_health"?"apple-health":x.provider;
+          const row=(local.sources||[]).find(y=>y.id===id);
+          if(row){row.status=x.status||row.status;row.lastSyncedAt=x.last_synced_at;row.permissions=x.permissions||{};}
+        });
+        save(local);
       }
       cloudHydrated=true;
     }catch(e){}
