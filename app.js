@@ -410,7 +410,7 @@ function home(){
    '<div class="home-pulse-grid">'+
    [['projects','Projects',state.projects?.length||0,'What you are building','projects'],['opportunities','Opportunities',state.opportunities?.length||0,'What could become something','opportunities'],['connections','Connections',state.connections?.length||0,'Authorized sources HudHud can use','connections'],['plans','Plans',state.plans?.length||0,'What you are intentionally trying to accomplish','planning'],['goals','Goals',state.goals?.length||0,'Why you are doing it','planning'],['activity','Activity',state.activity?.length||0,'What is happening now','activity']].map(x=>'<button class="home-pulse-card" type="button" data-pulse-view="'+esc(x[4])+'"><span class="home-pulse-icon">'+({'projects':'▣','opportunities':'◇','connections':'⌁','plans':'◈','goals':'◎','activity':'◷'}[x[0]]||'•')+'</span><strong>'+esc(x[1])+'</strong><b>'+esc(x[2])+'</b><small>'+esc(x[3])+'</small><em>OPEN →</em></button>').join('')+
    '</div></section>'+
-   '<section id="homeComponentGrid" class="grid home-component-grid" style="margin-top:34px">'+components.map(homeComponentCard).join("")+'</section><div id="homeComponentModal"></div>';
+   '<div id="homePulseDetailModal"></div>'+'<section id="homeComponentGrid" class="grid home-component-grid" style="margin-top:34px">'+components.map(homeComponentCard).join("")+'</section><div id="homeComponentModal"></div>';
 }
 function openHomeComponentModal(){
  const host=document.getElementById("homeComponentModal");if(!host)return;
@@ -438,8 +438,41 @@ function removeHomeComponent(key){
  homeComponents=homeComponents.filter(x=>x.component_key!==key);
  saveHomeComponents();render("home");toast("Component removed");
 }
+function openHomePulseDetail(key){
+ const host=document.getElementById("homePulseDetailModal");if(!host)return;
+ const rows=state.activity||[],connected=new Set((state.connections||[]).map(x=>String(x.provider||"").toLowerCase()));
+ const labels={projects:{title:"Projects",eyebrow:"WORKSPACE",description:"Everything you are actively building in HudHud.",view:"projects",icon:"▣"},opportunities:{title:"Opportunities",eyebrow:"WORKSPACE",description:"Potential work, leads, and opportunities tracked by HudHud.",view:"opportunities",icon:"◇"},connections:{title:"Connections",eyebrow:"INTEGRATIONS",description:"Services HudHud is authorized to use or is ready to connect.",view:"connections",icon:"⌁"},plans:{title:"Plans",eyebrow:"PLANNING",description:"The plans you have intentionally defined for your workspace.",view:"lifemap",icon:"◈"},goals:{title:"Goals",eyebrow:"PLANNING",description:"The goals behind the work HudHud is helping you organize.",view:"lifemap",icon:"◎"},activity:{title:"Activity",eyebrow:"LIVE WORKSPACE EVENTS",description:"Real events recorded by HudHud. Open any event for its details and the next useful action.",view:"activity",icon:"◷"}};
+ const info=labels[key]||labels.activity;
+ const navCard=(title,copy,view,icon="→")=>'<button type="button" class="home-detail-card" data-detail-nav="'+esc(view)+'"><span class="home-detail-card-icon">'+icon+'</span><span><strong>'+esc(title)+'</strong><small>'+esc(copy)+'</small></span><em>OPEN →</em></button>';
+ const oauthCard=(provider,label,copy)=>'<button type="button" class="home-detail-card home-detail-oauth" data-detail-oauth="'+esc(provider)+'"><span class="home-detail-card-icon">↗</span><span><strong>'+esc(label)+'</strong><small>'+esc(copy)+'</small></span><em>'+((connected.has(provider))?"RECONNECT":"CONNECT")+' →</em></button>';
+ let body="";
+ if(key==="activity"){
+  if(!rows.length)body='<div class="home-detail-empty"><span>◷</span><strong>No activity yet.</strong><small>HudHud will record meaningful workspace actions here.</small></div>';
+  else{
+   body='<div class="home-detail-list">'+rows.slice(0,12).map(event=>{
+    const textValue=String(event.text||"Activity event"),lower=textValue.toLowerCase();
+    const provider=["instagram","facebook","tiktok","linkedin","youtube","x"].find(p=>lower.includes(p));
+    const providerLabel=provider==="x"?"X":provider?provider.charAt(0).toUpperCase()+provider.slice(1):"";
+    return '<article class="home-detail-event"><div class="home-detail-event-mark">'+(provider?"↗":"•")+'</div><div class="home-detail-event-body"><strong>'+esc(textValue)+'</strong><small>'+new Date(event.at||Date.now()).toLocaleString()+'</small>'+(provider?'<div class="home-detail-event-actions">'+oauthCard(provider,providerLabel,"Open "+providerLabel+" OAuth and manage this connection.")+'</div>':"")+'</div></article>';
+   }).join("")+'</div>';
+   body+='<div class="home-detail-actions">'+navCard("Open full Activity","See the complete activity history.","activity","◷")+navCard("Open Connections","Manage the services HudHud can use.","connections","⌁")+navCard("Open Social","Connect or reconnect social accounts.","social","◎")+'</div>';
+  }
+ }else{
+  const count=key==="projects"?state.projects?.length||0:key==="opportunities"?state.opportunities?.length||0:key==="connections"?state.connections?.length||0:key==="plans"?state.plans?.length||0:key==="goals"?state.goals?.length||0:0;
+  body='<div class="home-detail-stat"><span>'+esc(info.icon)+'</span><strong>'+esc(count)+'</strong><small>'+esc(info.title.toUpperCase())+' CURRENTLY IN HUDHUD</small></div><div class="home-detail-actions">'+navCard("Open "+info.title,"Jump directly to the "+info.title.toLowerCase()+" workspace.",info.view,info.icon);
+  if(key==="connections")body+=navCard("Open Connector Store","Browse apps, search by category, and start a connector recipe.","connections","⌘")+oauthCard("tiktok","TikTok","Connect or reconnect TikTok with OAuth.")+oauthCard("linkedin","LinkedIn","Connect or reconnect LinkedIn with OAuth.")+oauthCard("youtube","YouTube","Connect or reconnect YouTube with OAuth.");
+  if(key==="projects")body+=navCard("Project connections","Choose which authorized services a project can use.","connections","⌁");
+  if(key==="opportunities")body+=navCard("Review workspace","Open your workspace and manage opportunity records.","opportunities","◇");
+  if(key==="plans"||key==="goals")body+=navCard("Open Life Map","See the plans, goals, and direction HudHud has recorded.","lifemap","◎");
+  body+='</div>';
+ }
+ host.innerHTML='<div class="home-detail-backdrop" data-close-home-detail></div><section class="home-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="homeDetailTitle"><button class="home-detail-close" data-close-home-detail>×</button><div class="eyebrow">'+esc(info.eyebrow)+'</div><h2 id="homeDetailTitle">'+esc(info.title)+'</h2><p class="home-detail-subtitle">'+esc(info.description)+'</p>'+body+'</section>';
+ host.querySelectorAll("[data-close-home-detail]").forEach(b=>b.onclick=()=>host.innerHTML="");
+ host.querySelectorAll("[data-detail-nav]").forEach(b=>b.onclick=()=>{host.innerHTML="";render(b.dataset.detailNav);});
+ host.querySelectorAll("[data-detail-oauth]").forEach(b=>b.onclick=()=>startSocialOAuth(b.dataset.detailOauth));
+}
 function bindHomePulse(){
- document.querySelectorAll("[data-pulse-view]").forEach(b=>b.onclick=()=>nav(b.dataset.pulseView));
+ document.querySelectorAll("[data-pulse-view]").forEach(b=>b.onclick=()=>openHomePulseDetail(b.dataset.pulseView));
 }
 function bindHomeComponents(){
  document.querySelector("[data-home-add-component]")?.addEventListener("click",openHomeComponentModal);
