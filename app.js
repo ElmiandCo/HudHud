@@ -2150,8 +2150,11 @@ async function init(){
  const today=document.getElementById("today");if(today)today.textContent=nowLabel();
  setupMobileNav();
  document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>render(b.dataset.view)));
- render("home");
- const socialResult=new URLSearchParams(window.location.search).get("social");
+ const params=new URLSearchParams(window.location.search);
+ const targetMap={connections:"connections",premium:"premium",devices:"devices",social:"social",lifemap:"lifemap",knowledge:"knowledge",help:"home"};
+ const hudhudTarget=params.get("hudhud-target");
+ const socialResult=params.get("social");
+ render(targetMap[hudhudTarget]||"home");
  if(socialResult)pendingView="social";
  initSupabase().catch(err=>console.warn("Supabase auth not initialized yet:",err.message));
 }
