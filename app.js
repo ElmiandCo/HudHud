@@ -384,6 +384,8 @@ function homeComponentCard(c){
    '<div class="metric">'+(icon?icon+" ":"")+esc(v.value)+'</div><div class="muted home-component-detail">'+esc(v.detail)+'</div></article>';
 }
 function home(){
+ const healthState=window.hudhudHealthCore?.load?.()||{sources:[]};
+ const healthConnected=(healthState.sources||[]).filter(x=>x.status==="connected").length;
  const components=(homeComponents.length?homeComponents:defaultHomeComponents()).filter(x=>x.enabled!==false).sort((a,b)=>(a.position||0)-(b.position||0));
  return '<section class="hero hudhud-home-banner">'+
    '<div class="home-cosmic-glow"></div>'+
@@ -408,7 +410,7 @@ function home(){
    '<section id="workspacePulse" class="home-pulse" aria-label="Workspace Pulse">'+
    '<div class="home-pulse-head"><div><span class="eyebrow">WORKSPACE PULSE</span><h2>Your workspace, right now.</h2><p>Live counts from HudHud. Every number opens the relevant workspace.</p></div></div>'+
    '<div class="home-pulse-grid">'+
-   [['projects','Projects',state.projects?.length||0,'What you are building','projects'],['opportunities','Opportunities',state.opportunities?.length||0,'What could become something','opportunities'],['connections','Connections',state.connections?.length||0,'Authorized sources HudHud can use','connections'],['plans','Plans',state.plans?.length||0,'What you are intentionally trying to accomplish','planning'],['goals','Goals',state.goals?.length||0,'Why you are doing it','planning'],['activity','Activity',state.activity?.length||0,'What is happening now','activity'],['health','HudHud Health',1,'Health, diet and transaction intelligence','health']].map(x=>'<button class="home-pulse-card" type="button" data-pulse-view="'+esc(x[4])+'"><span class="home-pulse-icon">'+({'projects':'▣','opportunities':'◇','connections':'⌁','plans':'◈','goals':'◎','activity':'◷','health':'♥'}[x[0]]||'•')+'</span><strong>'+esc(x[1])+'</strong><b>'+esc(x[2])+'</b><small>'+esc(x[3])+'</small><em>OPEN →</em></button>').join('')+
+   [['projects','Projects',state.projects?.length||0,'What you are building','projects'],['opportunities','Opportunities',state.opportunities?.length||0,'What could become something','opportunities'],['connections','Connections',state.connections?.length||0,'Authorized sources HudHud can use','connections'],['plans','Plans',state.plans?.length||0,'What you are intentionally trying to accomplish','planning'],['goals','Goals',state.goals?.length||0,'Why you are doing it','planning'],['activity','Activity',state.activity?.length||0,'What is happening now','activity'],['health','HudHud Health',healthConnected,'Health, diet and transaction intelligence','health']].map(x=>'<button class="home-pulse-card" type="button" data-pulse-view="'+esc(x[4])+'"><span class="home-pulse-icon">'+({'projects':'▣','opportunities':'◇','connections':'⌁','plans':'◈','goals':'◎','activity':'◷','health':'♥'}[x[0]]||'•')+'</span><strong>'+esc(x[1])+'</strong><b>'+esc(x[2])+'</b><small>'+esc(x[3])+'</small><em>OPEN →</em></button>').join('')+
    '</div></section>'+
    '<div id="homePulseDetailModal"></div>'+'<section id="homeComponentGrid" class="grid home-component-grid" style="margin-top:34px">'+components.map(homeComponentCard).join("")+'</section><div id="homeComponentModal"></div>';
 }
@@ -458,7 +460,7 @@ function openHomePulseDetail(key){
    body+='<div class="home-detail-actions">'+navCard("Open full Activity","See the complete activity history.","activity","◷")+navCard("Open Connections","Manage the services HudHud can use.","connections","⌁")+navCard("Open Social","Connect or reconnect social accounts.","social","◎")+'</div>';
   }
  }else{
-  const count=key==="projects"?state.projects?.length||0:key==="opportunities"?state.opportunities?.length||0:key==="connections"?state.connections?.length||0:key==="plans"?state.plans?.length||0:key==="goals"?state.goals?.length||0:key==="health"?1:0;
+  const count=key==="projects"?state.projects?.length||0:key==="opportunities"?state.opportunities?.length||0:key==="connections"?state.connections?.length||0:key==="plans"?state.plans?.length||0:key==="goals"?state.goals?.length||0:key==="health"?((window.hudhudHealthCore?.load?.().sources||[]).filter(x=>x.status==="connected").length):0;
   body='<div class="home-detail-stat"><span>'+esc(info.icon)+'</span><strong>'+esc(count)+'</strong><small>'+esc(info.title.toUpperCase())+' CURRENTLY IN HUDHUD</small></div><div class="home-detail-actions">'+navCard("Open "+info.title,"Jump directly to the "+info.title.toLowerCase()+" workspace.",info.view,info.icon);
   if(key==="connections")body+=navCard("Open Connector Store","Browse apps, search by category, and start a connector recipe.","connections","⌘")+oauthCard("tiktok","TikTok","Connect or reconnect TikTok with OAuth.")+oauthCard("linkedin","LinkedIn","Connect or reconnect LinkedIn with OAuth.")+oauthCard("youtube","YouTube","Connect or reconnect YouTube with OAuth.");
   if(key==="projects")body+=navCard("Project connections","Choose which authorized services a project can use.","connections","⌁");
