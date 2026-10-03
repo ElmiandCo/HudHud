@@ -12,6 +12,7 @@ let pendingView=null;
 let legacyWorkspace=null;
 let pendingWorkspaceMessage=null;
 let projectConnections={};
+let projectResources={};
 let connectionResourceCache={};
 
 function load(){
@@ -113,14 +114,15 @@ async function handleAuthSession(session){
 async function loadCloudState(){
  if(!hasCloudUser())return;
  const uid=currentUser.id;
- const [p,o,c,a,pc]=await Promise.all([
+ const [p,o,c,a,pc,pr]=await Promise.all([
    supabaseClient.from("hudhud_projects").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
    supabaseClient.from("hudhud_opportunities").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
    supabaseClient.from("hudhud_connections").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
    supabaseClient.from("hudhud_activity").select("*").eq("user_id",uid).order("created_at",{ascending:false}).limit(50),
-   supabaseClient.from("hudhud_project_connections").select("*").eq("user_id",uid).order("created_at",{ascending:false})
+   supabaseClient.from("hudhud_project_connections").select("*").eq("user_id",uid).order("created_at",{ascending:false}),
+   supabaseClient.from("hudhud_project_resources").select("*").eq("user_id",uid).order("created_at",{ascending:false})
  ]);
- const error=[p,o,c,a,pc].find(x=>x.error)?.error;
+ const error=[p,o,c,a,pc,pr].find(x=>x.error)?.error;
  if(error){console.error("HudHud cloud load failed",error);toast("Could not load your workspace");return;}
  state.projects=(p.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at}));
  state.opportunities=(o.data||[]).map(x=>({...x,createdAt:x.created_at,updatedAt:x.updated_at,opportunityType:x.opportunity_type,eventId:x.event_id}));
@@ -128,6 +130,8 @@ async function loadCloudState(){
  state.activity=(a.data||[]).map(x=>({text:x.text,at:x.created_at,id:x.id}));
  projectConnections={};
  (pc.data||[]).forEach(x=>{(projectConnections[x.project_id]||(projectConnections[x.project_id]=[])).push({...x,settings:x.settings||{}});});
+ projectResources={};
+ (pr.data||[]).forEach(x=>{(projectResources[x.project_id]||(projectResources[x.project_id]=[])).push({...x,metadata:x.metadata||{}});});
  save();
 }
 async function importLegacyWorkspace(){
@@ -572,7 +576,7 @@ function workspaceCards(items,kind,filter){
  return '<div class="workspace-cards">'+filtered.map(item=>{
    const p=stepProgress(item),percent=p.total?Math.round((p.done/p.total)*100):0;
    const linked=selectedProjectConnections(item.id);
-   const connectionHtml=kind==="project"?'<div class="project-connections"><div class="project-connections-head"><span>CONNECTIONS</span><button type="button" class="secondary mini-button" data-project-connections="'+esc(item.id)+'">⚙ Configure</button></div><div class="project-connection-chips">'+(linked.length?linked.map(c=>'<span class="project-chip">'+(c.provider==="github"?"🐙":c.provider==="vercel"?"▲":"⚡")+' '+esc(c.name)+'</span>').join(""):'<span class="muted">No connections selected.</span>')+'</div></div>':'';
+   const connectionHtml=kind==="project"?'<div class="project-connections"><div class="project-connections-head"><span>CONNECTED SOURCES</span><div><button type="button" class="secondary mini-button" data-project-connections="'+esc(item.id)+'">⚙ Connections</button><button type="button" class="primary mini-button" data-project-manage="'+esc(item.id)+'">＋ Manage</button></div></div><div class="project-connection-chips">'+(linked.length?linked.map(c=>'<span class="project-chip">'+connectionIcon(c.provider)+' '+esc(c.name)+'</span>').join(""):'<span class="muted">No authorized connections selected.</span>')+'</div></div>':'';
    const memberHtml='<div class="project-members"><div class="project-members-head"><span>MEMBERS</span><button type="button" class="secondary mini-button" data-members-kind="'+kind+'" data-members-id="'+esc(item.id)+'">＋ Manage</button></div><div class="project-member-chips" data-member-chips="'+kind+'" data-member-item="'+esc(item.id)+'"><span class="muted">Loading contacts…</span></div></div>';
    const stepsHtml=p.total?'<div class="workspace-steps">'+item.steps.map((step,index)=>
      '<div class="workspace-step-row"><button type="button" class="workspace-step '+(step.done?"done":"")+'" data-step-toggle="'+kind+'" data-item-id="'+esc(item.id)+'" data-step-index="'+index+'"><span class="step-check">'+(step.done?"✓":"")+'</span><span>'+esc(step.name)+'</span></button>'+
@@ -584,7 +588,7 @@ function workspaceCards(items,kind,filter){
      '<p class="workspace-description">'+esc(item.description||item.notes||"No description provided.")+'</p>'+(kind==="opportunity"?'<div class="opportunity-meta"><span>'+esc(item.agency||"Agency not set")+'</span><span>'+esc(item.opportunityType||"Type not set")+'</span><span>'+esc(item.category||"Category not set")+'</span>'+(item.eventId?'<span>Event '+esc(item.eventId)+'</span>':'')+'</div>':'')+     memberHtml+connectionHtml+
      '<div class="workspace-progress"><div><span>PROGRESS</span><strong>'+p.done+'/'+p.total+' steps</strong></div><div class="progress-track"><i style="width:'+percent+'%"></i></div></div>'+
      stepsHtml+
-     '<div class="workspace-card-actions"><button type="button" class="secondary" data-plan-item="'+kind+'" data-item-id="'+esc(item.id)+'">✎ Manage steps</button><button type="button" class="secondary danger-button" data-delete-workspace="'+kind+'" data-item-id="'+esc(item.id)+'">Delete</button></div>'+
+     '<div class="workspace-card-actions"><button type="button" class="primary" data-project-manage="'+esc(item.id)+'">＋ Manage project</button><button type="button" class="secondary" data-plan-item="'+kind+'" data-item-id="'+esc(item.id)+'">✎ Manage steps</button><button type="button" class="secondary danger-button" data-delete-workspace="'+kind+'" data-item-id="'+esc(item.id)+'">Delete</button></div>'+
    '</article>';
  }).join("")+'</div>';
 }
@@ -628,9 +632,8 @@ function projects(){
  const items=state.projects||[];
  const active=items.filter(x=>x.status!=="Done").length;
  const done=items.filter(x=>x.status==="Done").length;
- return '<div class="section-head"><div><span class="eyebrow">WORKSPACE</span><h2>Projects</h2><span class="muted">Give every project a description, a clear sequence of steps, and a visible finish line.</span></div><button class="primary" data-action="new-project">＋ New project</button></div>'+
- workspaceTabs("project",active,done)+
- workspaceCards(items,"project",projectFilter);
+ return '<div class="section-head"><div><span class="eyebrow">WORKSPACE</span><h2>Projects</h2><span class="muted">Give every project a clear sequence of work — then connect the real products, devices, apps, profiles and services behind it.</span></div><button class="primary" data-action="new-project">＋ New project</button></div>'+
+ projectGraphMarkup()+workspaceTabs("project",active,done)+workspaceCards(items,"project",projectFilter);
 }
 function opportunities(){
  const items=state.opportunities||[];
@@ -795,7 +798,7 @@ function commandCenter(){
  const defs=[["github","🐙","GitHub","Repositories, files, issues and pull requests"],["vercel","▲","Vercel","Projects, deployments and production"],["supabase","⚡","Supabase","Database, authentication and resources"],["stripe","💳","Stripe","Subscriptions and one-time sales"],["hudhud","🦉","HudHud","Command layer and workspace"],["brain","🧠","HudHud Brain","Local AI bridge"],["openclaw","🦞","OpenClaw","Gateway and computer-side actions"]];
  const lines=["subscription","onetime","projects","steps","opportunities","ai"];
  return '<div class="command-center"><div class="command-hero"><div><span class="eyebrow">HUDHUD COMMAND CENTER</span><h2>Ecosystem Control & Analytics</h2><p>Power BI-style operational analytics across sales, subscriptions, projects, opportunities, AI usage and infrastructure.</p></div><div class="command-hero-actions"><button class="primary" data-command-diagnostic>🔎 Run Full Diagnostic</button><button class="secondary" data-command-add-tool>＋ Add Tool</button></div></div>'+
- '<section class="analytics-kpis"><div><span>💳 Active subscriptions</span><strong>4</strong><small>3 Pro • 1 Premium</small></div><div><span>🔴 Canceled subscriptions</span><strong>1</strong><small>X-Subscriber-06</small></div><div><span>🧾 One-time customers</span><strong>5</strong><small>Lifetime purchases</small></div><div><span>💰 Demo revenue</span><strong>$339.66</strong><small>Historical test data</small></div></section>'+
+ '<section class="analytics-project-graph">'+projectGraphMarkup()+'</section><section class="analytics-kpis"><div><span>💳 Active subscriptions</span><strong>4</strong><small>3 Pro • 1 Premium</small></div><div><span>🔴 Canceled subscriptions</span><strong>1</strong><small>X-Subscriber-06</small></div><div><span>🧾 One-time customers</span><strong>5</strong><small>Lifetime purchases</small></div><div><span>💰 Demo revenue</span><strong>$339.66</strong><small>Historical test data</small></div></section>'+
  '<section class="card analytics-panel"><div class="command-section-head"><div><span class="eyebrow">ANALYTICS</span><h3>Compare business activity</h3><p>Toggle series to compare the same timeline.</p></div><select id="analyticsRange"><option>All history</option><option>Last 180 days</option><option>Last 90 days</option></select></div><div class="analytics-filter-row">'+lines.map(k=>'<label><input type="checkbox" data-analytics-series="'+k+'" checked> '+({subscription:"Subscriptions",onetime:"One-time sales",projects:"Projects",steps:"Steps completed",opportunities:"Opportunities",ai:"AI usage"}[k])+'</label>').join("")+'</div><div id="analyticsChart" class="analytics-chart"></div></section>'+
  '<section class="card" id="xApiBillingAnalytics" style="margin-top:18px"><div class="muted">Loading X API / computing charges…</div></section><section class="command-grid"><div class="card"><div class="command-section-head"><div><span class="eyebrow">STRIPE</span><h3>Customers & subscription history</h3></div></div><div class="analytics-customers">'+demo.map(d=>'<div class="analytics-customer-row"><strong>'+d[1]+'</strong><span>'+d[2]+'</span><small>'+d[0]+' 2026</small><em class="'+(d[3]==="Canceled"?"canceled":"")+'">'+d[3]+'</em></div>').join("")+'</div></div><div class="card"><div class="command-section-head"><div><span class="eyebrow">INFRASTRUCTURE</span><h3>Service health</h3></div></div><div id="commandHealthList">'+defs.map(d=>'<div class="command-service" data-command-service="'+d[0]+'"><span class="command-service-icon">'+d[1]+'</span><div><strong>'+d[2]+'</strong><small>'+d[3]+'</small></div><span class="command-status status-unknown">CHECKING</span></div>').join("")+'</div></div></section>'+
  '<section class="command-grid"><div class="card"><div class="command-section-head"><div><span class="eyebrow">TAILSCALE</span><h3>Devices & network</h3></div></div><div class="analytics-infra-grid"><div><strong>Live</strong><span>Tailnet devices</span></div><div><strong>🟢</strong><span>HudHud Brain</span></div><div><strong>🟢</strong><span>OpenClaw Gateway</span></div><div><strong>🟢</strong><span>Tailscale</span></div></div><div id="commandDiagnosticLog" class="command-diagnostic-log"><div class="command-log-empty">Run diagnostic for live service status.</div></div></div><div class="card"><div class="command-section-head"><div><span class="eyebrow">RESOURCES</span><h3>Connected resources</h3></div></div><div id="commandResourceGrid" class="command-resource-grid"></div></div></section><div id="commandToolModal"></div></div>';
@@ -1759,7 +1762,48 @@ async function loadWorkspaceMembers(kind,id){
  if(error){host.innerHTML='<span class="muted">Could not load members.</span>';return;}
  host.innerHTML=(data||[]).length?data.map(row=>'<span class="project-chip member-chip"><span class="conversation-avatar tiny">'+esc((row.hudhud_contacts?.name||"?").slice(0,1).toUpperCase())+'</span>'+esc(row.hudhud_contacts?.name||"Contact")+'</span>').join(""):'<span class="muted">No members yet.</span>';
 }
-async function bindWorkspaceMembers(){
+async function projectResourceRows(projectId){return projectResources[projectId]||[];}
+function projectResourceIcon(resource){const icons={product:"◈",device:"⌁",social_profile:"◎",app:"▣",project:"◆",connection:"⌘",custom:"✦"};return resource?.icon||icons[resource?.resource_type]||"✦";}
+function selectedProjectResources(projectId){return projectResourceRows(projectId);}
+async function cloudInsertProjectResource(resource){
+ if(!hasCloudUser())return true;
+ const {data,error}=await supabaseClient.from("hudhud_project_resources").insert({user_id:currentUser.id,project_id:resource.project_id,resource_type:resource.resource_type,name:resource.name,provider:resource.provider||null,external_id:resource.external_id||null,url:resource.url||null,icon:resource.icon||null,metadata:resource.metadata||{},updated_at:new Date().toISOString()}).select().single();
+ if(error){console.error(error);toast("Could not add project resource");return false;}
+ (projectResources[resource.project_id]||(projectResources[resource.project_id]=[])).unshift({...data,metadata:data.metadata||{}});
+ return true;
+}
+async function cloudDeleteProjectResource(resource){
+ if(!hasCloudUser())return true;
+ const {error}=await supabaseClient.from("hudhud_project_resources").delete().eq("id",resource.id).eq("user_id",currentUser.id);
+ if(error){console.error(error);toast("Could not remove project resource");return false;}
+ return true;
+}
+function openProjectResourceModal(projectId){
+ const project=state.projects.find(p=>p.id===projectId);if(!project)return;
+ const host=document.getElementById("projectResourceModalHost")||document.body.appendChild(Object.assign(document.createElement("div"),{id:"projectResourceModalHost"}));
+ const configured=state.connections.filter(c=>c.provider),others=state.projects.filter(p=>p.id!==projectId);
+ host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-project-resource></div><div class="resource-dialog project-resource-dialog"><button class="resource-close" data-close-project-resource>×</button><div class="eyebrow">PROJECT RESOURCE GRAPH</div><h2>Manage '+esc(project.name)+'</h2><p class="resource-subtitle">Attach real products, devices, social profiles, apps, projects, and authorized connections. These relationships feed the 3D project map and Analytics.</p><div class="project-resource-layout"><section><div class="project-resource-form"><label>Thing to add</label><select id="projectResourceType"><option value="product">Product</option><option value="device">Device</option><option value="social_profile">Social media profile</option><option value="app">App</option><option value="project">Another project</option><option value="connection">Authorized connection</option><option value="custom">Custom resource</option></select><label>Name</label><input id="projectResourceName" maxlength="120" placeholder="e.g. iPhone, TikTok profile, HudHud app"><label>Provider / brand</label><input id="projectResourceProvider" maxlength="80" placeholder="Apple, TikTok, GitHub…"><label>URL (optional)</label><input id="projectResourceUrl" type="url" maxlength="500" placeholder="https://…"><div id="projectResourceExisting" class="project-resource-existing"></div><button type="button" class="primary" id="projectResourceAdd">＋ Add to project</button></div></section><section><div class="project-resource-list-head"><span>LINKED OBJECTS</span><strong>0 linked</strong></div><div id="projectResourceList" class="project-resource-list"></div></section></div></div></div>';
+ const typeEl=host.querySelector("#projectResourceType"),nameEl=host.querySelector("#projectResourceName"),providerEl=host.querySelector("#projectResourceProvider"),urlEl=host.querySelector("#projectResourceUrl"),existing=host.querySelector("#projectResourceExisting");
+ const refreshList=()=>{const rows=selectedProjectResources(projectId);host.querySelector(".project-resource-list-head strong").textContent=rows.length+" linked";host.querySelector("#projectResourceList").innerHTML=rows.map(r=>'<div class="project-resource-row"><span class="project-resource-icon">'+projectResourceIcon(r)+'</span><div><strong>'+esc(r.name)+'</strong><small>'+esc((r.provider?r.provider+" • ":"")+r.resource_type.replace("_"," "))+'</small></div>'+(r.url?'<a class="mini-link" href="'+esc(r.url)+'" target="_blank" rel="noopener">Open</a>':"")+'<button type="button" class="resource-remove" data-remove-project-resource="'+esc(r.id)+'">×</button></div>').join("")||'<div class="project-resource-empty">Nothing linked yet. Add the first node to start the project graph.</div>';host.querySelectorAll("[data-remove-project-resource]").forEach(b=>b.onclick=async()=>{const row=selectedProjectResources(projectId).find(r=>r.id===b.dataset.removeProjectResource);if(row&&await cloudDeleteProjectResource(row)){projectResources[projectId]=(projectResources[projectId]||[]).filter(r=>r.id!==row.id);refreshList();}});};
+ const syncType=()=>{const t=typeEl.value;existing.innerHTML=t==="connection"?(configured.length?'<label>Configured connection</label><select id="projectResourceConnection">'+configured.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("")+'</select>':'<small class="muted">No configured connections. Connect one first.</small>'):t==="project"?(others.length?'<label>Existing project</label><select id="projectResourceProject">'+others.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join("")+'</select>':'<small class="muted">Create another project first.</small>'):'<small class="muted">HudHud will store this as a project relationship.</small>';};
+ typeEl.onchange=syncType;syncType();refreshList();
+ host.querySelectorAll("[data-close-project-resource]").forEach(b=>b.onclick=()=>host.remove());
+ host.querySelector("#projectResourceAdd").onclick=async()=>{
+   const type=typeEl.value,selectedId=type==="connection"?host.querySelector("#projectResourceConnection")?.value:type==="project"?host.querySelector("#projectResourceProject")?.value:null;
+   const selected=type==="connection"?configured.find(c=>c.id===selectedId):type==="project"?others.find(p=>p.id===selectedId):null;
+   const name=String(selected?.name||nameEl.value).trim();if(!name){toast("Give the resource a name");return;}
+   if((type==="connection"||type==="project")&&!selected){toast("Choose an existing resource");return;}
+   const resource={project_id:projectId,resource_type:type,name,provider:String(selected?.provider||providerEl.value).trim(),external_id:String(selected?.id||"").trim()||null,url:String(selected?.url||urlEl.value).trim()||null,icon:type==="connection"?connectionIcon(selected.provider):null,metadata:type==="project"?{project_name:selected.name}:{}};
+   if(!(await cloudInsertProjectResource(resource)))return;
+   log("Added "+type.replace("_"," ")+" to project: "+project.name+" • "+name);refreshList();nameEl.value="";providerEl.value="";urlEl.value="";toast("Added to project graph");
+ };
+}
+function projectGraphMarkup(){
+ const projects=state.projects||[];
+ return '<section class="project-graph-panel"><div class="project-graph-head"><div><span class="eyebrow">HUDHUD PROJECT GRAPH</span><h3>Projects × Sources × Things</h3><p>Live relationships from your workspace. Each node is an actual project or resource you attached.</p></div><span class="project-graph-badge">'+projects.length+' projects</span></div><div class="project-graph-stage"><div class="project-graph-orbit orbit-one"></div><div class="project-graph-orbit orbit-two"></div><div class="project-graph-core">HUDHUD<span>PROJECT GRAPH</span></div>'+projects.slice(0,8).map((p,i)=>{const rs=selectedProjectResources(p.id),cs=selectedProjectConnections(p.id),total=rs.length+cs.length;return '<div class="project-graph-node project-node-'+i+'"><span>'+esc(p.name.slice(0,1).toUpperCase())+'</span><strong>'+esc(p.name)+'</strong><small>'+total+' linked</small></div>'+rs.slice(0,8).map((r,j)=>'<div class="project-graph-source source-'+i+'-'+j+'"><span>'+projectResourceIcon(r)+'</span><small>'+esc(r.name)+'</small></div>').join("");}).join("")+'</div></section>';
+}
+function bindWorkspaceMembers(){
+ document.querySelectorAll("[data-project-manage]").forEach(b=>b.onclick=()=>openProjectResourceModal(b.dataset.projectManage));
  document.querySelectorAll("[data-members-kind]").forEach(b=>b.onclick=()=>openContactPickerModal(b.dataset.membersKind,b.dataset.membersId));
  document.querySelectorAll("[data-member-chips]").forEach(el=>loadWorkspaceMembers(el.dataset.memberChips,el.dataset.memberItem));
 }
