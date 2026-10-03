@@ -664,7 +664,7 @@ function providerIcon(p){return p==="github"?"🐙":p==="vercel"?"▲":"⚡";}
 async function openProviderAccounts(){
  if(!currentUser){showAuthModal("signin");return;}
  const host=document.getElementById("providerAccountsHost");if(!host)return;
- host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-provider-accounts></div><div class="resource-dialog"><div class="resource-loading"><span class="thinking-feather">🪶</span>Loading connected accounts…</div></div></div>';
+ host.innerHTML='<div class="resource-modal"><div class="resource-backdrop" data-close-provider-accounts></div><div class="resource-dialog"><div class="resource-loading"><span class="thinking-feather" aria-hidden="true"><svg viewBox="0 0 64 64" role="presentation"><defs><linearGradient id="thinkingFeatherGradient" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#168CFF"/><stop offset="52%" stop-color="#6366F1"/><stop offset="100%" stop-color="#C13CFF"/></linearGradient></defs><path d="M54 7C38 8 20 15 12 28c-6 10-3 20 5 25 2-7 7-14 14-20-5 7-8 14-9 21 8-3 16-9 22-17C51 29 55 18 54 7Z" fill="url(#thinkingFeatherGradient)"/><path d="M11 54c10-12 20-21 35-31" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="2" stroke-linecap="round"/></svg></span>Loading connected accounts…</div></div></div>';
  try{
    const accounts=await loadProviderAccounts();
    const grouped={github:[],vercel:[],supabase:[]};accounts.forEach(a=>(grouped[a.provider]||[]).push(a));
