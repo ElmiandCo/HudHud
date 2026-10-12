@@ -1353,3 +1353,80 @@ body{transition:background-color .2s ease,color .2s ease}
 @keyframes hudhud-orb-spin{to{rotate:360deg}}
 @keyframes hudhud-orb-art{0%,100%{transform:scale(.95)}50%{transform:scale(1.06)}}
 @media(prefers-reduced-motion:reduce){#hudhudMobileOrb,#hudhudMobileOrb:before,#hudhudMobileOrb:after,#hudhudMobileOrb img{animation:none!important;translate:none!important}}
+
+/* HudHud immersive bubble conversation + interactive orb command center */
+@media(max-width:800px){
+ .hudhud-home-banner .home-chat{position:relative!important;background:radial-gradient(ellipse at 50% 3%,rgba(71,80,175,.19),transparent 55%),#080b17!important}
+ .hudhud-home-banner .home-chat #messages{
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  gap:19px!important;scroll-behavior:smooth!important;overscroll-behavior:contain;
+  padding:24px 15px 32px!important;overflow-x:hidden!important;
+ }
+ .hudhud-home-banner .home-chat #messages .message{
+  flex:0 0 auto!important;display:flex!important;flex-direction:column!important;
+  width:fit-content!important;max-width:94%!important;min-width:0!important;
+  margin:0!important;border-radius:50px!important;padding:19px 23px!important;
+  overflow-wrap:anywhere!important;word-break:normal!important;
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s ease!important;
+  animation:hudhud-bubble-arrive .65s cubic-bezier(.17,.88,.25,1.22) both!important;
+ }
+ .hudhud-home-banner .home-chat #messages .message.hud{
+  align-self:flex-start!important;width:92%!important;max-width:92%!important;
+  background:linear-gradient(145deg,rgba(34,43,91,.89),rgba(16,20,47,.92))!important;
+  border:1px solid rgba(122,161,255,.29)!important;
+  box-shadow:0 18px 38px #0007,inset 0 1px #b4ccff1c,0 0 28px #654dff13!important;
+ }
+ .hudhud-home-banner .home-chat #messages .message.user{
+  align-self:flex-end!important;width:fit-content!important;max-width:78%!important;
+  padding:13px 22px!important;
+  background:linear-gradient(135deg,rgba(91,69,180,.94),rgba(39,85,159,.92))!important;
+  border:1px solid rgba(185,187,255,.42)!important;
+  box-shadow:0 12px 30px #0006,0 0 22px #7774ff24!important;
+  animation:hudhud-user-pop .72s cubic-bezier(.17,.88,.25,1.22) both!important;
+ }
+ .hudhud-home-banner .home-chat #messages .message b{font-size:10px!important;letter-spacing:.15em!important;opacity:.74!important;margin-bottom:7px!important}
+ .hudhud-home-banner .home-chat #messages .message span{font-size:15px!important;line-height:1.65!important;white-space:pre-wrap!important}
+ .hudhud-home-banner .home-chat #messages .message.user b{display:none!important}
+ .hudhud-home-banner .home-chat .chat-form{
+  position:relative!important;z-index:2!important;border-radius:50px!important;
+  background:rgba(20,27,52,.94)!important;border:1px solid #8291e14d!important;
+  box-shadow:0 8px 35px #0008,0 0 22px #7464ff15!important;
+  padding:5px!important;
+ }
+ .hudhud-home-banner .home-chat .chat-form input{border:0!important;background:transparent!important;box-shadow:none!important;min-width:0!important}
+ .hudhud-home-banner .home-chat .chat-form button{border-radius:50%!important;flex:0 0 42px!important;width:42px!important;height:42px!important}
+ #hudhudMobileOrb{bottom:calc(104px + env(safe-area-inset-bottom))!important;transition:scale .3s ease!important}
+ #hudhudMobileOrb.menu-open{scale:1.08}
+ .hudhud-orb-panel{
+  display:block;position:fixed;left:12px;right:12px;
+  bottom:calc(201px + env(safe-area-inset-bottom));z-index:1001;
+  padding:18px;border-radius:32px;
+  border:1px solid #9eacff6b;
+  background:linear-gradient(155deg,rgba(25,34,72,.97),rgba(8,12,31,.98));
+  box-shadow:0 24px 80px #000c,0 0 42px #776aff3b;
+  backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transform:translateY(20px) scale(.93);transform-origin:bottom center;
+  transition:opacity .25s ease,transform .35s cubic-bezier(.2,.8,.2,1),visibility .25s;
+ }
+ .hudhud-orb-panel.open{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0) scale(1)}
+ .orb-panel-title{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:800;letter-spacing:.14em;color:#c6d4ff;margin:0 4px 14px}
+ .orb-panel-title button{border:0;border-radius:50%;background:#ffffff16;color:white;font-size:22px;width:34px;height:34px}
+ .orb-panel-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+ .orb-panel-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:76px;border-radius:22px;border:1px solid #a4b3ff29;background:#ffffff0b;color:#e9edff;font-size:22px}
+ .orb-panel-grid button span{font-size:11px;font-weight:650}
+ .orb-panel-grid button:active{background:#7774ff4a;transform:scale(.95)}
+}
+@media(min-width:801px){.hudhud-orb-panel{display:none!important}}
+@keyframes hudhud-bubble-arrive{
+  0%{opacity:0;transform:translateY(36px) scale(.88);filter:blur(5px)}
+  65%{opacity:1;filter:blur(0)}
+  100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+}
+@keyframes hudhud-user-pop{
+  0%{opacity:0;transform:translate(20px,-35px) scale(.6)}
+  55%{opacity:1;transform:translate(-3px,9px) scale(1.045)}
+  100%{opacity:1;transform:translate(0,0) scale(1)}
+}
+@media(prefers-reduced-motion:reduce){.hudhud-home-banner .home-chat #messages .message{animation:none!important;transition:none!important}.hudhud-orb-panel{transition:none!important}}
