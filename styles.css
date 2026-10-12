@@ -1430,3 +1430,24 @@ body{transition:background-color .2s ease,color .2s ease}
   100%{opacity:1;transform:translate(0,0) scale(1)}
 }
 @media(prefers-reduced-motion:reduce){.hudhud-home-banner .home-chat #messages .message{animation:none!important;transition:none!important}.hudhud-orb-panel{transition:none!important}}
+
+
+/* HudHud mobile dock — four navigation actions with the assistant orb in the center. */
+@media(max-width:800px){
+  #mobileNav.mobile-nav{grid-template-columns:repeat(5,minmax(0,1fr))!important;align-items:center;bottom:calc(8px + env(safe-area-inset-bottom))!important}
+  #mobileNav .mobile-nav-orb-space{display:block;min-width:0;pointer-events:none}
+  #mobileNav button{min-width:0}
+  #hudhudMobileOrb{
+    left:50%!important;bottom:calc(13px + env(safe-area-inset-bottom))!important;
+    width:64px!important;height:64px!important;z-index:10011!important;
+    transform:translateX(-50%)!important;
+  }
+  #hudhudOrbPanel.hudhud-orb-panel{
+    bottom:calc(92px + env(safe-area-inset-bottom))!important;
+    z-index:10012!important;
+  }
+  #mobileNavBackdrop.mobile-nav-backdrop{z-index:10018!important}
+  #mobileNavDrawer.mobile-nav-drawer{z-index:10019!important}
+}
+@media(max-width:380px){#hudhudMobileOrb{width:58px!important;height:58px!important}}
+@media(prefers-reduced-motion:reduce){#hudhudMobileOrb{animation:none!important}#hudhudMobileOrb:before,#hudhudMobileOrb:after{animation:none!important}}
