@@ -1921,10 +1921,10 @@ async function deleteWorkspaceItem(kind,itemId){
 
 function addMessage(who,text,kind){
  const box=document.getElementById("messages");if(!box)return;
- const d=document.createElement("div");d.className="message "+kind;
+ const d=document.createElement("div");d.className="message "+kind+" hudhud-bubble";
  const b=document.createElement("b");b.textContent=who;
  const s=document.createElement("span");s.textContent=text;
- d.appendChild(b);d.appendChild(s);box.appendChild(d);box.scrollTop=box.scrollHeight;
+ d.appendChild(b);d.appendChild(s);box.appendChild(d);requestAnimationFrame(()=>{box.scrollTo({top:box.scrollHeight,behavior:"smooth"});});
 }
 async function handleWorkspaceCommand(message){
  const text=String(message||"").trim();
@@ -2250,8 +2250,20 @@ function bindHomeAuth(){
 
 function installHudHudMobileOrb(){
  if(document.getElementById("hudhudMobileOrb"))return;
- const orb=document.createElement("button");orb.id="hudhudMobileOrb";orb.type="button";orb.setAttribute("aria-label","Talk to HudHud");orb.innerHTML='<span class="hudhud-orb-inner"><img src="/assets/NewHudhud.PNG" alt=""></span>';
- orb.addEventListener("click",()=>{render("home");setTimeout(()=>{document.getElementById("chatInput")?.focus();document.querySelector(".home-chat")?.scrollIntoView({behavior:"smooth",block:"end"});},60)});
+ const orb=document.createElement("button");
+ orb.id="hudhudMobileOrb";orb.type="button";
+ orb.setAttribute("aria-label","Open HudHud controls");
+ orb.setAttribute("aria-expanded","false");
+ orb.innerHTML='<span class="hudhud-orb-inner"><img src="/assets/NewHudhud.PNG" alt=""></span>';
+ const panel=document.createElement("div");panel.id="hudhudOrbPanel";panel.className="hudhud-orb-panel";
+ panel.setAttribute("role","menu");panel.setAttribute("aria-label","HudHud controls");
+ panel.innerHTML='<div class="orb-panel-title">✦ HUDHUD CONTROL CENTER <button type="button" data-orb-close aria-label="Close controls">×</button></div><div class="orb-panel-grid"><button data-orb-page="home">💬 <span>Chat</span></button><button data-orb-page="core">🧠 <span>Brain</span></button><button data-orb-page="connections">🔗 <span>Connections</span></button><button data-orb-page="tools">⚙️ <span>Tools</span></button><button data-orb-page="devices">📱 <span>Devices</span></button><button data-orb-page="system">🛡️ <span>System</span></button></div>';
+ document.body.appendChild(panel);
+ const close=()=>{panel.classList.remove("open");orb.classList.remove("menu-open");orb.setAttribute("aria-expanded","false")};
+ orb.addEventListener("click",()=>{const open=panel.classList.toggle("open");orb.classList.toggle("menu-open",open);orb.setAttribute("aria-expanded",String(open))});
+ panel.addEventListener("click",e=>{if(e.target.closest("[data-orb-close]")){close();return}const b=e.target.closest("[data-orb-page]");if(!b)return;const view=b.dataset.orbPage;close();render(view);if(view==="home")setTimeout(()=>document.getElementById("chatInput")?.focus(),100)});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
+ document.addEventListener("click",e=>{if(!orb.contains(e.target)&&!panel.contains(e.target))close()});
  document.body.appendChild(orb);
 }
 installHudHudMobileOrb();
