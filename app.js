@@ -400,7 +400,7 @@ function home(){
    '<h1>Your AI. Your Tools.<br><span>Your World.</span></h1>'+
    '<p>Connect. Build. Automate. — All in one place.</p>'+
    '<div class="actions home-hero-actions"><button class="primary home-ask" type="button" data-home-ask>✦ Ask HudHud <b>→</b></button></div>'+
-   '<div class="home-chat"><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Talk to HudHud…" aria-label="Message HudHud"><button class="primary" type="submit">Send</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div>'+
+   '<div class="home-chat"><div class="hudhud-chat-head"><span class="hudhud-chat-presence">✦ HUDHUD <small>AI COMPANION</small></span><span class="hudhud-chat-live">● Ready to help</span></div><div id="messages" class="messages"><div class="message hud"><b>HUDHUD</b><span>I\'m here. What would you like to work on?</span></div></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" maxlength="1000" placeholder="Message HudHud…" aria-label="Message HudHud"><button class="primary" type="submit" aria-label="Send message">➤</button></form><div id="brainStatus" class="chat-status">Checking local brain…</div></div>'+
    '</div></div>'+
    '<div class="home-status-rail">'+
    '<div class="home-status-main"><i></i><div><strong>System Online</strong><small>All systems operational</small></div></div>'+
@@ -2247,6 +2247,14 @@ function bindHomeAuth(){
    render("getstarted");
  });
 }
+
+function installHudHudMobileOrb(){
+ if(document.getElementById("hudhudMobileOrb"))return;
+ const orb=document.createElement("button");orb.id="hudhudMobileOrb";orb.type="button";orb.setAttribute("aria-label","Talk to HudHud");orb.innerHTML='<span class="hudhud-orb-inner"><img src="/assets/NewHudhud.PNG" alt=""></span>';
+ orb.addEventListener("click",()=>{render("home");setTimeout(()=>{document.getElementById("chatInput")?.focus();document.querySelector(".home-chat")?.scrollIntoView({behavior:"smooth",block:"end"});},60)});
+ document.body.appendChild(orb);
+}
+installHudHudMobileOrb();
 
 function bindChat(){
  const ask=document.querySelector("[data-home-ask]");ask?.addEventListener("click",()=>document.getElementById("chatInput")?.focus());
