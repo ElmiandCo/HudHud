@@ -1921,11 +1921,31 @@ async function deleteWorkspaceItem(kind,itemId){
 
 function addMessage(who,text,kind){
  const box=document.getElementById("messages");if(!box)return;
+ // FLIP: capture existing bubble positions before inserting the next bubble.
+ const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+ const existing=[...box.querySelectorAll(".message")];
+ const before=new Map(existing.map(el=>[el,el.getBoundingClientRect()]));
  const d=document.createElement("div");d.className="message "+kind+" hudhud-bubble";
- const b=document.createElement("b");b.textContent=who;
- const s=document.createElement("span");s.textContent=text;
- d.appendChild(b);d.appendChild(s);box.appendChild(d);requestAnimationFrame(()=>{box.scrollTo({top:box.scrollHeight,behavior:"smooth"});});
+ const label=document.createElement("b");label.textContent=who;
+ const body=document.createElement("span");body.textContent=text;
+ d.append(label,body);box.appendChild(d);
+ // Advance the scroll position immediately; animate existing messages in viewport space.
+ const target=Math.max(0,box.scrollHeight-box.clientHeight);
+ box.scrollTop=target;
+ if(!reduced){
+  existing.forEach(el=>{
+   const prev=before.get(el),next=el.getBoundingClientRect();
+   const dx=prev.left-next.left,dy=prev.top-next.top;
+   if(Math.abs(dx)<.5&&Math.abs(dy)<.5)return;
+   // Cancel an earlier transition so rapid consecutive messages stay fluid.
+   el.getAnimations().filter(a=>a.id==="hudhud-chat-reflow").forEach(a=>a.cancel());
+   const anim=el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],
+    {duration:620,easing:"cubic-bezier(.22,1,.36,1)"});
+   anim.id="hudhud-chat-reflow";
+  });
+ }
 }
+
 async function handleWorkspaceCommand(message){
  const text=String(message||"").trim();
 
