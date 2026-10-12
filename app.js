@@ -394,7 +394,6 @@ function home(){
  return '<section class="hero hudhud-home-banner">'+
    '<div class="home-cosmic-glow"></div>'+
    '<div class="home-bird-art" aria-hidden="true"><img src="/assets/NewHudhud.PNG" alt="HudHud"></div>'+
-   '<div class="home-orbit home-orbit-a"></div><div class="home-orbit home-orbit-b"></div>'+
    '<div class="home-banner-content">'+
    '<div class="home-banner-glass">'+
    '<span class="eyebrow home-welcome">WELCOME TO HUDHUD</span>'+
