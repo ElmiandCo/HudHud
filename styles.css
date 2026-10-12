@@ -1252,3 +1252,9 @@ body{transition:background-color .2s ease,color .2s ease}
 @keyframes project-core-pulse{0%,100%{box-shadow:0 0 24px rgba(49,206,255,.24),0 0 90px rgba(149,45,255,.16),inset 0 0 35px rgba(62,201,255,.13)}50%{box-shadow:0 0 38px rgba(49,206,255,.35),0 0 120px rgba(149,45,255,.22),inset 0 0 45px rgba(62,201,255,.20)}}
 .analytics-project-graph{margin-bottom:18px}
 @media(max-width:800px){.project-resource-layout{grid-template-columns:1fr}.project-graph-stage{height:500px}.project-graph-node{width:108px}.project-node-0{left:2%;top:20%}.project-node-1{right:2%;top:17%}.project-node-2{left:2%;bottom:19%}.project-node-3{right:2%;bottom:19%}.project-node-4{left:50%;top:7%;transform:translateX(-50%) translateZ(15px)}.project-node-5{right:50%;bottom:7%;transform:translateX(50%) translateZ(35px)}.project-node-6{left:1%;top:49%}.project-node-7{right:1%;top:48%}.project-graph-source{display:none}}
+
+/* Homepage: display the supplied PNG itself, without orbit/float effects. */
+.hudhud-home-banner .home-orbit,.hudhud-home-banner .home-cosmic-glow{display:none!important}
+.hudhud-home-banner .home-bird-art{animation:none!important;filter:none!important;transform:none!important}
+.hudhud-home-banner .home-bird-art img{animation:none!important;filter:none!important;transform:none!important;object-fit:contain!important}
+@media(max-width:800px){.hudhud-home-banner .home-bird-art{left:50%!important;right:auto!important;transform:translateX(-50%)!important}}
