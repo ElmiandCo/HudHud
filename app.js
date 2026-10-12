@@ -1626,9 +1626,9 @@ function setupMobileNav(){
   wrap.className="mobile-nav";
   wrap.innerHTML=`
     <button data-mobile-view="home"><span>⌂</span><small>Home</small></button>
-    <button data-mobile-view="projects"><span>▣</span><small>Work</small></button>
     <button data-mobile-view="social"><span>◎</span><small>Social</small></button>
-    <button data-mobile-view="gamelab"><span>🎮</span><small>Build</small></button>
+    <span class="mobile-nav-orb-space" aria-hidden="true"></span>
+    <button data-mobile-view="gamelab"><span>✧</span><small>Build</small></button>
     <button data-mobile-more><span>☰</span><small>More</small></button>`;
   document.body.appendChild(wrap);
 
@@ -2109,13 +2109,13 @@ async function authAccessToken(forceRefresh=false){
 }
 async function authorizedFetch(input,options={},retry=true){
  let token=await authAccessToken(false);
- if(!token)throw new Error("Authentication expired. Please sign in again.");
+ if(!token){showAuthModal("signin");throw new Error("HudHud sign-in expired on this domain. Please sign in again to reconnect.");}
  const headers=new Headers(options.headers||{});
  headers.set("Authorization","Bearer "+token);
  let response=await fetch(input,{...options,headers});
  if(response.status===401 && retry){
    token=await authAccessToken(true);
-   if(!token)throw new Error("Authentication expired. Please sign in again.");
+   if(!token){showAuthModal("signin");throw new Error("HudHud sign-in expired on this domain. Please sign in again to reconnect.");}
    headers.set("Authorization","Bearer "+token);
    response=await fetch(input,{...options,headers});
  }
