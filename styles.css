@@ -1258,3 +1258,38 @@ body{transition:background-color .2s ease,color .2s ease}
 .hudhud-home-banner .home-bird-art{animation:none!important;filter:none!important;transform:none!important}
 .hudhud-home-banner .home-bird-art img{animation:none!important;filter:none!important;transform:none!important;object-fit:contain!important}
 @media(max-width:800px){.hudhud-home-banner .home-bird-art{left:50%!important;right:auto!important;transform:translateX(-50%)!important}}
+
+/* HudHud mobile app shell — chat first, original PNG, animated assistant orb */
+.hudhud-chat-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid #ffffff19}
+.hudhud-chat-presence{font-size:13px;font-weight:800;letter-spacing:.1em;color:#f2eaff}
+.hudhud-chat-presence small{font-size:9px;font-weight:500;letter-spacing:.04em;opacity:.6;margin-left:5px}
+.hudhud-chat-live{font-size:11px;color:#8ef1cd}
+#hudhudMobileOrb{display:none}
+@media(max-width:800px){
+ body{overflow-x:hidden}
+ .hudhud-home-banner{min-height:calc(100dvh - 78px)!important;border-radius:0!important;margin:0!important;overflow:hidden!important;background:radial-gradient(ellipse at 50% 3%,#25204d 0%,#0c1020 48%,#070911 100%)!important}
+ .hudhud-home-banner .home-bird-art{position:absolute!important;top:8px!important;left:auto!important;right:16px!important;transform:none!important;width:74px!important;height:74px!important;opacity:1!important;z-index:8!important}
+ .hudhud-home-banner .home-bird-art img{width:100%!important;height:100%!important;animation:none!important;object-fit:contain!important}
+ .hudhud-home-banner .home-banner-content{display:block!important;min-height:calc(100dvh - 78px)!important;padding:16px 12px 165px!important}
+ .hudhud-home-banner .home-banner-glass{width:100%!important;min-height:0!important;border:0!important;border-radius:0!important;padding:8px 0!important;background:none!important;box-shadow:none!important;backdrop-filter:none!important}
+ .hudhud-home-banner .home-welcome{display:block!important;font-size:10px!important;letter-spacing:.2em!important;margin:7px 0!important;color:#a99bff!important}
+ .hudhud-home-banner .home-banner-glass h1{font-size:clamp(26px,7vw,36px)!important;line-height:1.15!important;margin:6px 88px 6px 0!important;letter-spacing:-.04em!important}
+ .hudhud-home-banner .home-banner-glass>p{font-size:12px!important;opacity:.7!important;margin:0 80px 14px 0!important}
+ .hudhud-home-banner .home-hero-actions,.hudhud-home-banner .home-status-rail,.hudhud-home-banner .home-signature{display:none!important}
+ .hudhud-home-banner .home-chat{display:flex!important;flex-direction:column!important;position:relative!important;width:100%!important;max-width:none!important;height:calc(100dvh - 265px)!important;min-height:340px!important;margin:12px 0 0!important;border:1px solid #a5a8ff38!important;border-radius:24px!important;background:linear-gradient(155deg,#151a32eb,#090d1bed)!important;box-shadow:0 18px 60px #0009,0 0 50px #6265ff15!important;overflow:hidden!important}
+ .hudhud-home-banner .home-chat #messages{flex:1!important;min-height:0!important;height:auto!important;overflow-y:auto!important;padding:18px 12px!important;scroll-behavior:smooth}
+ .hudhud-home-banner .home-chat .message{max-width:89%!important;width:max-content!important;min-width:90px!important;border-radius:20px!important;padding:12px 15px!important;margin-bottom:13px!important;background:#202b49!important;box-shadow:0 7px 24px #0005!important;animation:hudhud-card-arrive .3s ease-out both}
+ .hudhud-home-banner .home-chat .message.user{margin-left:auto!important;background:linear-gradient(135deg,#5146a6,#2b5589)!important}
+ .hudhud-home-banner .home-chat .message span{white-space:pre-wrap;overflow-wrap:anywhere}
+ .hudhud-home-banner .home-chat .chat-form{display:flex!important;gap:8px!important;margin:0 10px 4px!important;padding:9px!important;border:1px solid #ffffff28!important;border-radius:22px!important;background:#151c32!important}
+ .hudhud-home-banner .home-chat .chat-form input{min-width:0!important;flex:1!important;background:transparent!important;border:0!important;outline:0!important;color:white!important;font-size:16px!important}
+ .hudhud-home-banner .home-chat .chat-form button{width:44px!important;height:44px!important;flex:none!important;border-radius:16px!important;padding:0!important}
+ .hudhud-home-banner .home-chat .chat-status{font-size:10px!important;padding:6px 16px 10px!important;color:#a9b7db!important}
+ #hudhudMobileOrb{display:grid;place-items:center;position:fixed;bottom:calc(18px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:72px;height:72px;border:1px solid #a7dcff9c;border-radius:50%;padding:6px;z-index:1500;cursor:pointer;background:conic-gradient(from 0deg,#2a72d8,#9b39f2,#17d5ff,#6251d8,#2a72d8);box-shadow:0 0 18px #4acbff77,0 0 38px #9c55f555,0 8px 30px #000b;animation:hudhud-orb-breathe 3s ease-in-out infinite}
+ #hudhudMobileOrb .hudhud-orb-inner{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:#101428}
+ #hudhudMobileOrb img{width:100%;height:100%;object-fit:contain}
+ #hudhudMobileOrb:focus-visible{outline:3px solid white;outline-offset:4px}
+}
+@keyframes hudhud-orb-breathe{0%,100%{box-shadow:0 0 15px #3ecbff77,0 0 35px #8c4bff55}50%{box-shadow:0 0 30px #3ecbffcc,0 0 65px #8c4bff99}}
+@keyframes hudhud-card-arrive{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){#hudhudMobileOrb,.hudhud-home-banner .home-chat .message{animation:none!important}}
